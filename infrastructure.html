@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infrastructure - SmartRoute</title>
+    
+    <!-- CDNs -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+
+    <!-- Local Assets -->
+        <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/components.css">
+    
+    <style>
+        .split-layout {
+            display: flex;
+            height: calc(100vh - 100px);
+            gap: 20px;
+        }
+        .map-container {
+            width: 55%;
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+            background: #030810;
+        }
+        .infra-panel {
+            width: 45%;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        .filter-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            background: rgba(100, 200, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .tab-btn.active, .tab-btn:hover {
+            background: rgba(0, 212, 255, 0.2);
+            border-color: #00d4ff;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+        }
+        .infra-card {
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .infra-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.2);
+            border-color: rgba(0, 212, 255, 0.6);
+        }
+        .badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .bg-critical { background: rgba(255, 59, 59, 0.2); color: #ff3b3b; border: 1px solid #ff3b3b; }
+        .bg-poor { background: rgba(255, 149, 0, 0.2); color: #ff9500; border: 1px solid #ff9500; }
+        .bg-moderate { background: rgba(255, 215, 0, 0.2); color: #ffd700; border: 1px solid #ffd700; }
+        .bg-good { background: rgba(0, 255, 136, 0.2); color: #00ff88; border: 1px solid #00ff88; }
+        
+        .detail-panel {
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .back-btn {
+            background: none;
+            border: none;
+            color: #00d4ff;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .condition-bar-bg {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .condition-bar-fill {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 1s ease;
+        }
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <div class="main-content" id="main-content">
+            <main class="page-body">
+                <div class="split-layout">
+                    <div class="map-container glass-card">
+                        <div id="map"></div>
+                    </div>
+                    
+                    <div class="infra-panel" id="list-view">
+                        <div class="filter-tabs">
+                            <button class="tab-btn active">ALL</button>
+                            <button class="tab-btn">ROADS</button>
+                            <button class="tab-btn">BRIDGES</button>
+                            <button class="tab-btn">CULVERTS</button>
+                            <button class="tab-btn">TUNNELS</button>
+                        </div>
+                        
+                        <div id="infra-list">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <div class="infra-panel detail-panel glass-card" id="detail-view">
+                        <button class="back-btn" onclick="showList()">← Back to List</button>
+                        <h2 id="det-name" style="background: linear-gradient(90deg, #00d4ff, #00ff88); -webkit-background-clip: text; color: transparent;">-</h2>
+                        <p>ID: <span id="det-id"></span> | Type: <span id="det-type"></span></p>
+                        
+                        <div class="glass-card" style="padding: 15px;">
+                            <h3>Risk Level: <span id="det-risk-text"></span></h3>
+                            <div class="condition-bar-bg">
+                                <div id="det-risk-bar" class="condition-bar-fill"></div>
+                            </div>
+                        </div>
+
+                        <div class="glass-card" style="padding: 15px;">
+                            <h3>Details</h3>
+                            <p><strong>Condition:</strong> <span id="det-condition" class="badge"></span></p>
+                            <p><strong>Status:</strong> <span id="det-status"></span></p>
+                            <p><strong>Last Inspection:</strong> <span id="det-date"></span></p>
+                        </div>
+
+                        <div class="glass-card" style="padding: 15px;">
+                            <h3>Inspection History</h3>
+                            <ul style="list-style-type: none; padding-left: 0;">
+                                <li>✓ 2024-08-12: Structural scan completed.</li>
+                                <li>✓ 2024-02-15: Routine maintenance check.</li>
+                                <li>✓ 2023-09-10: Post-monsoon assessment.</li>
+                            </ul>
+                        </div>
+
+                        <div class="action-grid">
+                            <button class="btn-primary" onclick="updateCondition()">UPDATE CONDITION</button>
+                            <button class="btn-primary" style="background: rgba(255, 149, 0, 0.2); border-color: #ff9500; color: #ff9500;" onclick="scheduleInspection()">SCHEDULE INSPECTION</button>
+                            <button class="btn-primary" style="background: rgba(255, 59, 59, 0.2); border-color: #ff3b3b; color: #ff3b3b;" onclick="reportDamage()">REPORT DAMAGE</button>
+                            <button class="btn-primary" style="background: rgba(255,255,255,0.1); border-color: #aaa; color: #fff;" onclick="viewHistory()">VIEW HISTORY</button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/components.js"></script>
+    <script src="js/map-engine.js"></script>
+    <script src="js/charts.js"></script>
+    <script>
+        const infraData = [
+            { id: 'INF-001', name: 'SH-39 (Narsipatnam-Paderu)', type: 'Road', condition: 'Critical', risk: 95, date: '2024-08-12', status: 'Blocked', color: '#ff3b3b', lat: 17.85, lng: 82.52 },
+            { id: 'INF-002', name: 'Sileru River Bridge', type: 'Bridge', condition: 'Poor', risk: 78, date: '2024-07-20', status: 'Warning', color: '#ff9500', lat: 18.02, lng: 82.15 },
+            { id: 'INF-003', name: 'NH-516E (Vizag-Araku)', type: 'Road', condition: 'Poor', risk: 65, date: '2024-08-28', status: 'Partial', color: '#ff9500', lat: 18.25, lng: 82.90 },
+            { id: 'INF-004', name: 'Godavari Culvert', type: 'Culvert', condition: 'Moderate', risk: 45, date: '2024-09-01', status: 'Monitor', color: '#ffd700', lat: 17.65, lng: 82.40 },
+            { id: 'INF-005', name: 'SH-34 (Chintapalle-Araku)', type: 'Road', condition: 'Good', risk: 28, date: '2024-09-03', status: 'Operational', color: '#00ff88', lat: 18.05, lng: 82.60 },
+            { id: 'INF-006', name: 'Machkund Bridge', type: 'Bridge', condition: 'Good', risk: 22, date: '2024-08-30', status: 'Operational', color: '#00ff88', lat: 18.58, lng: 82.52 },
+            { id: 'INF-007', name: 'SH-40 (Paderu-GKVeedhi)', type: 'Road', condition: 'Moderate', risk: 51, date: '2024-08-25', status: 'Partial', color: '#ffd700', lat: 18.00, lng: 82.45 },
+            { id: 'INF-008', name: 'Hukumpeta Culvert', type: 'Culvert', condition: 'Excellent', risk: 8, date: '2024-09-04', status: 'Operational', color: '#00ff88', lat: 18.20, lng: 82.75 },
+            { id: 'INF-009', name: 'Koyyuru-Chintapalle Road', type: 'Road', condition: 'Good', risk: 31, date: '2024-09-02', status: 'Operational', color: '#00ff88', lat: 17.75, lng: 82.30 },
+            { id: 'INF-010', name: 'Paderu Town Bridge', type: 'Bridge', condition: 'Poor', risk: 71, date: '2024-07-15', status: 'Warning', color: '#ff9500', lat: 18.08, lng: 82.66 },
+            { id: 'INF-011', name: 'VR-28 (Vizag Coastal)', type: 'Road', condition: 'Good', risk: 25, date: '2024-09-03', status: 'Operational', color: '#00ff88', lat: 17.70, lng: 83.25 },
+            { id: 'INF-012', name: 'Araku Valley Tunnel', type: 'Tunnel', condition: 'Moderate', risk: 42, date: '2024-08-20', status: 'Monitor', color: '#ffd700', lat: 18.33, lng: 82.87 }
+        ];
+
+        let infraMap = null;
+        let selectedItem = null;
+        let currentFilter = 'ALL';
+        let highlightMarker = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if(window.SmartRoute) {
+                SmartRoute.initSharedComponents({title: 'Infrastructure', subtitle: 'Road & Bridge Condition Management'});
+                SmartRoute.initCountUps();
+            }
+            if(window.MapEngine) {
+                infraMap = MapEngine.initMap('map');
+                if(infraMap) {
+                    MapEngine.addRoads(infraMap);
+                    MapEngine.addIncidents(infraMap);
+                    MapEngine.addVehicles(infraMap);
+                }
+            }
+            
+            // Tab filtering
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            tabButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    tabButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFilter = btn.textContent.trim();
+                    renderList();
+                });
+            });
+
+            renderList();
+        });
+
+        function getBadgeClass(cond) {
+            if(cond === 'Critical') return 'bg-critical';
+            if(cond === 'Poor') return 'bg-poor';
+            if(cond === 'Moderate') return 'bg-moderate';
+            return 'bg-good';
+        }
+
+        function renderList() {
+            const list = document.getElementById('infra-list');
+            list.innerHTML = '';
+            
+            const filtered = infraData.filter(item => {
+                if(currentFilter === 'ALL') return true;
+                if(currentFilter === 'ROADS') return item.type === 'Road';
+                if(currentFilter === 'BRIDGES') return item.type === 'Bridge';
+                if(currentFilter === 'CULVERTS') return item.type === 'Culvert';
+                if(currentFilter === 'TUNNELS') return item.type === 'Tunnel';
+                return true;
+            });
+
+            filtered.forEach((item) => {
+                const originalIndex = infraData.indexOf(item);
+                const card = document.createElement('div');
+                card.className = 'glass-card infra-card';
+                card.onclick = () => showDetail(originalIndex);
+                card.innerHTML = `
+                    <div>
+                        <h4 style="margin: 0 0 5px 0;">${item.type === 'Bridge' ? '🌉' : item.type === 'Tunnel' ? '🚇' : '🛣'} ${item.name}</h4>
+                        <small style="color: #aaa;">${item.id} | Risk: ${item.risk}% | Status: ${item.status}</small>
+                    </div>
+                    <div>
+                        <span class="badge ${getBadgeClass(item.condition)}">${item.condition}</span>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        function showDetail(index) {
+            const item = infraData[index];
+            selectedItem = item;
+
+            document.getElementById('list-view').style.display = 'none';
+            document.getElementById('detail-view').style.display = 'flex';
+            
+            document.getElementById('det-name').innerText = item.name;
+            document.getElementById('det-id').innerText = item.id;
+            document.getElementById('det-type').innerText = item.type;
+            
+            const badgeClass = getBadgeClass(item.condition);
+            const condEl = document.getElementById('det-condition');
+            condEl.innerText = item.condition;
+            condEl.className = `badge ${badgeClass}`;
+            
+            document.getElementById('det-status').innerText = item.status;
+            document.getElementById('det-date').innerText = item.date;
+            
+            document.getElementById('det-risk-text').innerText = `${item.risk}%`;
+            const bar = document.getElementById('det-risk-bar');
+            bar.style.width = `${item.risk}%`;
+            bar.style.background = item.color;
+
+            if(infraMap && item.lat && item.lng) {
+                infraMap.flyTo([item.lat, item.lng], 13, { duration: 1.5 });
+                if(highlightMarker) infraMap.removeLayer(highlightMarker);
+                highlightMarker = L.circleMarker([item.lat, item.lng], {
+                    radius: 12,
+                    color: item.color,
+                    fillColor: item.color,
+                    fillOpacity: 0.6,
+                    weight: 3
+                }).addTo(infraMap).bindPopup(`<b>${item.name}</b><br>Condition: ${item.condition}`).openPopup();
+            }
+        }
+
+        function showList() {
+            document.getElementById('detail-view').style.display = 'none';
+            document.getElementById('list-view').style.display = 'flex';
+            if(infraMap) {
+                infraMap.setView([17.9, 82.8], 9);
+                if(highlightMarker) infraMap.removeLayer(highlightMarker);
+            }
+        }
+
+        function updateCondition() {
+            if(!selectedItem) return;
+            if(window.SmartRoute && SmartRoute.showToast) {
+                SmartRoute.showToast(`Condition log updated for ${selectedItem.name}. Synced with state PWD portal.`, 'success');
+            }
+        }
+
+        function scheduleInspection() {
+            if(!selectedItem) return;
+            if(window.SmartRoute && SmartRoute.showToast) {
+                SmartRoute.showToast(`Inspection scheduled for ${selectedItem.name} on 2026-09-08 (Assigned: FO-061)`, 'info');
+            }
+        }
+
+        function reportDamage() {
+            if(!selectedItem) return;
+            if(window.SmartRoute && SmartRoute.showToast) {
+                SmartRoute.showToast(`Urgent damage alert logged for ${selectedItem.name}. Response team notified.`, 'warn');
+            }
+        }
+
+        function viewHistory() {
+            if(!selectedItem) return;
+            if(window.SmartRoute && SmartRoute.showToast) {
+                SmartRoute.showToast(`Displaying full historical inspection logs (3 records found).`, 'info');
+            }
+        }
+    </script>
+</body>
+</html>

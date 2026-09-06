@@ -1,0 +1,345 @@
+/* ============================================================
+   SMARTROUTE — KEYFRAMES & ANIMATION SYSTEM
+   ============================================================ */
+
+/* ── Core Keyframes ─────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px) translateZ(0); }
+  to   { opacity: 1; transform: translateY(0) translateZ(0); }
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-24px) translateZ(0); }
+  to   { opacity: 1; transform: translateY(0) translateZ(0); }
+}
+
+@keyframes fadeInLeft {
+  from { opacity: 0; transform: translateX(-24px) translateZ(0); }
+  to   { opacity: 1; transform: translateX(0) translateZ(0); }
+}
+
+@keyframes fadeInRight {
+  from { opacity: 0; transform: translateX(24px) translateZ(0); }
+  to   { opacity: 1; transform: translateX(0) translateZ(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.88) translateZ(0); }
+  to   { opacity: 1; transform: scale(1) translateZ(0); }
+}
+
+@keyframes slideInUp {
+  from { transform: translateY(100%) translateZ(0); }
+  to   { transform: translateY(0) translateZ(0); }
+}
+
+/* ── Pulse & Glow ───────────────────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+@keyframes pulseRing {
+  0%   { transform: scale(1); opacity: 1; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+@keyframes pulseRingSlow {
+  0%   { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 12px currentColor, 0 0 30px rgba(0,212,255,0.15); }
+  50%       { box-shadow: 0 0 24px currentColor, 0 0 60px rgba(0,212,255,0.3); }
+}
+
+@keyframes borderGlow {
+  0%, 100% { border-color: var(--border-card); }
+  50%       { border-color: var(--cyan); box-shadow: 0 0 20px rgba(0,212,255,0.3); }
+}
+
+@keyframes criticalAlert {
+  0%, 100% {
+    border-color: rgba(255,59,59,0.4);
+    box-shadow: 0 0 12px rgba(255,59,59,0.2);
+  }
+  50% {
+    border-color: var(--danger);
+    box-shadow: 0 0 30px rgba(255,59,59,0.5), 0 0 60px rgba(255,59,59,0.2);
+  }
+}
+
+/* ── Spin & Rotate ──────────────────────────────────────────── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes spinReverse {
+  from { transform: rotate(360deg); }
+  to   { transform: rotate(0deg); }
+}
+
+@keyframes orbit {
+  from { transform: rotate(0deg) translateX(40px) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(40px) rotate(-360deg); }
+}
+
+/* ── Route Drawing ──────────────────────────────────────────── */
+@keyframes drawRoute {
+  from { stroke-dashoffset: 1000; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes routeTravel {
+  0%   { stroke-dashoffset: 80; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes routeFlow {
+  0%   { stroke-dashoffset: 24; }
+  100% { stroke-dashoffset: 0; }
+}
+
+/* ── Vehicle Movement ───────────────────────────────────────── */
+@keyframes vehicleMove {
+  0%, 100% { transform: translate(0, 0); }
+  25%  { transform: translate(4px, -2px); }
+  50%  { transform: translate(8px, 0px); }
+  75%  { transform: translate(4px, 2px); }
+}
+
+@keyframes vehicleBob {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-3px); }
+}
+
+/* ── Scanning / AI Effects ──────────────────────────────────── */
+@keyframes scanLine {
+  0%   { top: 0%; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+@keyframes scanRing {
+  0%   { transform: scale(0.5); opacity: 0.9; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+@keyframes radarSweep {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes aiThink {
+  0%, 100% { opacity: 0.3; transform: scale(0.95); }
+  50%       { opacity: 1;   transform: scale(1.05); }
+}
+
+/* ── Particles ──────────────────────────────────────────────── */
+@keyframes floatParticle {
+  0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0.8; }
+  50%  { transform: translateY(-20px) translateX(10px) scale(1.2); opacity: 0.4; }
+  100% { transform: translateY(-40px) translateX(-5px) scale(0.6); opacity: 0; }
+}
+
+@keyframes floatUp {
+  0%   { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-60px); opacity: 0; }
+}
+
+/* ── Water / Flood ──────────────────────────────────────────── */
+@keyframes waterWave {
+  0%, 100% { transform: scaleY(1) scaleX(1); }
+  25%       { transform: scaleY(1.04) scaleX(0.98); }
+  75%       { transform: scaleY(0.96) scaleX(1.02); }
+}
+
+@keyframes waterRipple {
+  0%   { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+@keyframes rain {
+  0%   { transform: translateY(-10px); opacity: 0; }
+  30%  { opacity: 0.8; }
+  100% { transform: translateY(40px); opacity: 0; }
+}
+
+/* ── Shimmer ────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes shimmerBg {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── Float ──────────────────────────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0) translateZ(0); }
+  50%       { transform: translateY(-8px) translateZ(0); }
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0) translateZ(0); }
+  50%       { transform: translateY(-4px) translateZ(0); }
+}
+
+/* ── Blink ──────────────────────────────────────────────────── */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ── Count Up ───────────────────────────────────────────────── */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Energy Line (N Logo) ───────────────────────────────────── */
+@keyframes energyTravel {
+  0%   { stroke-dashoffset: 1000; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes energyPulse {
+  0%, 100% { opacity: 0.5; stroke-width: 2; }
+  50%       { opacity: 1;   stroke-width: 4; filter: drop-shadow(0 0 8px var(--cyan)); }
+}
+
+/* ── Noise / Disruption ─────────────────────────────────────── */
+@keyframes glitch {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-2px); }
+  40%       { transform: translateX(2px); }
+  60%       { transform: translateX(-1px); }
+  80%       { transform: translateX(1px); }
+}
+
+/* ── Timeline Node ──────────────────────────────────────────── */
+@keyframes nodeActivate {
+  0%   { transform: scale(0.8); opacity: 0.5; }
+  60%  { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ── Data stream ────────────────────────────────────────────── */
+@keyframes dataStream {
+  0%   { transform: translateY(-100%); opacity: 0.6; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
+/* ── Map zoom-in ────────────────────────────────────────────── */
+@keyframes zoomIn {
+  from { transform: scale(1.08); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+/* ── Animation Utility Classes ──────────────────────────────── */
+.animate-fadeIn       { animation: fadeIn       var(--t-slow) var(--ease-smooth) both; }
+.animate-fadeInUp     { animation: fadeInUp     var(--t-slow) var(--ease-smooth) both; }
+.animate-fadeInDown   { animation: fadeInDown   var(--t-slow) var(--ease-smooth) both; }
+.animate-fadeInLeft   { animation: fadeInLeft   var(--t-slow) var(--ease-smooth) both; }
+.animate-fadeInRight  { animation: fadeInRight  var(--t-slow) var(--ease-smooth) both; }
+.animate-scaleIn      { animation: scaleIn      var(--t-slow) var(--ease-spring) both; }
+.animate-float        { animation: float        3s ease-in-out infinite; }
+.animate-floatSlow    { animation: floatSlow    4s ease-in-out infinite; }
+.animate-pulse        { animation: pulse        2s ease-in-out infinite; }
+.animate-spin         { animation: spin         1s linear infinite; }
+.animate-shimmer      { animation: shimmer      2s ease-in-out infinite; }
+
+/* Stagger delay helpers */
+.delay-1  { animation-delay: 0.1s; }
+.delay-2  { animation-delay: 0.2s; }
+.delay-3  { animation-delay: 0.3s; }
+.delay-4  { animation-delay: 0.4s; }
+.delay-5  { animation-delay: 0.5s; }
+.delay-6  { animation-delay: 0.6s; }
+.delay-7  { animation-delay: 0.7s; }
+.delay-8  { animation-delay: 0.8s; }
+
+/* ── Skeleton Loader ────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 0%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmerBg 1.8s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Pulse Ring Marker ──────────────────────────────────────── */
+.pulse-ring {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  animation: pulseRing 2s ease-out infinite;
+}
+
+.pulse-ring-2 {
+  position: absolute;
+  inset: -16px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  animation: pulseRing 2s ease-out 0.4s infinite;
+}
+
+/* ── Vehicle GPS Ring ───────────────────────────────────────── */
+.gps-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid var(--cyan);
+  animation: pulseRing 2.5s ease-out infinite;
+}
+
+/* ── Loading Spinner ────────────────────────────────────────── */
+.spinner {
+  width: 28px; height: 28px;
+  border: 2px solid rgba(0,212,255,0.2);
+  border-top-color: var(--cyan);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.spinner-lg {
+  width: 48px; height: 48px;
+  border-width: 3px;
+}
+
+/* ── Page Transition ────────────────────────────────────────── */
+.page-enter {
+  animation: fadeInUp 0.5s var(--ease-smooth) both;
+}
+
+/* ── Entrance Animation Orchestrator ────────────────────────── */
+.entrance-anim > * {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp var(--t-slow) var(--ease-smooth) both;
+}
+
+.entrance-anim > *:nth-child(1)  { animation-delay: 0.05s; }
+.entrance-anim > *:nth-child(2)  { animation-delay: 0.10s; }
+.entrance-anim > *:nth-child(3)  { animation-delay: 0.15s; }
+.entrance-anim > *:nth-child(4)  { animation-delay: 0.20s; }
+.entrance-anim > *:nth-child(5)  { animation-delay: 0.25s; }
+.entrance-anim > *:nth-child(6)  { animation-delay: 0.30s; }
+.entrance-anim > *:nth-child(7)  { animation-delay: 0.35s; }
+.entrance-anim > *:nth-child(8)  { animation-delay: 0.40s; }
+.entrance-anim > *:nth-child(9)  { animation-delay: 0.45s; }
+.entrance-anim > *:nth-child(10) { animation-delay: 0.50s; }

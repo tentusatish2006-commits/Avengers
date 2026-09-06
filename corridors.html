@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Risk Corridors - SmartRoute</title>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+
+      <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    .corridor-grid {
+      display: grid;
+      grid-template-columns: 55% 43%;
+      gap: 2%;
+      height: calc(100vh - 120px);
+    }
+    .map-wrapper {
+      height: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    #map { width: 100%; height: 100%; }
+    
+    .corridor-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      overflow-y: auto;
+      height: 100%;
+      padding-right: 10px;
+    }
+    .corridor-card {
+      padding: 15px;
+      cursor: pointer;
+      transition: all 0.3s;
+      border-left-width: 4px;
+      border-left-style: solid;
+    }
+    .corridor-card:hover {
+      transform: translateX(-5px);
+      box-shadow: -5px 5px 15px rgba(0,212,255,0.1);
+    }
+    .c-critical { border-left-color: #ff3b3b; }
+    .c-high { border-left-color: #ff9500; }
+    .c-mod { border-left-color: #facc15; }
+    .c-low { border-left-color: #00ff88; }
+    
+    .risk-bar-container {
+      height: 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+    .risk-bar {
+      height: 100%;
+      border-radius: 3px;
+    }
+    
+    .corridor-details {
+      display: none;
+      height: 100%;
+      overflow-y: auto;
+    }
+    .active-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="main-content" id="main-content">
+      <main class="page-body p-4">
+        <div class="corridor-grid">
+          <div class="glass-card map-wrapper">
+            <div id="map"></div>
+          </div>
+          
+          <div id="corridor-list-panel" class="corridor-list">
+            <h2 class="text-xl font-bold gradient-text mb-2">Analyzed Routes</h2>
+            
+            <div class="glass-card corridor-card c-critical" onclick="showDetails('Paderu – Araku Valley', 86, 'CRITICAL', 'Active Landslide + Flood', 3, 2, [18.08, 82.66])">
+              <div class="flex justify-between items-start">
+                <h3 class="font-bold text-lg">Paderu – Araku Valley</h3>
+                <span class="text-danger font-bold bg-red-900 bg-opacity-30 px-2 py-1 rounded text-xs">CRITICAL</span>
+              </div>
+              <div class="text-sm text-gray mt-2">Cause: Active Landslide + Flood</div>
+              <div class="flex gap-4 mt-2 text-xs">
+                <span>⚠️ 3 Incidents</span>
+                <span>🚛 2 Vehicles at risk</span>
+              </div>
+              <div class="risk-bar-container"><div class="risk-bar bg-danger" style="width: 86%"></div></div>
+            </div>
+
+            <div class="glass-card corridor-card c-high" onclick="showDetails('Chintapalle – Araku', 79, 'HIGH', 'Road damage + Rain', 2, 0, [17.87, 82.35])">
+              <div class="flex justify-between items-start">
+                <h3 class="font-bold text-lg">Chintapalle – Araku</h3>
+                <span class="text-warn font-bold bg-orange-900 bg-opacity-30 px-2 py-1 rounded text-xs">HIGH</span>
+              </div>
+              <div class="text-sm text-gray mt-2">Cause: Road damage + Rain</div>
+              <div class="flex gap-4 mt-2 text-xs">
+                <span>⚠️ 2 Incidents</span>
+              </div>
+              <div class="risk-bar-container"><div class="risk-bar bg-warn" style="width: 79%"></div></div>
+            </div>
+            
+            <div class="glass-card corridor-card c-high" onclick="showDetails('Narsipatnam – Paderu', 72, 'HIGH', 'Flash flood', 1, 0, [17.67, 82.61])">
+              <div class="flex justify-between items-start">
+                <h3 class="font-bold text-lg">Narsipatnam – Paderu</h3>
+                <span class="text-warn font-bold bg-orange-900 bg-opacity-30 px-2 py-1 rounded text-xs">HIGH</span>
+              </div>
+              <div class="text-sm text-gray mt-2">Cause: Flash flood</div>
+              <div class="flex gap-4 mt-2 text-xs">
+                <span>⚠️ 1 Incident</span>
+              </div>
+              <div class="risk-bar-container"><div class="risk-bar bg-warn" style="width: 72%"></div></div>
+            </div>
+
+            <div class="glass-card corridor-card c-mod" onclick="showDetails('GK Veedhi – Paderu', 65, 'MODERATE', 'Construction', 0, 0, [17.89, 82.17])">
+              <div class="flex justify-between items-start">
+                <h3 class="font-bold text-lg">GK Veedhi – Paderu</h3>
+                <span class="text-yellow-400 font-bold bg-yellow-900 bg-opacity-30 px-2 py-1 rounded text-xs">MODERATE</span>
+              </div>
+              <div class="text-sm text-gray mt-2">Cause: Construction</div>
+              <div class="flex gap-4 mt-2 text-xs">
+                <span>⚠️ 0 Incidents</span>
+              </div>
+              <div class="risk-bar-container"><div class="risk-bar bg-yellow-400" style="width: 65%"></div></div>
+            </div>
+
+            <div class="glass-card corridor-card c-mod" onclick="showDetails('Vizag – Narsipatnam', 48, 'MODERATE', 'Heavy traffic', 1, 0, [17.68, 83.21])">
+              <div class="flex justify-between items-start">
+                <h3 class="font-bold text-lg">Vizag – Narsipatnam</h3>
+                <span class="text-yellow-400 font-bold bg-yellow-900 bg-opacity-30 px-2 py-1 rounded text-xs">MODERATE</span>
+              </div>
+              <div class="text-sm text-gray mt-2">Cause: Heavy traffic</div>
+              <div class="flex gap-4 mt-2 text-xs">
+                <span>⚠️ 1 Incident</span>
+              </div>
+              <div class="risk-bar-container"><div class="risk-bar bg-yellow-400" style="width: 48%"></div></div>
+            </div>
+
+            <div class="glass-card corridor-card c-low" onclick="showDetails('Koyyuru – Chintapalle', 31, 'LOW', 'None', 0, 0, [17.66, 82.16])">
+              <div class="flex justify-between items-start">
+                <h3 class="font-bold text-lg">Koyyuru – Chintapalle</h3>
+                <span class="text-safe font-bold bg-green-900 bg-opacity-30 px-2 py-1 rounded text-xs">LOW</span>
+              </div>
+              <div class="text-sm text-gray mt-2">Cause: None</div>
+              <div class="flex gap-4 mt-2 text-xs">
+                <span>⚠️ 0 Incidents</span>
+              </div>
+              <div class="risk-bar-container"><div class="risk-bar bg-safe" style="width: 31%"></div></div>
+            </div>
+          </div>
+
+          <div id="corridor-details-panel" class="corridor-details glass-card p-4">
+            <button onclick="backToList()" class="text-cyan text-sm mb-4 hover:underline">← Back to List</button>
+            <h2 id="det-title" class="text-2xl font-bold gradient-text">Corridor Name</h2>
+            <div class="flex items-center gap-4 mt-2 mb-6">
+              <span id="det-score" class="text-3xl font-bold">0</span><span class="text-gray text-xl">/ 100 Risk</span>
+              <span id="det-badge" class="px-2 py-1 rounded text-sm font-bold">LEVEL</span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+              <div class="glass-card p-3 bg-opacity-30">
+                <div class="text-xs text-gray uppercase">Current Weather</div>
+                <div class="text-lg font-bold mt-1 text-cyan">Heavy Rain</div>
+              </div>
+              <div class="glass-card p-3 bg-opacity-30">
+                <div class="text-xs text-gray uppercase">Traffic Status</div>
+                <div class="text-lg font-bold mt-1 text-warn">Congested</div>
+              </div>
+            </div>
+            
+            <div class="mb-4">
+              <h4 class="font-bold mb-2 text-gray border-b border-gray-700 pb-1">AI 24h Prediction</h4>
+              <p class="text-sm">Risk level expected to <span class="text-danger font-bold">increase by 15%</span> due to continuous rainfall. Ground saturation high, landslide probability elevated.</p>
+            </div>
+            
+            <div class="mb-4">
+              <h4 class="font-bold mb-2 text-gray border-b border-gray-700 pb-1">Historical Incidents (30d)</h4>
+              <ul class="text-sm space-y-1">
+                <li>• 2 minor landslides</li>
+                <li>• 1 tree fall (cleared)</li>
+                <li>• Frequent waterlogging at KM-14</li>
+              </ul>
+            </div>
+            
+            <div class="mb-4">
+              <h4 class="font-bold mb-2 text-gray border-b border-gray-700 pb-1">Affected Vehicles</h4>
+              <div id="det-vehicles" class="text-sm">None</div>
+            </div>
+            
+            <div class="glass-card p-3 border-cyan border mt-auto bg-blue-900 bg-opacity-20">
+              <h4 class="font-bold text-cyan mb-1">Recommended Alternate</h4>
+              <p class="text-sm">Reroute via Anakapalli - Narsipatnam Highway (State Highway 39). +45 mins delay but safe.</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="js/components.js"></script>
+  <script src="js/map-engine.js"></script>
+  <script src="js/charts.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      SmartRoute.initSharedComponents({title: 'Risk Corridors', subtitle: 'High-Risk Transport Route Analysis'});
+      
+      MapEngine.initMap('map');
+      
+      // Draw corridors as thick lines
+      const corridors = [
+        { points: [[18.08, 82.66], [18.33, 82.87]], color: '#ff3b3b', risk: 'critical' },
+        { points: [[17.87, 82.35], [18.33, 82.87]], color: '#ff9500', risk: 'high' },
+        { points: [[17.67, 82.61], [18.08, 82.66]], color: '#ff9500', risk: 'high' },
+        { points: [[17.89, 82.17], [18.08, 82.66]], color: '#facc15', risk: 'mod' },
+        { points: [[17.68, 83.21], [17.67, 82.61]], color: '#facc15', risk: 'mod' },
+        { points: [[17.66, 82.16], [17.87, 82.35]], color: '#00ff88', risk: 'low' }
+      ];
+      
+      corridors.forEach(c => {
+        L.polyline(c.points, {
+          color: c.color,
+          weight: 6,
+          opacity: 0.8,
+          lineCap: 'round',
+          className: 'glowing-line'
+        }).addTo(MapEngine.map);
+      });
+      
+      MapEngine.addIncidents();
+      
+      // glowing line css injected via js since it's specific to map svg
+      const style = document.createElement('style');
+      style.innerHTML = `
+        .glowing-line { filter: drop-shadow(0 0 5px currentColor); }
+      `;
+      document.head.appendChild(style);
+    });
+    
+    function showDetails(name, score, level, cause, incidents, vehicles, coords) {
+      document.getElementById('corridor-list-panel').style.display = 'none';
+      const detailsPanel = document.getElementById('corridor-details-panel');
+      detailsPanel.classList.add('active-panel');
+      
+      document.getElementById('det-title').innerText = name;
+      document.getElementById('det-score').innerText = score;
+      
+      const badge = document.getElementById('det-badge');
+      badge.innerText = level;
+      badge.className = 'px-2 py-1 rounded text-sm font-bold';
+      let colorClass = 'text-safe bg-green-900';
+      if(level === 'CRITICAL') colorClass = 'text-danger bg-red-900';
+      else if(level === 'HIGH') colorClass = 'text-warn bg-orange-900';
+      else if(level === 'MODERATE') colorClass = 'text-yellow-400 bg-yellow-900';
+      badge.className += ' ' + colorClass + ' bg-opacity-30';
+      
+      document.getElementById('det-vehicles').innerHTML = vehicles > 0 ? 
+        `<span class="text-danger font-bold">${vehicles} vehicles currently in corridor</span>` : 'No tracked vehicles currently.';
+        
+      if(coords) {
+        MapEngine.map.flyTo(coords, 10, { duration: 1.5 });
+      }
+    }
+    
+    function backToList() {
+      document.getElementById('corridor-details-panel').classList.remove('active-panel');
+      document.getElementById('corridor-details-panel').style.display = 'none';
+      document.getElementById('corridor-list-panel').style.display = 'flex';
+      MapEngine.map.flyTo([17.8, 82.8], 8, { duration: 1 });
+    }
+  </script>
+</body>
+</html>

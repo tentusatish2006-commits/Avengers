@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartRoute - Alert Center</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+  
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    .stats-row {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      flex: 1;
+      padding: 15px;
+      text-align: center;
+    }
+    .layout-2col {
+      display: flex;
+      gap: 20px;
+      height: calc(100vh - 200px);
+    }
+    .left-col {
+      width: 40%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .filters {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 10px;
+      overflow-x: auto;
+    }
+    .filter-btn {
+      padding: 5px 10px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 4px;
+      background: transparent;
+      color: white;
+      cursor: pointer;
+    }
+    .filter-btn.active {
+      background: rgba(0,212,255,0.2);
+      border-color: #00d4ff;
+    }
+    .alert-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .alert-card {
+      padding: 15px;
+      border-left: 4px solid transparent;
+      cursor: pointer;
+      background: rgba(0,0,0,0.4);
+    }
+    .alert-card.critical { border-left-color: #ff3b3b; animation: pulse-border 2s infinite; }
+    .alert-card.high { border-left-color: #ff9500; }
+    .alert-card.medium { border-left-color: #ffd60a; }
+    .alert-card.info { border-left-color: #00d4ff; }
+    
+    @keyframes pulse-border {
+      0% { box-shadow: inset 4px 0 0 0 rgba(255,59,59,1); }
+      50% { box-shadow: inset 4px 0 10px 0 rgba(255,59,59,0.5); }
+      100% { box-shadow: inset 4px 0 0 0 rgba(255,59,59,1); }
+    }
+    
+    .right-col {
+      width: 60%;
+    }
+    .detail-panel {
+      height: 100%;
+      padding: 20px;
+      display: none;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .timeline {
+      margin-top: 20px;
+      border-left: 2px solid rgba(255,255,255,0.2);
+      padding-left: 15px;
+    }
+    .timeline-item {
+      position: relative;
+      margin-bottom: 15px;
+    }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -20px;
+      top: 5px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #00d4ff;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="main-content" id="main-content">
+      <main class="page-body">
+        
+        <div class="stats-row">
+          <div class="glass-card stat-card"><h3>Total</h3><h2 class="count-up">47</h2></div>
+          <div class="glass-card stat-card"><h3 class="text-danger">Critical</h3><h2 class="count-up">5</h2></div>
+          <div class="glass-card stat-card"><h3 class="text-warn">High</h3><h2 class="count-up">12</h2></div>
+          <div class="glass-card stat-card"><h3 style="color: #ffd60a;">Medium</h3><h2 class="count-up">18</h2></div>
+          <div class="glass-card stat-card"><h3 class="text-cyan">Info</h3><h2 class="count-up">12</h2></div>
+        </div>
+
+        <div class="layout-2col">
+          <div class="left-col">
+            <div class="filters">
+              <button class="filter-btn active" data-filter="all">ALL</button>
+              <button class="filter-btn" data-filter="critical">CRITICAL</button>
+              <button class="filter-btn" data-filter="high">HIGH</button>
+              <button class="filter-btn" data-filter="medium">MEDIUM</button>
+              <button class="filter-btn" data-filter="info">INFO</button>
+            </div>
+            
+            <div class="alert-list">
+              <div class="glass-card alert-card critical" data-type="critical">
+                <div class="text-sm">08:32 | Paderu</div>
+                <strong>SH-39 Landslide Blockage</strong>
+                <p class="text-sm">Complete road blockage at KM 48, 3 vehicles stranded</p>
+              </div>
+              <div class="glass-card alert-card critical" data-type="critical">
+                <div class="text-sm">09:15 | Narsipatnam</div>
+                <strong>Flash Flood Alert</strong>
+                <p class="text-sm">Rising water levels on NH-516E</p>
+              </div>
+              <div class="glass-card alert-card critical" data-type="critical">
+                <div class="text-sm">10:20 | Paderu PHC</div>
+                <strong>Medicine Delivery Delayed</strong>
+                <p class="text-sm">VH-001 diverted, ETA +2h</p>
+              </div>
+              <div class="glass-card alert-card high" data-type="high">
+                <div class="text-sm">11:05 | GK Veedhi</div>
+                <strong>Bridge Structural Warning</strong>
+                <p class="text-sm">Load capacity exceeded</p>
+              </div>
+              <div class="glass-card alert-card high" data-type="high">
+                <div class="text-sm">10:05 | Araku Valley</div>
+                <strong>Road Damage Detected</strong>
+                <p class="text-sm">AI analysis confirms damage</p>
+              </div>
+              <div class="glass-card alert-card high" data-type="high">
+                <div class="text-sm">13:10 | Hukumpeta</div>
+                <strong>Flash Flood</strong>
+                <p class="text-sm">Multiple roads affected</p>
+              </div>
+              <div class="glass-card alert-card medium" data-type="medium">
+                <div class="text-sm">14:00 | Alluri District</div>
+                <strong>Heavy Rain Forecast</strong>
+                <p class="text-sm">150mm expected overnight</p>
+              </div>
+              <div class="glass-card alert-card medium" data-type="medium">
+                <div class="text-sm">09:45 | Chintapalle</div>
+                <strong>Vehicle Delayed</strong>
+                <p class="text-sm">Food delivery 3h behind schedule</p>
+              </div>
+              <div class="glass-card alert-card medium" data-type="medium">
+                <div class="text-sm">11:48 | Narsipatnam KM12</div>
+                <strong>Road Crack Detected</strong>
+                <p class="text-sm">Monitoring required</p>
+              </div>
+              <div class="glass-card alert-card info" data-type="info">
+                <div class="text-sm">07:00 | HQ</div>
+                <strong>System Update</strong>
+                <p class="text-sm">Database synced</p>
+              </div>
+              <div class="glass-card alert-card info" data-type="info">
+                <div class="text-sm">08:00 | Paderu</div>
+                <strong>Officer Check-in</strong>
+                <p class="text-sm">Officer FO-042 reporting</p>
+              </div>
+              <div class="glass-card alert-card info" data-type="info">
+                <div class="text-sm">13:00 | Vizag</div>
+                <strong>Weather Update</strong>
+                <p class="text-sm">IMD rainfall alert issued</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="right-col">
+            <div class="glass-card detail-panel" id="detail-panel">
+              <div style="display:flex; justify-content: space-between;">
+                <h2 id="detail-title">SH-39 Landslide Blockage</h2>
+                <span class="badge badge-danger" id="detail-badge">CRITICAL</span>
+              </div>
+              <div class="text-cyan">📍 <span id="detail-loc">Paderu</span> | 🕒 <span id="detail-time">08:32</span></div>
+              
+              <div style="padding: 15px; background: rgba(0,0,0,0.5); border-radius: 8px;" id="detail-desc">
+                Complete road blockage at KM 48, 3 vehicles stranded
+              </div>
+              
+              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn btn-primary" onclick="window.location.href='map.html'">VIEW ON MAP</button>
+                <button class="btn" style="border: 1px solid #00d4ff; color: #00d4ff;" onclick="if(window.SmartRoute) SmartRoute.showToast('Officer Unit FO-042 assigned to sector.', 'info', 2500)">ASSIGN OFFICER</button>
+                <button class="btn" id="btn-ack" style="border: 1px solid #00ff88; color: #00ff88;" onclick="acknowledgeCurrentAlert(this)">ACKNOWLEDGE</button>
+                <button class="btn" style="border: 1px solid #ff9500; color: #ff9500;" onclick="window.location.href='emergency.html'">RESPOND</button>
+              </div>
+              
+              <div class="timeline">
+                <h4>Response Timeline</h4>
+                <div class="timeline-item">
+                  <strong>08:32</strong> - Alert auto-generated by AI Analysis
+                </div>
+                <div class="timeline-item">
+                  <strong>08:35</strong> - Notifications sent to nearby units
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="js/components.js"></script>
+  <script src="js/map-engine.js"></script>
+  <script src="js/charts.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (window.SmartRoute) {
+        SmartRoute.initSharedComponents({
+          title: 'Alert Center', 
+          subtitle: 'Active Notifications & Emergency Alerts'
+        });
+        SmartRoute.initCountUps();
+      }
+      
+      const listContainer = document.querySelector('.alert-list');
+      const filters = document.querySelectorAll('.filter-btn');
+      let currentFilter = 'all';
+      let selectedAlertCode = 'ALT-001';
+
+      function bindCardClicks() {
+        const cards = document.querySelectorAll('.alert-card');
+        cards.forEach(card => {
+          card.onclick = () => {
+            document.getElementById('detail-panel').style.display = 'flex';
+            const title = card.querySelector('strong') ? card.querySelector('strong').innerText : 'Emergency Alert';
+            const desc = card.querySelector('p') ? card.querySelector('p').innerText : '';
+            const loc = card.dataset.location || 'Visakhapatnam Agency';
+            const time = card.dataset.time || 'Just now';
+            const sev = (card.dataset.type || 'critical').toUpperCase();
+            selectedAlertCode = card.dataset.code || 'ALT-001';
+
+            document.getElementById('detail-title').innerText = title;
+            document.getElementById('detail-desc').innerText = desc;
+            if (document.getElementById('detail-loc')) document.getElementById('detail-loc').innerText = loc;
+            if (document.getElementById('detail-time')) document.getElementById('detail-time').innerText = time;
+            const badge = document.getElementById('detail-badge');
+            if (badge) {
+              badge.innerText = sev;
+              badge.className = sev === 'CRITICAL' ? 'badge badge-danger' : sev === 'HIGH' ? 'badge badge-warning' : 'badge badge-safe';
+            }
+          };
+        });
+      }
+
+      function applyFilter() {
+        const cards = document.querySelectorAll('.alert-card');
+        cards.forEach(card => {
+          const type = (card.getAttribute('data-type') || '').toLowerCase();
+          if (currentFilter === 'all' || type === currentFilter) {
+            card.style.display = 'block';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+      }
+
+      filters.forEach(btn => {
+        btn.addEventListener('click', () => {
+          filters.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentFilter = btn.getAttribute('data-filter');
+          applyFilter();
+        });
+      });
+
+      // Live alert polling
+      let lastAlertCount = 0;
+      async function loadLiveAlerts() {
+        try {
+          if (window.SmartRouteAPI && window.SmartRouteAPI.getAlerts) {
+            const alerts = await window.SmartRouteAPI.getAlerts();
+            if (alerts && alerts.length > 0) {
+              if (alerts.length !== lastAlertCount) {
+                lastAlertCount = alerts.length;
+                listContainer.innerHTML = '';
+                alerts.forEach(a => {
+                  const card = document.createElement('div');
+                  const sev = (a.severity || 'high').toLowerCase();
+                  card.className = `glass-card alert-card ${sev}`;
+                  card.setAttribute('data-type', sev);
+                  card.setAttribute('data-code', a.code || 'ALT-001');
+                  card.setAttribute('data-location', a.road_code || 'Agency Corridor');
+                  card.setAttribute('data-time', a.timestamp || 'Just now');
+                  card.innerHTML = `
+                    <div class="text-sm">${a.timestamp || 'Just now'} | ${a.road_code || 'SH-39'}</div>
+                    <strong>${a.title}</strong>
+                    <p class="text-sm">${a.message || 'Hazard alert'}</p>
+                  `;
+                  listContainer.appendChild(card);
+                });
+                bindCardClicks();
+                applyFilter();
+                
+                // Update stats
+                const statCards = document.querySelectorAll('.stat-card h2');
+                if (statCards.length >= 5) {
+                  statCards[0].textContent = alerts.length;
+                  statCards[1].textContent = alerts.filter(a => (a.severity||'').toLowerCase() === 'critical').length;
+                  statCards[2].textContent = alerts.filter(a => (a.severity||'').toLowerCase() === 'high').length;
+                  statCards[3].textContent = alerts.filter(a => (a.severity||'').toLowerCase() === 'medium').length;
+                  statCards[4].textContent = alerts.filter(a => (a.severity||'').toLowerCase() === 'info').length;
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Alert polling:', e);
+        }
+      }
+
+      await loadLiveAlerts();
+      bindCardClicks();
+
+      // Poll every 5s for auto-updates when an incident is created
+      setInterval(loadLiveAlerts, 5000);
+
+      // Wire Acknowledge button
+      const ackBtn = document.getElementById('btn-ack');
+      window.acknowledgeCurrentAlert = async function(btn) {
+        btn.textContent = '✓ ACKNOWLEDGED';
+        const badge = document.getElementById('detail-badge');
+        if (badge) {
+          badge.textContent = 'ACKNOWLEDGED';
+          badge.className = 'badge badge-safe';
+        }
+        try {
+          if (window.SmartRouteAPI && window.SmartRouteAPI.acknowledgeAlert) {
+            await window.SmartRouteAPI.acknowledgeAlert(selectedAlertCode);
+          }
+        } catch(e) {}
+        if (window.SmartRoute) SmartRoute.showToast(`Alert ${selectedAlertCode} marked acknowledged`, 'success', 2500);
+      };
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartRoute - Emergency Response</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- CDNs -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+    
+    <!-- Local CSS -->
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/components.css">
+    
+    <style>
+        .layout-3col {
+            display: grid;
+            grid-template-columns: 280px 1fr 300px;
+            gap: 20px;
+            height: calc(100vh - 100px);
+            padding: 20px 0;
+        }
+        
+        .panel {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        
+        /* Queue Panel */
+        .header-pulse {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .pulse-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--danger);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--danger);
+            animation: pulse-glow 1.5s infinite;
+        }
+        
+        .incident-card {
+            background: rgba(255,255,255,0.03);
+            border-left: 4px solid;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .incident-card:hover {
+            transform: translateX(4px);
+            background: rgba(255,255,255,0.08);
+        }
+        .incident-card.critical { border-left-color: var(--danger); }
+        .incident-card.high { border-left-color: var(--warn); }
+        .incident-card.medium { border-left-color: var(--cyan); }
+        
+        .incident-card .title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+        .incident-card .meta { font-size: 0.75rem; color: #aaa; margin-bottom: 8px; }
+        
+        /* Map Area */
+        .map-container {
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        #emergency-map {
+            width: 100%;
+            height: 100%;
+            background: #030810;
+        }
+        
+        /* Response Panel */
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 15px 0;
+            padding-left: 10px;
+            border-left: 2px solid rgba(255,255,255,0.1);
+        }
+        .timeline-node {
+            position: relative;
+            padding-left: 20px;
+            font-size: 0.8rem;
+            color: #888;
+        }
+        .timeline-node::before {
+            content: '';
+            position: absolute;
+            left: -25px;
+            top: 2px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #333;
+            border: 2px solid #555;
+        }
+        .timeline-node.done { color: #fff; }
+        .timeline-node.done::before {
+            background: var(--safe);
+            border-color: var(--safe);
+            box-shadow: 0 0 10px var(--safe);
+        }
+        .timeline-node.active { color: var(--cyan); font-weight: 600; }
+        .timeline-node.active::before {
+            background: var(--cyan);
+            border-color: var(--cyan);
+            box-shadow: 0 0 10px var(--cyan);
+            animation: pulse-glow 1.5s infinite;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+            padding-bottom: 4px;
+        }
+        .detail-label { color: #aaa; }
+        .detail-val { font-weight: 600; text-align: right; }
+        
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <div class="main-content" id="main-content">
+            <main class="page-body">
+                <div class="layout-3col">
+                    
+                    <!-- LEFT: Incident Queue -->
+                    <div class="panel glass-card">
+                        <div class="card-header border-bottom">
+                            <div class="header-pulse">
+                                <div class="pulse-dot"></div>
+                                <h3>🚨 ACTIVE EMERGENCIES</h3>
+                            </div>
+                        </div>
+                        <div class="p-3">
+                            <div class="incident-card critical">
+                                <div class="title">SH-39 Landslide</div>
+                                <div class="meta">CRITICAL — 08:32 — Response: In Progress</div>
+                                <button class="btn btn-primary btn-sm w-100">RESPOND</button>
+                            </div>
+                            <div class="incident-card critical">
+                                <div class="title">NH-516E Flood</div>
+                                <div class="meta">CRITICAL — 09:15 — Response: Dispatched</div>
+                                <button class="btn btn-outline btn-sm w-100">VIEW</button>
+                            </div>
+                            <div class="incident-card high">
+                                <div class="title">Medicine Delivery Risk</div>
+                                <div class="meta">HIGH — 10:20 — Response: Rerouting</div>
+                                <button class="btn btn-outline btn-sm w-100">VIEW</button>
+                            </div>
+                            <div class="incident-card high">
+                                <div class="title">Bridge Warning GK Veedhi</div>
+                                <div class="meta">HIGH — 11:05 — Response: Monitoring</div>
+                                <button class="btn btn-outline btn-sm w-100">VIEW</button>
+                            </div>
+                            <div class="incident-card medium">
+                                <div class="title">Road Damage Araku</div>
+                                <div class="meta">MEDIUM — 10:05 — Response: Scheduled</div>
+                                <button class="btn btn-outline btn-sm w-100">VIEW</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CENTER: Map -->
+                    <div class="map-container">
+                        <div id="emergency-map"></div>
+                    </div>
+
+                    <!-- RIGHT: Response Panel -->
+                    <div class="panel glass-card">
+                        <div class="card-header border-bottom">
+                            <h3 class="gradient-text">RESPONSE COMMAND</h3>
+                        </div>
+                        <div class="p-3">
+                            <h4 class="mb-3 text-danger">SH-39 Landslide</h4>
+                            
+                            <div class="timeline">
+                                <div class="timeline-node done">INCIDENT DETECTED</div>
+                                <div class="timeline-node done">AI ANALYSIS</div>
+                                <div class="timeline-node done">AUTHORITY ALERT</div>
+                                <div class="timeline-node active">TEAM ASSIGNED</div>
+                                <div class="timeline-node">ALTERNATE ROUTE</div>
+                                <div class="timeline-node">ROAD CLEARANCE</div>
+                                <div class="timeline-node">RESOLVED</div>
+                            </div>
+
+                            <div class="mt-4">
+                                <div class="detail-row">
+                                    <span class="detail-label">Affected Roads</span>
+                                    <span class="detail-val">SH-39 KM 45-52</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Affected Villages</span>
+                                    <span class="detail-val">Munchingiput, Pedabayalu</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Vehicles at Risk</span>
+                                    <span class="detail-val text-warn">3</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Response Team</span>
+                                    <span class="detail-val text-cyan">NDRF Unit-7</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Alternate Route</span>
+                                    <span class="detail-val">Via Chintapalle SH-34</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Est. Resolution</span>
+                                    <span class="detail-val">8-12 hours</span>
+                                </div>
+                            </div>
+                            
+                            <div class="action-grid">
+                                <button class="btn btn-primary w-100">ASSIGN TEAM</button>
+                                <button class="btn btn-warn w-100" style="background: rgba(255, 149, 0, 0.2); border-color: var(--warn); color: var(--warn);">REDIRECT VEHICLES</button>
+                                <button class="btn btn-danger w-100" style="background: rgba(255, 59, 59, 0.2); border-color: var(--danger); color: var(--danger);">SEND ALERT</button>
+                                <button class="btn btn-outline w-100">UPDATE STATUS</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Local Scripts -->
+    <script src="js/components.js"></script>
+    <script src="js/map-engine.js"></script>
+    <script src="js/charts.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if(window.SmartRoute) {
+                SmartRoute.initSharedComponents({
+                    title: 'Emergency Response',
+                    subtitle: 'Crisis Management Command Center'
+                });
+                SmartRoute.initCountUps();
+            }
+
+            // Initialize Map
+            if(window.MapEngine) {
+                const emMap = MapEngine.initMap('emergency-map');
+                MapEngine.addRoads(emMap);
+                MapEngine.addIncidents(emMap);
+                MapEngine.addVehicles(emMap);
+                if(emMap) {
+                    emMap.setView([18.07, 82.74], 11);
+                }
+            }
+
+            // Interactive Action Buttons
+            const buttons = document.querySelectorAll('.action-grid button');
+            if (buttons.length >= 4) {
+                buttons[0].addEventListener('click', () => {
+                    if (window.SmartRoute) SmartRoute.showToast('NDRF Unit-7 deployment orders confirmed.', 'success', 2500);
+                    advanceTimeline(4);
+                });
+                buttons[1].addEventListener('click', () => {
+                    if (window.SmartRoute) SmartRoute.showToast('Autonomous diversion signal sent to VH-001 & VH-002.', 'info', 2500);
+                    advanceTimeline(5);
+                });
+                buttons[2].addEventListener('click', () => {
+                    if (window.SmartRoute) SmartRoute.showToast('Emergency broadcast transmitted to 14 Gram Panchayats.', 'warn', 2500);
+                });
+                buttons[3].addEventListener('click', () => {
+                    if (window.SmartRoute) SmartRoute.showToast('Sector status updated: Road Clearance underway.', 'success', 2500);
+                    advanceTimeline(6);
+                });
+            }
+
+            function advanceTimeline(nodeIdx) {
+                const nodes = document.querySelectorAll('.timeline-node');
+                nodes.forEach((n, i) => {
+                    if (i < nodeIdx) { n.className = 'timeline-node done'; }
+                    else if (i === nodeIdx) { n.className = 'timeline-node active'; }
+                });
+            }
+
+            // Incident card click handler
+            document.querySelectorAll('.incident-card').forEach((card, idx) => {
+                card.addEventListener('click', () => {
+                    document.querySelectorAll('.incident-card').forEach(c => c.style.background = '');
+                    card.style.background = 'rgba(0, 212, 255, 0.12)';
+                    const title = card.querySelector('.title').textContent;
+                    document.querySelector('.p-3 h4').textContent = title;
+                    if (window.SmartRoute) SmartRoute.showToast(`Loading crisis telemetry for: ${title}`, 'info', 1800);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

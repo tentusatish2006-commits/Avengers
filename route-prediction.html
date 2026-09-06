@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Route Prediction - SmartRoute</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Local CSS -->
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/components.css">
+
+    <style>
+        .page-body {
+            display: grid;
+            grid-template-columns: 280px 1fr 300px;
+            gap: 20px;
+            height: calc(100vh - 80px); /* Adjust based on navbar */
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .input-panel, .analysis-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .form-group select {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+            color: var(--text-light);
+            padding: 10px;
+            border-radius: 6px;
+            font-family: 'Outfit', sans-serif;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .form-group select:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+        }
+
+        .map-container {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-dark);
+        }
+
+        /* AI Scanning Animation Overlay */
+        .ai-scanner-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(3, 8, 16, 0.7);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            pointer-events: none;
+        }
+
+        .ai-scanner-overlay.active {
+            display: flex;
+        }
+
+        .scan-ring {
+            position: absolute;
+            border: 2px solid var(--accent-cyan);
+            border-radius: 50%;
+            opacity: 0;
+            animation: pulse-ring 2s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+        }
+
+        .scan-ring:nth-child(2) { animation-delay: 0.5s; }
+        .scan-ring:nth-child(3) { animation-delay: 1s; }
+
+        @keyframes pulse-ring {
+            0% { width: 0; height: 0; opacity: 1; }
+            100% { width: 300px; height: 300px; opacity: 0; }
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--accent-cyan);
+            box-shadow: 0 0 20px var(--accent-cyan);
+            animation: scan-sweep 2.5s linear infinite;
+        }
+
+        @keyframes scan-sweep {
+            0% { top: 0; }
+            50% { top: 100%; }
+            100% { top: 0; }
+        }
+
+        .scan-text {
+            color: var(--accent-cyan);
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--accent-cyan);
+            z-index: 10;
+        }
+
+        /* Analysis Panel */
+        .initial-state {
+            text-align: center;
+            color: var(--text-muted);
+            margin-top: 50px;
+        }
+
+        .results-state {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .results-state.active {
+            display: flex;
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .risk-gauge {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: conic-gradient(var(--status-danger) 78%, rgba(255,255,255,0.1) 0);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .risk-gauge::before {
+            content: '';
+            position: absolute;
+            width: 130px;
+            height: 130px;
+            background: var(--bg-card);
+            border-radius: 50%;
+        }
+
+        .risk-gauge-text {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+
+        .risk-gauge-text h2 {
+            margin: 0;
+            color: var(--status-danger);
+            font-size: 2rem;
+            text-shadow: 0 0 10px var(--status-danger);
+        }
+
+        .risk-gauge-text span {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .risk-bar-container {
+            margin-bottom: 10px;
+        }
+
+        .risk-bar-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+        }
+
+        .risk-bar {
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .risk-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .metric-item {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .metric-item .label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .metric-item .value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .metric-item.danger .value { color: var(--status-danger); }
+
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <div class="main-content" id="main-content">
+            <main class="page-body">
+                
+                <!-- LEFT: Input Panel -->
+                <div class="glass-card input-panel">
+                    <h2 class="gradient-text" style="font-size: 1.2rem; margin-bottom: 10px;">ROUTE ANALYSIS</h2>
+                    
+                    <div class="form-group">
+                        <label>Source</label>
+                        <select id="source">
+                            <option value="vsp">Visakhapatnam Port</option>
+                            <option value="nrsp">Narsipatnam</option>
+                            <option value="paderu">Paderu</option>
+                            <option value="koyyuru">Koyyuru</option>
+                            <option value="vizag">Vizag Urban</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Destination</label>
+                        <select id="dest">
+                            <option value="paderu">Paderu</option>
+                            <option value="araku">Araku Valley</option>
+                            <option value="chintapalle">Chintapalle</option>
+                            <option value="gkveedhi">GK Veedhi</option>
+                            <option value="hukumpeta">Hukumpeta</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Vehicle Type</label>
+                        <select id="vehicle-type">
+                            <option>Medicine Truck</option>
+                            <option>Food Vehicle</option>
+                            <option>Emergency</option>
+                            <option>Construction</option>
+                            <option>Personnel</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cargo Priority</label>
+                        <select id="priority">
+                            <option>Critical</option>
+                            <option>High</option>
+                            <option>Normal</option>
+                        </select>
+                    </div>
+
+                    <button class="btn-primary" style="margin-top: auto;" onclick="analyzeRoute()">ANALYZE ROUTE</button>
+                </div>
+
+                <!-- CENTER: Map -->
+                <div class="map-container">
+                    <div id="map"></div>
+                    <div class="ai-scanner-overlay" id="scanner">
+                        <div class="scan-ring"></div>
+                        <div class="scan-ring"></div>
+                        <div class="scan-ring"></div>
+                        <div class="scan-line"></div>
+                        <div class="scan-text">AI ANALYZING ROUTE...</div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: Analysis Panel -->
+                <div class="glass-card analysis-panel">
+                    <div class="initial-state" id="initial-state">
+                        Configure route parameters and click Analyze to view AI insights.
+                    </div>
+
+                    <div class="results-state" id="results-state">
+                        <div class="risk-gauge" id="risk-gauge">
+                            <div class="risk-gauge-text">
+                                <h2 class="count-up" id="risk-gauge-val" data-target="78">78</h2>
+                                <span id="risk-gauge-sub">% RISK — HIGH</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 style="font-size: 0.9rem; margin-bottom: 10px; color: var(--text-muted);">RISK BREAKDOWN</h3>
+                            
+                            <div class="risk-bar-container">
+                                <div class="risk-bar-label"><span>Road Condition</span><span id="val-road">65%</span></div>
+                                <div class="risk-bar"><div id="bar-road" class="risk-bar-fill" style="width: 65%; background: var(--status-warn);"></div></div>
+                            </div>
+                            
+                            <div class="risk-bar-container">
+                                <div class="risk-bar-label"><span>Weather Risk</span><span id="val-weather">82%</span></div>
+                                <div class="risk-bar"><div id="bar-weather" class="risk-bar-fill" style="width: 82%; background: var(--status-danger);"></div></div>
+                            </div>
+
+                            <div class="risk-bar-container">
+                                <div class="risk-bar-label"><span>Traffic Load</span><span id="val-traffic">45%</span></div>
+                                <div class="risk-bar"><div id="bar-traffic" class="risk-bar-fill" style="width: 45%; background: var(--status-warn);"></div></div>
+                            </div>
+
+                            <div class="risk-bar-container">
+                                <div class="risk-bar-label"><span>Flood Risk</span><span id="val-flood">78%</span></div>
+                                <div class="risk-bar"><div id="bar-flood" class="risk-bar-fill" style="width: 78%; background: var(--status-danger);"></div></div>
+                            </div>
+
+                            <div class="risk-bar-container">
+                                <div class="risk-bar-label"><span>Landslide Risk</span><span id="val-landslide">71%</span></div>
+                                <div class="risk-bar"><div id="bar-landslide" class="risk-bar-fill" style="width: 71%; background: var(--status-warn);"></div></div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item danger" id="card-delay">
+                                <span class="label">Est. Delay</span>
+                                <span class="value" id="val-delay">+2h 35m</span>
+                            </div>
+                            <div class="metric-item" id="card-access">
+                                <span class="label">Road Accessibility</span>
+                                <span class="value" id="val-access">42%</span>
+                            </div>
+                            <div class="metric-item danger" id="card-disrupt">
+                                <span class="label">Disruption Prob.</span>
+                                <span class="value" id="val-disrupt">HIGH</span>
+                            </div>
+                            <div class="metric-item" id="card-departure">
+                                <span class="label">Rec. Departure</span>
+                                <span class="value" id="val-departure">06:00 AM</span>
+                            </div>
+                        </div>
+
+                        <a href="alternate-routes.html" class="btn-primary" style="text-align: center; text-decoration: none;">VIEW ALTERNATE ROUTES</a>
+                        <button class="btn-secondary" id="btn-gen-report">GENERATE REPORT</button>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+    
+    <script src="js/components.js"></script>
+    <script src="js/map-engine.js"></script>
+    <script src="js/charts.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if(window.SmartRoute) {
+                SmartRoute.initSharedComponents({
+                    title: 'AI Route Prediction',
+                    subtitle: 'Machine Learning Route Risk Analysis'
+                });
+            }
+
+            if(window.MapEngine) {
+                MapEngine.initMap('map', { center: [17.935, 82.520], zoom: 9 });
+            }
+        });
+
+        async function analyzeRoute() {
+            const scanner = document.getElementById('scanner');
+            const initialState = document.getElementById('initial-state');
+            const resultsState = document.getElementById('results-state');
+
+            const srcEl = document.getElementById('source');
+            const dstEl = document.getElementById('dest');
+            const vhEl = document.getElementById('vehicle-type');
+            const prioEl = document.getElementById('priority');
+
+            const source = srcEl ? srcEl.options[srcEl.selectedIndex].text : 'Visakhapatnam Port';
+            const destination = dstEl ? dstEl.options[dstEl.selectedIndex].text : 'Paderu';
+            const vehicleType = vhEl ? vhEl.value : 'Medicine Truck';
+            const priority = prioEl ? prioEl.value : 'Critical';
+
+            // Show scanner
+            scanner.classList.add('active');
+            initialState.style.display = 'none';
+            resultsState.classList.remove('active');
+
+            let data = null;
+            try {
+                if (window.SmartRouteAPI && window.SmartRouteAPI.predictRouteRisk) {
+                    data = await window.SmartRouteAPI.predictRouteRisk(source, destination, vehicleType, priority);
+                }
+            } catch (err) {
+                console.warn('API route prediction error, using fallback:', err);
+            }
+
+            await new Promise(r => setTimeout(r, 1200));
+
+            scanner.classList.remove('active');
+            resultsState.classList.add('active');
+
+            if (data && data.status === 'success') {
+                const score = Math.round(data.risk_score || 78);
+                const sev = (data.severity || 'HIGH').toUpperCase();
+                const gaugeVal = document.getElementById('risk-gauge-val');
+                const gaugeSub = document.getElementById('risk-gauge-sub');
+                const gauge = document.getElementById('risk-gauge');
+
+                if (gaugeVal) {
+                    gaugeVal.textContent = score;
+                    gaugeVal.setAttribute('data-target', score);
+                }
+                if (gaugeSub) {
+                    gaugeSub.textContent = `% RISK — ${sev}`;
+                }
+                if (gauge) {
+                    const col = score > 65 ? 'var(--status-danger)' : score > 35 ? 'var(--status-warn)' : 'var(--status-safe)';
+                    gauge.style.background = `conic-gradient(${col} ${score}%, rgba(255,255,255,0.1) 0)`;
+                }
+
+                const b = data.breakdown || {};
+                const setBar = (idVal, idBar, val) => {
+                    const vEl = document.getElementById(idVal);
+                    const bEl = document.getElementById(idBar);
+                    if (vEl) vEl.textContent = `${val}%`;
+                    if (bEl) {
+                        bEl.style.width = `${val}%`;
+                        bEl.style.background = val > 65 ? 'var(--status-danger)' : val > 35 ? 'var(--status-warn)' : 'var(--status-safe)';
+                    }
+                };
+                setBar('val-road', 'bar-road', b.road_condition || 65);
+                setBar('val-weather', 'bar-weather', b.weather_risk || 82);
+                setBar('val-traffic', 'bar-traffic', b.traffic_load || 45);
+                setBar('val-flood', 'bar-flood', b.flood_risk || 78);
+                setBar('val-landslide', 'bar-landslide', b.landslide_risk || 71);
+
+                const m = data.metrics || {};
+                const valDelay = document.getElementById('val-delay');
+                const valAccess = document.getElementById('val-access');
+                const valDisrupt = document.getElementById('val-disrupt');
+                const valDeparture = document.getElementById('val-departure');
+                if (valDelay) valDelay.textContent = m.est_delay || '+2h 35m';
+                if (valAccess) valAccess.textContent = `${m.road_accessibility_pct || 42}%`;
+                if (valDisrupt) valDisrupt.textContent = m.disruption_probability || 'HIGH';
+                if (valDeparture) valDeparture.textContent = m.rec_departure || '06:00 AM';
+            }
+
+            // Draw route on map
+            if (window.MapEngine) {
+                MapEngine.drawAlternateRoutes();
+                MapEngine.addIncidents();
+            }
+
+            if (window.SmartRoute && SmartRoute.showToast) {
+                SmartRoute.showToast(`AI ML prediction computed for ${source} ➔ ${destination}`, 'info');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnReport = document.getElementById('btn-gen-report');
+            if (btnReport) {
+                btnReport.addEventListener('click', () => {
+                    if (window.SmartRoute && SmartRoute.showToast) {
+                        SmartRoute.showToast('Compiling Route Risk Dossier (PDF)... Check Reports Center', 'success');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

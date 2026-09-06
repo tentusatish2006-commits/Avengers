@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartRoute - AI Command Center</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- CDNs -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+    
+    <!-- Local CSS -->
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/components.css">
+    
+    <style>
+        .layout-3col {
+            display: grid;
+            grid-template-columns: 320px 1fr 300px;
+            gap: 20px;
+            height: calc(100vh - 100px);
+            padding: 20px 0;
+        }
+        
+        .panel {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        /* Chat Panel */
+        .chat-history {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .chat-msg {
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 85%;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        .chat-user {
+            align-self: flex-end;
+            background: rgba(0, 212, 255, 0.15);
+            border: 1px solid var(--cyan-alpha);
+            border-bottom-right-radius: 4px;
+        }
+        .chat-ai {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom-left-radius: 4px;
+        }
+        .chat-input-area {
+            padding: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0,0,0,0.2);
+        }
+        .chat-input-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .chat-input-box input {
+            flex: 1;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            padding: 10px 15px;
+            color: #fff;
+            font-family: 'Outfit', sans-serif;
+        }
+        .chat-input-box input:focus {
+            outline: none;
+            border-color: var(--cyan);
+            box-shadow: 0 0 10px var(--cyan-alpha);
+        }
+        .suggested-queries {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .query-chip {
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .query-chip:hover {
+            background: rgba(0, 212, 255, 0.2);
+            border-color: var(--cyan);
+        }
+        
+        /* Map Area */
+        .map-container {
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid var(--cyan-alpha);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
+        }
+        #ai-map {
+            width: 100%;
+            height: 100%;
+            background: #030810;
+        }
+        
+        .ai-scanning-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            pointer-events: none;
+            display: none;
+        }
+        .ai-scanning-overlay.active {
+            display: block;
+        }
+        .scan-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid var(--cyan);
+            border-radius: 50%;
+            animation: ripple 2s infinite cubic-bezier(0.1, 0.8, 0.3, 1);
+        }
+        .scan-ring:nth-child(1) { animation-delay: 0s; }
+        .scan-ring:nth-child(2) { animation-delay: 0.6s; }
+        .scan-ring:nth-child(3) { animation-delay: 1.2s; }
+        
+        .floating-indicator {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--cyan);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--cyan);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+            display: none;
+        }
+        .floating-indicator.active {
+            display: block;
+            animation: pulse-glow 1.5s infinite;
+        }
+        
+        /* Intelligence Panel */
+        .intel-panel {
+            padding-right: 5px;
+            overflow-y: auto;
+        }
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.85rem;
+        }
+        .status-val { font-weight: 600; color: var(--safe); }
+        .status-val.live { color: var(--cyan); }
+        
+        .insight-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+        .insight-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        
+        .grid-matrix {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .matrix-cell {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            padding: 10px;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+        .matrix-cell .val {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-top: 5px;
+        }
+        
+        .typing-indicator span {
+            display: inline-block;
+            width: 4px;
+            height: 4px;
+            background: #fff;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes ripple {
+            0% { width: 0; height: 0; opacity: 1; }
+            100% { width: 300px; height: 300px; opacity: 0; }
+        }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <div class="main-content" id="main-content">
+            <main class="page-body">
+                <div class="layout-3col">
+                    
+                    <!-- LEFT: AI Chat Interface -->
+                    <div class="panel glass-card">
+                        <div class="card-header border-bottom">
+                            <h3 class="gradient-text">🤖 AI ASSISTANT</h3>
+                        </div>
+                        <div class="chat-history" id="chat-history">
+                            <div class="chat-msg chat-user">
+                                Which district has the highest risk?
+                            </div>
+                            <div class="chat-msg chat-ai">
+                                Alluri Sitharama Raju district has the highest risk score of 86/100. Active landslide on SH-39 and flash flood on NH-516E are the primary causes. 8 active incidents. Immediate rerouting recommended.
+                            </div>
+                            <div class="chat-msg chat-user">
+                                Which roads are blocked?
+                            </div>
+                            <div class="chat-msg chat-ai">
+                                Currently 4 roads are blocked: (1) SH-39 at KM 48 — Landslide (2) NH-516E KM 23 — Flood (3) MDR-15 — Road damage (4) VR-28 — Bridge warning. Alternate routes have been pre-calculated.
+                            </div>
+                            <div class="chat-msg chat-user">
+                                What is the safest route from Vizag to Paderu?
+                            </div>
+                            <div class="chat-msg chat-ai">
+                                Recommended: Vizag → Chintapalle → Paderu via SH-34. Risk: 28/100. ETA: 3h 45m. Current road condition: Good. No active incidents on this route.
+                            </div>
+                        </div>
+                        <div class="chat-input-area">
+                            <div class="chat-input-box">
+                                <input type="text" id="chat-input" placeholder="Ask AI about routes, incidents, risks...">
+                                <button class="btn btn-primary btn-sm" id="btn-send">SEND</button>
+                            </div>
+                            <div class="suggested-queries">
+                                <div class="query-chip">🔬 Analyze damage photo</div>
+                                <div class="query-chip">Highest risk district</div>
+                                <div class="query-chip">Blocked roads</div>
+                                <div class="query-chip">Safe route</div>
+                                <div class="query-chip">Medicine delays</div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- CENTER: Map -->
+                    <div class="map-container">
+                        <div class="floating-indicator" id="ai-scanning-text">AI SCANNING...</div>
+                        <div id="ai-map"></div>
+                        <div class="ai-scanning-overlay" id="scanning-rings">
+                            <div class="scan-ring"></div>
+                            <div class="scan-ring"></div>
+                            <div class="scan-ring"></div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT: Intelligence Panel -->
+                    <div class="panel glass-card intel-panel">
+                        <div class="card-header border-bottom">
+                            <h3>SYSTEM STATUS</h3>
+                        </div>
+                        <div class="p-3">
+                            <div class="status-row">
+                                <span>AI Engine</span>
+                                <span class="status-val">ACTIVE</span>
+                            </div>
+                            <div class="status-row">
+                                <span>Data Feed</span>
+                                <span class="status-val live">LIVE</span>
+                            </div>
+                            <div class="status-row">
+                                <span>Risk Model</span>
+                                <span class="status-val">v3.2</span>
+                            </div>
+                        </div>
+                        
+                        <div class="card-header border-bottom mt-2">
+                            <h3>CURRENT ALERTS</h3>
+                        </div>
+                        <div class="p-3">
+                            <div class="text-danger font-sm mb-2">● SH-39 Complete Blockage (Landslide)</div>
+                            <div class="text-warn font-sm mb-2">● NH-516E High Water Level</div>
+                            <div class="text-safe font-sm">● Rescue Team 7 Arrived at site</div>
+                        </div>
+
+                        <div class="card-header border-bottom mt-2">
+                            <h3>AI INSIGHTS</h3>
+                        </div>
+                        <div class="p-3">
+                            <div class="insight-card">⚡ 3 medicine deliveries may be delayed by 2+ hours</div>
+                            <div class="insight-card">🌧 Landslide probability +40% in next 6 hours for Paderu</div>
+                            <div class="insight-card">🚛 Reroute VH-002 via Koyyuru to save 45 minutes</div>
+                            <div class="insight-card">🛣 SH-39 may remain blocked for 8-12 hours</div>
+                        </div>
+
+                        <div class="card-header border-bottom mt-2">
+                            <h3>RISK MATRIX</h3>
+                        </div>
+                        <div class="p-3 grid-matrix">
+                            <div class="matrix-cell">
+                                <div>ASR District</div>
+                                <div class="val text-danger">86</div>
+                            </div>
+                            <div class="matrix-cell">
+                                <div>Parvathipuram</div>
+                                <div class="val text-warn">62</div>
+                            </div>
+                            <div class="matrix-cell">
+                                <div>Anakapalli</div>
+                                <div class="val text-safe">24</div>
+                            </div>
+                            <div class="matrix-cell">
+                                <div>Visakhapatnam</div>
+                                <div class="val text-safe">18</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Local Scripts -->
+    <script src="js/components.js"></script>
+    <script src="js/map-engine.js"></script>
+    <script src="js/charts.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if(window.SmartRoute) {
+                SmartRoute.initSharedComponents({
+                    title: 'AI Command Center',
+                    subtitle: 'Intelligent Decision Support System'
+                });
+                SmartRoute.initCountUps();
+            }
+
+            // Initialize Map
+            if(window.MapEngine) {
+                window.aiMap = MapEngine.initMap('ai-map');
+                MapEngine.addRoads(window.aiMap);
+                MapEngine.addIncidents(window.aiMap);
+                MapEngine.addVehicles(window.aiMap);
+            }
+
+            
+            // Chat Interaction Logic
+            const input = document.getElementById('chat-input');
+            const btnSend = document.getElementById('btn-send');
+            const history = document.getElementById('chat-history');
+            const scanRings = document.getElementById('scanning-rings');
+            const scanText = document.getElementById('ai-scanning-text');
+            
+            async function simulateAIResponse(userText) {
+                // Add user msg
+                const userDiv = document.createElement('div');
+                userDiv.className = 'chat-msg chat-user';
+                userDiv.textContent = userText;
+                history.appendChild(userDiv);
+                history.scrollTop = history.scrollHeight;
+                input.value = '';
+                
+                // Show scanning
+                scanRings.classList.add('active');
+                scanText.classList.add('active');
+                
+                // Typing indicator
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'chat-msg chat-ai typing-indicator';
+                typingDiv.innerHTML = '<span></span><span></span><span></span>';
+                history.appendChild(typingDiv);
+                history.scrollTop = history.scrollHeight;
+                
+                let aiHtml = '';
+                try {
+                    if (window.SmartRouteAPI && window.SmartRouteAPI.askAI) {
+                        const res = await window.SmartRouteAPI.askAI(userText);
+                        if (res && res.reply) {
+                            aiHtml = res.reply;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('API error, falling back to local NLP engine', e);
+                }
+
+                    const q = userText.toLowerCase();
+                    if (q.includes('photo') || q.includes('analyz') || q.includes('damage') || q.includes('image') || q.includes('vision')) {
+                        aiHtml = `<strong>🔬 COMPUTER VISION DAMAGE INFERENCE:</strong><br>
+                        <div style="border-radius:10px; overflow:hidden; margin:8px 0; border:1.5px solid rgba(0,212,255,0.4); position:relative; box-shadow:0 4px 16px rgba(0,0,0,0.6);">
+                            <img src="https://images.unsplash.com/photo-1580741569354-1d4be2b38a67?w=700&q=80" style="width:100%; height:140px; object-fit:cover; display:block;" alt="Damage Analysis">
+                            <div style="position:absolute; top:6px; right:6px; background:rgba(255,59,59,0.9); color:#fff; font-size:9px; font-weight:800; padding:2px 8px; border-radius:3px;">CRITICAL HAZARD: 96%</div>
+                            <div style="position:absolute; bottom:0; left:0; right:0; background:linear-gradient(transparent, rgba(3,8,16,0.9)); padding:6px 10px; font-size:10px; color:#aed6f1;">NH-13 Tawang Pass KM62 · Massive Landslide Debris</div>
+                        </div>
+                        ● <strong>Hazard Detected:</strong> Boulder deposits & mud obstruction (~180 m³).<br>
+                        ● <strong>Accessibility:</strong> 0% for heavy convoys · Single-lane clearing underway.<br>
+                        ● <strong>Recommendation:</strong> Reroute convoys via Alternate Route A (GS-1 Bypass).`;
+                        if (window.MapEngine && window.aiMap) {
+                            window.aiMap.flyTo([27.58, 91.86], 11, {duration: 1.5});
+                        }
+                    } else if (q.includes('highest risk') || q.includes('district')) {
+                        aiHtml = `<strong>CRITICAL RISK ASSESSMENT:</strong><br>
+                        Sector <strong>Assam / Brahmaputra Valley</strong> currently exhibits the highest vulnerability index: <strong>86/100</strong>.<br>
+                        ● <strong>Primary Threat:</strong> River surge flooding along Guwahati riverfront & Tawang Pass landslide.<br>
+                        ● <strong>Affected Corridors:</strong> AH-1, NH-27, NH-13.<br>
+                        ● <strong>Recommended Action:</strong> Divert freight via GS-1 / Shillong bypass; deploy NDRF Unit-4 at Guwahati.`;
+                    } else if (q.includes('blocked') || q.includes('road')) {
+                        aiHtml = `<strong>BLOCKED ROAD INTELLIGENCE:</strong><br>
+                        ● <strong>NH-13 (Tawang Pass KM62)</strong> is <strong>100% BLOCKED</strong> due to a 180 m³ rockfall/landslide.<br>
+                        ● <strong>AH-1 (Guwahati Riverfront)</strong> is <strong>PARTIALLY BLOCKED</strong> due to high river surge.<br>
+                        ● <strong>Recommended Action:</strong> Direct emergency convoys through elevated GS-1 corridor.`;
+                    } else if (q.includes('medicine') || q.includes('deliveries') || q.includes('delayed')) {
+                        aiHtml = `<strong>ESSENTIAL MEDICAL FLEET STATUS:</strong><br>
+                        ● <strong>VH-001 (MED-Convoy-NE1)</strong> carrying insulin & critical serums is rerouted via GS-1 bypass.<br>
+                        ● <strong>VH-003 (EMG-Truck-NE3)</strong> carrying relief tents safely en route.<br>
+                        ● <strong>AI Automated Action:</strong> Autonomous GPS waypoint dispatch sent. ETA adjusted to 16:05 (+1h 35m).`;
+                    } else if (q.includes('safest') || q.includes('alternate')) {
+                        aiHtml = `<strong>OPTIMAL SAFE ROUTE COMPUTED:</strong><br>
+                        ● <strong>Route A (Via GS-1 / Shillong Bypass)</strong> is <strong>100% ACCESSIBLE</strong>.<br>
+                        ● <strong>Telemetry:</strong> Distance 84 km · ETA 2h 10m · Combined Risk Index: <strong>14/100 (LOW)</strong>.<br>
+                        ● <strong>Highlight:</strong> Full road sensor health green; zero river surge risk.`;
+                    } else {
+                        aiHtml = `<strong>AI TELEMETRY ANALYSIS:</strong><br>
+                        North-Eastern corridor sensors report active monsoon saturation across regional passes.<br>
+                        ● <strong>Confidence:</strong> 96.2% · Predictive horizon: 6 hours.<br>
+                        ● <strong>Action:</strong> Real-time alerts dispatched to field officers. Rerouting protocols active.`;
+                    }
+
+
+                await new Promise(r => setTimeout(r, 600));
+
+                scanRings.classList.remove('active');
+                scanText.classList.remove('active');
+                if (history.contains(typingDiv)) {
+                    history.removeChild(typingDiv);
+                }
+                
+                const aiDiv = document.createElement('div');
+                aiDiv.className = 'chat-msg chat-ai';
+                aiDiv.innerHTML = aiHtml;
+                history.appendChild(aiDiv);
+                history.scrollTop = history.scrollHeight;
+            }
+            
+            btnSend.addEventListener('click', () => {
+                if(input.value.trim()) simulateAIResponse(input.value);
+            });
+            input.addEventListener('keypress', (e) => {
+                if(e.key === 'Enter' && input.value.trim()) simulateAIResponse(input.value);
+            });
+            
+            document.querySelectorAll('.query-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    input.value = chip.textContent;
+                    simulateAIResponse(chip.textContent);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Officer Dashboard - SmartRoute</title>
+    
+    <!-- CDNs -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+
+    <!-- Local Assets -->
+        <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/components.css">
+    
+    <style>
+        body {
+            background: #030810;
+            display: flex;
+            justify-content: center;
+        }
+        .mobile-container {
+            width: 100%;
+            max-width: 480px;
+            background: rgba(3, 8, 16, 0.95);
+            min-height: 100vh;
+            border-left: 1px solid rgba(255,255,255,0.05);
+            border-right: 1px solid rgba(255,255,255,0.05);
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .profile-card {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+        }
+        .prof-avatar {
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            background: #00d4ff;
+            color: #000;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.5rem; font-weight: bold;
+        }
+        .prof-info h2 { margin: 0; font-size: 1.2rem; }
+        .prof-info p { margin: 2px 0 0 0; color: #aaa; font-size: 0.9rem; }
+        .status-dot {
+            display: inline-block;
+            width: 10px; height: 10px;
+            background: #00ff88;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #00ff88;
+            margin-right: 5px;
+        }
+        
+        .gps-card {
+            padding: 15px;
+            position: relative;
+        }
+        #mini-map {
+            width: 100%;
+            height: 150px;
+            border-radius: 8px;
+            margin-top: 10px;
+            background: #111;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        .stat-box {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(0,212,255,0.2);
+            padding: 10px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .stat-box h3 { margin: 0; font-size: 1.5rem; color: #00d4ff; }
+        .stat-box p { margin: 5px 0 0 0; font-size: 0.8rem; color: #aaa; }
+        
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .action-btn {
+            background: rgba(0,212,255,0.1);
+            border: 1px solid rgba(0,212,255,0.3);
+            color: #fff;
+            height: 80px;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .action-btn:hover {
+            background: rgba(0,212,255,0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,212,255,0.2);
+        }
+        .btn-red {
+            background: rgba(255,59,59,0.1);
+            border-color: rgba(255,59,59,0.5);
+            color: #ff3b3b;
+        }
+        .btn-red:hover {
+            background: rgba(255,59,59,0.2);
+            box-shadow: 0 5px 15px rgba(255,59,59,0.3);
+        }
+        
+        .task-list { display: flex; flex-direction: column; gap: 10px; }
+        .task-card {
+            background: rgba(255,255,255,0.03);
+            border-left: 4px solid #ff9500;
+            padding: 12px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="mobile-container">
+        
+        <div class="top-bar">
+            <h3 style="margin:0; background: linear-gradient(90deg, #00d4ff, #00ff88); -webkit-background-clip: text; color: transparent;">SmartRoute</h3>
+            <div style="font-size: 1.5rem; cursor: pointer;">≡</div>
+        </div>
+        
+        <!-- Profile -->
+        <div class="glass-card profile-card">
+            <div class="prof-avatar">RK</div>
+            <div class="prof-info">
+                <h2>Ravi Kumar</h2>
+                <p>FO-042 | North-Eastern Command (Assam Sector)</p>
+                <p style="color: #00ff88; margin-top:5px;"><span class="status-dot"></span>ONLINE</p>
+            </div>
+        </div>
+
+        <!-- GPS -->
+        <div class="glass-card gps-card">
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color:#00d4ff; font-weight:bold;">📍 Current Location (2D Satellite View)</span>
+                <span style="color:#aaa; font-size:0.8rem;">Live GPS Telemetry</span>
+            </div>
+            <p style="margin:5px 0 0 0; font-size:0.95rem; font-family:'JetBrains Mono',monospace; color:#00d4ff;">26.1524° N, 91.7510° E</p>
+            <p style="margin:0; color:#aaa; font-size:0.85rem;">Guwahati Riverfront / Brahmaputra Sector, Assam</p>
+            <div id="mini-map" style="height:180px; border-radius:10px; margin-top:10px; border:1px solid rgba(0,212,255,0.3); overflow:hidden;"></div>
+        </div>
+
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-box">
+                <h3 class="count-up" data-val="3">3</h3>
+                <p>Reports</p>
+            </div>
+            <div class="stat-box">
+                <h3 class="count-up" data-val="2">2</h3>
+                <p>Assigned</p>
+            </div>
+            <div class="stat-box">
+                <h3>127<span style="font-size:0.8rem">km</span></h3>
+                <p>Traveled</p>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="action-grid">
+            <button class="action-btn" onclick="window.location.href='field-report.html'">
+                <span style="font-size: 1.5rem;">📍</span>
+                REPORT INCIDENT
+            </button>
+            <button class="action-btn" onclick="window.location.href='photo-analysis.html'">
+                <span style="font-size: 1.5rem;">📷</span>
+                UPLOAD PHOTO
+            </button>
+            <button class="action-btn btn-red" onclick="window.location.href='emergency.html'">
+                <span style="font-size: 1.5rem;">🚨</span>
+                EMERGENCY
+            </button>
+            <button class="action-btn" onclick="window.location.href='map.html'">
+                <span style="font-size: 1.5rem;">🗺</span>
+                VIEW MAP
+            </button>
+            <button class="action-btn" onclick="window.location.href='vehicle-tracking.html'">
+                <span style="font-size: 1.5rem;">🚛</span>
+                TRACK VEHICLE
+            </button>
+            <button class="action-btn" onclick="window.location.href='reports.html'">
+                <span style="font-size: 1.5rem;">📋</span>
+                MY REPORTS
+            </button>
+        </div>
+
+        <!-- Assigned Tasks -->
+        <div>
+            <h3 style="margin-bottom:10px; color:#fff;">Assigned Tasks</h3>
+            <div class="task-list">
+                <div class="task-card" style="cursor: pointer;" onclick="window.location.href='emergency.html'">
+                    <h4 style="margin:0 0 5px 0;">Verify Landslide on SH-39 ↗</h4>
+                    <p style="margin:0; font-size:0.85rem; color:#aaa;">Dist: 4.2 km • High Priority</p>
+                </div>
+                <div class="task-card" style="border-left-color: #ffd700; cursor: pointer;" onclick="window.location.href='infrastructure.html'">
+                    <h4 style="margin:0 0 5px 0;">Inspect Godavari Culvert ↗</h4>
+                    <p style="margin:0; font-size:0.85rem; color:#aaa;">Dist: 12.5 km • Medium Priority</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weather -->
+        <div class="glass-card" style="padding: 15px;">
+            <h4 style="margin:0 0 10px 0; color:#00d4ff;">Current Conditions</h4>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 2rem;">🌧</div>
+                <div style="text-align: right;">
+                    <div style="font-size: 1.2rem; font-weight: bold;">24°C</div>
+                    <div style="font-size: 0.9rem; color: #aaa;">Heavy Rain (45mm/hr)</div>
+                </div>
+            </div>
+            <div style="margin-top: 10px; font-size: 0.8rem; color: #ff9500; background: rgba(255,149,0,0.1); padding: 5px; border-radius: 4px;">
+                Advisory: Flash flood risk elevated in your sector.
+            </div>
+        </div>
+
+    </div>
+
+    <script src="js/components.js"></script>
+    <script src="js/map-engine.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if(window.SmartRoute && window.SmartRoute.initCountUps) {
+                SmartRoute.initCountUps();
+            }
+
+            // Init 2D Satellite mini map based on Google Satellite Topography photo
+            const officerLat = 26.1524;
+            const officerLng = 91.7510;
+
+            const map = L.map('mini-map', {
+                center: [officerLat, officerLng],
+                zoom: 11,
+                zoomControl: true,
+                attributionControl: false
+            });
+
+            // Google Satellite Hybrid with crystal labels matching uploaded photo
+            L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+                maxZoom: 20,
+                subdomains: ['mt0','mt1','mt2','mt3']
+            }).addTo(map);
+
+            if (window.MapEngine && window.MapEngine.addRegionLabels) {
+                MapEngine.addRegionLabels(map);
+            }
+
+            // Pulsing live radar beacon for Officer Ravi Kumar
+            const officerIcon = L.divIcon({
+                className: '',
+                html: `
+                    <div style="position:relative; width:34px; height:34px; display:flex; align-items:center; justify-content:center; transform:translate(-50%, -50%);">
+                        <div style="position:absolute; inset:0; border-radius:50%; background:rgba(0,212,255,0.45); animation:ripple 2s infinite ease-out;"></div>
+                        <div style="width:16px; height:16px; border-radius:50%; background:#00d4ff; border:2.5px solid #fff; box-shadow:0 0 16px #00d4ff; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:900; color:#000;">RK</div>
+                    </div>
+                `,
+                iconSize: [1, 1],
+                iconAnchor: [0, 0]
+            });
+
+            L.marker([officerLat, officerLng], {icon: officerIcon}).addTo(map)
+             .bindPopup('<b style="color:#00d4ff;">Officer Ravi Kumar (FO-042)</b><br>Guwahati Riverfront Base, Assam<br><span style="color:#00ff88; font-size:11px;">● LIVE ON DUTY · GPS SYNCED</span>')
+             .openPopup();
+
+            setTimeout(() => map.invalidateSize(), 150);
+        });
+    </script>
+</body>
+</html>
+

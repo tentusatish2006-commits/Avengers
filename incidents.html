@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incident Monitoring - SmartRoute</title>
+    
+    <!-- CDNs -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+    
+    <!-- Local CSS -->
+        <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/components.css">
+
+    <style>
+        .incident-layout {
+            display: grid;
+            grid-template-columns: 30% 40% 30%;
+            height: calc(100vh - 100px);
+            gap: 15px;
+            font-family: 'Outfit', sans-serif;
+        }
+        
+        /* Left Column: List */
+        .incident-list-col {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        .incident-list-col::-webkit-scrollbar {
+            width: 6px;
+        }
+        .incident-list-col::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 255, 0.3);
+            border-radius: 3px;
+        }
+        
+        .incident-card {
+            background: rgba(10, 15, 25, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(100, 200, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            color: #fff;
+        }
+        .incident-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 212, 255, 0.15);
+            border-color: rgba(0, 212, 255, 0.4);
+        }
+        .incident-card.selected {
+            border-color: #00d4ff;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+            background: rgba(0, 212, 255, 0.05);
+        }
+        .incident-card.critical {
+            animation: pulse-border-red 2s infinite;
+        }
+        @keyframes pulse-border-red {
+            0% { border-color: rgba(255, 59, 59, 0.3); }
+            50% { border-color: rgba(255, 59, 59, 0.8); box-shadow: 0 0 15px rgba(255,59,59,0.3); }
+            100% { border-color: rgba(255, 59, 59, 0.3); }
+        }
+        
+        .incident-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .incident-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .badge-critical { background: rgba(255, 59, 59, 0.2); color: #ff3b3b; border: 1px solid #ff3b3b; }
+        .badge-high { background: rgba(255, 149, 0, 0.2); color: #ff9500; border: 1px solid #ff9500; }
+        .badge-medium { background: rgba(0, 212, 255, 0.2); color: #00d4ff; border: 1px solid #00d4ff; }
+        
+        .incident-meta {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .btn-view-map {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+        }
+        .btn-view-map:hover {
+            background: rgba(0,212,255,0.1);
+            border-color: #00d4ff;
+            color: #00d4ff;
+        }
+
+        /* Center Column: Map */
+        .incident-map-col {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(100, 200, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+        #incident-map {
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Right Column: Details */
+        .incident-details-col {
+            background: rgba(10, 15, 25, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(100, 200, 255, 0.15);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            color: #fff;
+        }
+        .empty-state {
+            display: flex;
+            height: 100%;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-size: 15px;
+            text-align: center;
+        }
+        .detail-content {
+            display: none;
+            height: 100%;
+            flex-direction: column;
+            animation: fadeIn 0.3s ease-out;
+        }
+        .detail-content.active {
+            display: flex;
+        }
+        .detail-header {
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+        .detail-id {
+            color: #00d4ff;
+            font-size: 12px;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        .detail-title {
+            font-size: 22px;
+            background: linear-gradient(90deg, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        /* Timeline */
+        .timeline {
+            margin: 20px 0;
+            position: relative;
+            padding-left: 20px;
+            flex-grow: 1;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 5px;
+            top: 5px;
+            bottom: 25px;
+            width: 2px;
+            background: rgba(255,255,255,0.1);
+        }
+        .timeline-node {
+            position: relative;
+            margin-bottom: 18px;
+            font-size: 14px;
+            color: #64748b;
+            padding-left: 15px;
+            transition: all 0.3s;
+        }
+        .timeline-node::before {
+            content: '';
+            position: absolute;
+            left: -20px;
+            top: 4px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #1e293b;
+            border: 2px solid #64748b;
+            transition: all 0.3s;
+        }
+        .timeline-node.active { color: #fff; font-weight: 500; }
+        .timeline-node.active::before {
+            background: #00d4ff;
+            border-color: #00d4ff;
+            box-shadow: 0 0 12px #00d4ff;
+        }
+        
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .action-btn {
+            padding: 12px;
+            border-radius: 6px;
+            border: none;
+            font-size: 12px;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            transition: 0.2s;
+            text-align: center;
+        }
+        .btn-assign { background: #00d4ff; color: #000; }
+        .btn-assign:hover { box-shadow: 0 0 15px #00d4ff; transform: translateY(-2px); }
+        .btn-redirect { background: rgba(255, 149, 0, 0.2); color: #ff9500; border: 1px solid #ff9500; }
+        .btn-redirect:hover { background: #ff9500; color: #000; box-shadow: 0 0 15px #ff9500; transform: translateY(-2px); }
+        .btn-alert { background: rgba(255, 59, 59, 0.2); color: #ff3b3b; border: 1px solid #ff3b3b; }
+        .btn-alert:hover { background: #ff3b3b; color: #fff; box-shadow: 0 0 15px #ff3b3b; transform: translateY(-2px); }
+        .btn-status { background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+        .btn-status:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <div class="main-content" id="main-content">
+            <main class="page-body">
+                <div class="incident-layout">
+                    <!-- Left: List -->
+                    <div class="incident-list-col glass-card" style="border: none; background: transparent; padding: 0;">
+                        <a href="field-report.html" style="display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#ff3b3b,#ff6b00);color:#fff;text-decoration:none;padding:12px;border-radius:8px;font-weight:700;font-size:12px;letter-spacing:0.5px;box-shadow:0 4px 15px rgba(255,59,59,0.3);text-transform:uppercase;">🚨 REPORT NEW INCIDENT</a>
+                        <div id="incident-list" style="display:flex;flex-direction:column;gap:12px;"></div>
+                    </div>
+                    
+                    <!-- Center: Map -->
+                    <div class="incident-map-col">
+                        <div id="incident-map"></div>
+                    </div>
+                    
+                    <!-- Right: Details -->
+                    <div class="incident-details-col glass-card">
+                        <div class="empty-state" id="empty-state">
+                            <div>
+                                <div style="font-size: 40px; margin-bottom: 15px; color: #00d4ff;">⚡</div>
+                                Select an incident<br>to view details and take action
+                            </div>
+                        </div>
+                        
+                        <div class="detail-content" id="detail-content">
+                            <div class="detail-header">
+                                <div class="detail-id" id="det-id">INC-000</div>
+                                <div class="detail-title" id="det-title">Incident Title</div>
+                                <span class="badge" id="det-badge">SEVERITY</span>
+                            </div>
+                            
+                            <div style="font-size: 14px; color: #cbd5e1; margin-bottom: 20px; line-height: 1.6;">
+                                <div>📍 <span id="det-loc" style="color: #fff;">Location</span></div>
+                                <div>🛣 <span id="det-road" style="color: #fff;">Road</span></div>
+                                <div>⏱ <span id="det-time" style="color: #fff;">Time</span></div>
+                                <div style="color: #ff9500; margin-top: 10px; padding: 10px; background: rgba(255,149,0,0.1); border-radius: 6px; border: 1px solid rgba(255,149,0,0.2);">
+                                    ⚠ <span id="det-desc">Risk Description</span>
+                                </div>
+                            </div>
+                            
+                            <div style="font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 10px;">Response Timeline</div>
+                            <div class="timeline">
+                                <div class="timeline-node active">Detected (Auto-Sensor)</div>
+                                <div class="timeline-node" id="tl-verified">Verified (Command Center)</div>
+                                <div class="timeline-node" id="tl-alerted">Units Alerted</div>
+                                <div class="timeline-node">Response En Route</div>
+                                <div class="timeline-node">Resolved</div>
+                            </div>
+                            
+                            <div class="action-buttons">
+                                <button class="action-btn btn-assign">ASSIGN OFFICER</button>
+                                <button class="action-btn btn-redirect">REDIRECT VEHICLES</button>
+                                <button class="action-btn btn-alert">SEND ALERT</button>
+                                <button class="action-btn btn-status">UPDATE STATUS</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Local JS -->
+    <script src="js/components.js"></script>
+    <script src="js/map-engine.js"></script>
+    <script src="js/charts.js"></script>
+    
+    <script>
+        // NE India incident data
+        const incidentData = [
+            { id: 'INC-001', lat: 26.14, lng: 91.73, title: 'Flash Flood — Brahmaputra Embankment', type: 'Weather', severity: 'critical', time: '08:22', road: 'NH-27 Guwahati Sector', desc: 'River embankment breached. Water level 2.1m above road surface. NH-27 fully submerged.' },
+            { id: 'INC-002', lat: 27.58, lng: 91.86, title: 'Landslide — Tawang Pass KM 62', type: 'Obstruction', severity: 'critical', time: '09:15', road: 'NH-13 Tawang Sector', desc: 'Boulder rockfall blocking both carriageways. ~240 m³ debris. NDRF required.' },
+            { id: 'INC-003', lat: 25.67, lng: 94.10, title: 'Road Damage — Kohima NH-2', type: 'Road Hazard', severity: 'high', time: '10:40', road: 'NH-2 Kohima–Dimapur', desc: 'Deep fissures (4m wide) across primary lane. Structural integrity compromised.' },
+            { id: 'INC-004', lat: 25.57, lng: 91.89, title: 'Bridge Crack — Shillong Bypass', type: 'Infrastructure', severity: 'high', time: '11:55', road: 'NH-6 Shillong Bypass', desc: 'Longitudinal cracks detected on bridge deck. Load limit reduced to 5 tonnes.' },
+            { id: 'INC-005', lat: 24.82, lng: 92.79, title: 'Road Erosion — Silchar NH-306', type: 'Road Hazard', severity: 'medium', time: '12:18', road: 'NH-306 Silchar Sector', desc: 'Heavy monsoon erosion on shoulder. Single-lane traffic management in effect.' },
+            { id: 'INC-006', lat: 23.73, lng: 92.72, title: 'Debris Flow — Aizawl Hill Road', type: 'Weather', severity: 'high', time: '13:05', road: 'NH-54 Aizawl', desc: 'Saturated hillside debris covering 150m of NH-54. Heavy equipment dispatched.' }
+        ];
+
+        let map, markers = {};
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if(window.SmartRoute) {
+                SmartRoute.initSharedComponents({
+                    title: 'Incident Monitoring',
+                    subtitle: 'Active Incidents & Emergency Tracking'
+                });
+                if(SmartRoute.initCountUps) SmartRoute.initCountUps();
+            }
+            
+            // Google Satellite Hybrid map — NE India (matches reference photo)
+            if (window.MapEngine && window.MapEngine.initMap) {
+                map = MapEngine.initMap('incident-map', {
+                    center: [25.80, 91.60],
+                    zoom: 7,
+                    zoomControl: true,
+                    regionLabels: true
+                });
+            } else {
+                // Fallback direct Leaflet
+                map = L.map('incident-map', { zoomControl: false }).setView([25.80, 91.60], 7);
+                L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+                    subdomains: ['0','1','2','3'],
+                    attribution: '© Google'
+                }).addTo(map);
+                L.control.zoom({ position: 'bottomright' }).addTo(map);
+            }
+
+            // Fetch live incidents from backend if available
+            try {
+                if (window.SmartRouteAPI && window.SmartRouteAPI.getIncidents) {
+                    const live = await window.SmartRouteAPI.getIncidents();
+                    if (live && live.length) {
+                        incidentData.length = 0;
+                        live.forEach(i => incidentData.push({
+                            id: i.code || `INC-${i.id}`,
+                            title: i.title, type: i.type,
+                            severity: (i.severity || 'high').toLowerCase(),
+                            lat: i.lat || 26.14, lng: i.lng || 91.73,
+                            road: i.road_name || 'NH-27',
+                            time: i.detected_time || 'Just now',
+                            desc: i.description || 'Active hazard'
+                        }));
+                    }
+                }
+            } catch(e) { console.warn('Incident API:', e); }
+
+            renderList();
+            renderMarkers();
+        });
+
+        function renderList() {
+            const container = document.getElementById('incident-list');
+            container.innerHTML = '';
+            
+            incidentData.forEach(inc => {
+                const isCrit = inc.severity === 'critical';
+                const div = document.createElement('div');
+                div.className = `incident-card ${isCrit ? 'critical' : ''}`;
+                div.id = `card-${inc.id}`;
+                div.onclick = () => selectIncident(inc);
+                
+                let icon3d = isCrit ? '🚨' : inc.severity === 'high' ? '🚧' : '⚠️';
+
+                div.innerHTML = `
+                    <div class="incident-header">
+                        <div class="incident-title" style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size: 20px;">${icon3d}</span> ${inc.title}
+                        </div>
+                    </div>
+                    <div class="incident-meta">
+                        <div>ID: ${inc.id} | ${inc.type}</div>
+                        <div><span class="badge badge-${inc.severity}">${inc.severity}</span></div>
+                    </div>
+                    <div class="incident-meta" style="color: #cbd5e1;">
+                        <div>📍 Lat: ${inc.lat}, Lng: ${inc.lng}</div>
+                        <div>⏱ ${inc.time}</div>
+                    </div>
+                    <div><span style="font-size:11px; background:rgba(0,255,136,0.1); padding:2px 6px; border-radius:4px; color:#00ff88;">Status: Active</span></div>
+                    <div style="margin-top: 10px;">
+                        <button class="btn-view-map">VIEW ON MAP</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function renderMarkers() {
+            incidentData.forEach(inc => {
+                let color = inc.severity === 'critical' ? '#ff3b3b' : inc.severity === 'high' ? '#ff9500' : '#00d4ff';
+                let pulse = inc.severity === 'critical' ? 'animation: pulse-border-red 1s infinite;' : '';
+                
+                const markerHtml = `
+                    <div style="background:${color}; width:18px; height:18px; border-radius:50%; box-shadow:0 0 15px ${color}; border:2px solid #fff; ${pulse}"></div>
+                `;
+                const icon = L.divIcon({ html: markerHtml, className: '', iconSize: [18, 18] });
+                
+                const m = L.marker([inc.lat, inc.lng], { icon }).addTo(map);
+                m.on('click', () => { selectIncident(inc); });
+                markers[inc.id] = m;
+            });
+        }
+
+        function selectIncident(inc) {
+            // Update UI list
+            document.querySelectorAll('.incident-card').forEach(c => c.classList.remove('selected'));
+            document.getElementById(`card-${inc.id}`).classList.add('selected');
+
+            // Map FlyTo
+            map.flyTo([inc.lat, inc.lng], 13, { duration: 1.5 });
+            
+            // Show Popup on Map
+            markers[inc.id].bindPopup(`<b style="color:#000; font-family:'Outfit', sans-serif;">${inc.title}</b><br><span style="color:#333; font-family:'Outfit', sans-serif;">${inc.desc}</span>`).openPopup();
+
+            // Update Right Panel
+            document.getElementById('empty-state').style.display = 'none';
+            document.getElementById('detail-content').classList.remove('active');
+            
+            // Small delay to restart animation
+            setTimeout(() => {
+                document.getElementById('detail-content').classList.add('active');
+                
+                document.getElementById('det-id').innerText = inc.id;
+                document.getElementById('det-title').innerText = inc.title;
+                const badge = document.getElementById('det-badge');
+                badge.className = `badge badge-${inc.severity}`;
+                badge.innerText = inc.severity;
+                
+                document.getElementById('det-loc').innerText = `Lat: ${inc.lat}, Lng: ${inc.lng}`;
+                document.getElementById('det-road').innerText = inc.road;
+                document.getElementById('det-time').innerText = `Detected at ${inc.time}`;
+                document.getElementById('det-desc').innerText = inc.desc;
+                
+                // Animate Timeline nodes
+                document.querySelectorAll('.timeline-node').forEach((node, index) => {
+                    if(index > 0) node.classList.remove('active');
+                });
+                
+                setTimeout(() => document.getElementById('tl-verified').classList.add('active'), 600);
+                if(inc.severity === 'critical' || inc.severity === 'high') {
+                    setTimeout(() => document.getElementById('tl-alerted').classList.add('active'), 1200);
+                }
+            }, 50);
+        }
+    </script>
+</body>
+</html>

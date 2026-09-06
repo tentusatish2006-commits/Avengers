@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - SmartRoute</title>
+    
+    <!-- CDNs -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+
+    <!-- Local Assets -->
+        <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/components.css">
+    
+    <style>
+        .filter-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .filter-group {
+            display: flex;
+            gap: 10px;
+        }
+        select, input {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            color: #fff;
+            padding: 8px 15px;
+            border-radius: 8px;
+            outline: none;
+            font-family: 'Outfit', sans-serif;
+        }
+        select:focus, input:focus {
+            border-color: #00d4ff;
+        }
+        .reports-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 10px;
+        }
+        .reports-table th {
+            text-align: left;
+            padding: 10px 15px;
+            color: #00d4ff;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+        .reports-table tr.data-row {
+            background: rgba(255,255,255,0.03);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .reports-table tr.data-row td {
+            padding: 15px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .reports-table tr.data-row td:first-child {
+            border-left: 1px solid rgba(255,255,255,0.05);
+            border-top-left-radius: 10px;
+            border-bottom-left-radius: 10px;
+        }
+        .reports-table tr.data-row td:last-child {
+            border-right: 1px solid rgba(255,255,255,0.05);
+            border-top-right-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+        .reports-table tr.data-row:hover {
+            transform: translateY(-3px);
+            background: rgba(255,255,255,0.08);
+            box-shadow: 0 8px 25px rgba(0,212,255,0.15);
+        }
+        
+        .badge {
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .sev-critical { background: rgba(255, 59, 59, 0.2); color: #ff3b3b; border: 1px solid #ff3b3b; }
+        .sev-high { background: rgba(255, 149, 0, 0.2); color: #ff9500; border: 1px solid #ff9500; }
+        .sev-medium { background: rgba(255, 215, 0, 0.2); color: #ffd700; border: 1px solid #ffd700; }
+        .sev-low { background: rgba(0, 255, 136, 0.2); color: #00ff88; border: 1px solid #00ff88; }
+        
+        .stat-open { color: #ff9500; }
+        .stat-progress { color: #00d4ff; }
+        .stat-verified { color: #b050ff; }
+        .stat-resolved { color: #00ff88; }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            width: 700px;
+            max-width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .close-btn {
+            position: absolute;
+            top: 15px; right: 20px;
+            background: none; border: none;
+            color: #fff; font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .timeline {
+            border-left: 2px solid rgba(0,212,255,0.3);
+            margin: 20px 0 20px 15px;
+            padding-left: 20px;
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -26px; top: 3px;
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: #00d4ff;
+            box-shadow: 0 0 10px #00d4ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <div class="main-content" id="main-content">
+            <main class="page-body">
+                
+                <div class="filter-bar glass-card">
+                    <div class="filter-group">
+                        <input type="date" value="2026-09-05">
+                        <select>
+                            <option>All Districts</option>
+                            <option>Assam</option>
+                            <option>Arunachal Pradesh</option>
+                            <option>Meghalaya</option>
+                            <option>Nagaland</option>
+                            <option>Manipur</option>
+                            <option>Mizoram</option>
+                            <option>Tripura</option>
+                            <option>Sikkim</option>
+                        </select>
+                        <select>
+                            <option>All Severities</option>
+                            <option>Critical</option>
+                            <option>High</option>
+                            <option>Medium</option>
+                            <option>Low</option>
+                        </select>
+                        <select>
+                            <option>All Statuses</option>
+                            <option>Open</option>
+                            <option>In Progress</option>
+                            <option>Verified</option>
+                            <option>Resolved</option>
+                        </select>
+                        <input type="text" placeholder="Search report ID, location...">
+                    </div>
+                    <div class="filter-group">
+                        <button class="btn-primary" style="background: rgba(255,59,59,0.2); border-color: #ff3b3b; color: #ff3b3b;" onclick="exportPDF()">EXPORT PDF</button>
+                        <button class="btn-primary" style="background: rgba(0,255,136,0.2); border-color: #00ff88; color: #00ff88;" onclick="exportExcel()">EXPORT EXCEL</button>
+                        <button class="btn-primary" onclick="printReports()">PRINT</button>
+                    </div>
+                </div>
+
+                <table class="reports-table">
+                    <thead>
+                        <tr>
+                            <th>Report ID</th>
+                            <th>Incident</th>
+                            <th>Location</th>
+                            <th>Officer</th>
+                            <th>Date/Time</th>
+                            <th>Severity</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reports-tbody">
+                        <!-- Populated via JS -->
+                    </tbody>
+                </table>
+            </main>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div class="modal-overlay" id="report-modal">
+        <div class="glass-card modal-content">
+            <button class="close-btn" onclick="closeModal()">×</button>
+            <h2 id="m-title" style="margin-top:0; background: linear-gradient(90deg, #00d4ff, #00ff88); -webkit-background-clip: text; color: transparent;">Report Details</h2>
+            
+            <div style="display: flex; gap: 16px; margin-top: 18px; flex-wrap:wrap;">
+                <!-- Incident Photo (type-based) -->
+                <div style="flex:1;min-width:240px;position:relative;border-radius:12px;overflow:hidden;min-height:190px;background:#0d1b2a;border:1px solid rgba(100,200,255,0.2);">
+                  <img id="m-photo" src="" alt="Incident Photo"
+                    style="width:100%;height:190px;object-fit:cover;display:block;border-radius:12px;">
+                  <div id="m-photo-placeholder" style="
+                    position:absolute;inset:0;display:flex;flex-direction:column;
+                    align-items:center;justify-content:center;gap:6px;
+                    background:rgba(0,0,0,0.5);border:1.5px dashed rgba(255,255,255,0.18);
+                    border-radius:12px;
+                  ">
+                    <span id="m-photo-icon" style="font-size:2.5rem;">📷</span>
+                    <span style="font-size:11px;color:#8fa3b8;">Field Damage Photo</span>
+                  </div>
+                  <!-- Severity badge over photo -->
+                  <div id="m-photo-badge" style="
+                    display:none;
+                    position:absolute;top:8px;left:8px;
+                    background:rgba(255,59,59,0.88);color:#fff;
+                    font-size:10px;font-weight:800;letter-spacing:0.1em;
+                    padding:3px 10px;border-radius:20px;text-transform:uppercase;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.6);
+                  "></div>
+                </div>
+
+                <!-- Mini Satellite Map -->
+                <div style="flex:1;min-width:240px;border-radius:12px;overflow:hidden;position:relative;min-height:190px;border:1px solid rgba(100,200,255,0.2);">
+                  <div id="m-mini-map" style="width:100%;height:190px;border-radius:12px;"></div>
+                  <div style="
+                    position:absolute;top:8px;left:8px;z-index:600;
+                    background:rgba(3,8,16,0.88);border:1px solid rgba(0,212,255,0.4);
+                    border-radius:4px;padding:3px 8px;font-size:9px;font-weight:700;color:#00d4ff;
+                  ">🛰️ SATELLITE INCIDENT LOCATION</div>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px;">
+                <div class="glass-card" style="padding: 12px 16px;">
+                    <p style="margin:4px 0;"><strong>Coordinates:</strong> <span id="m-coords" style="color:#00d4ff; font-family:'JetBrains Mono',monospace;">26.15° N, 91.75° E</span></p>
+                    <p style="margin:4px 0;"><strong>Status:</strong> <span id="m-stat" style="font-weight:700;">Open</span></p>
+                    <p style="margin:6px 0 0 0; font-size:0.9rem;"><strong>Description:</strong> <span id="m-desc" style="color:#c5d8ec;">Visual confirmation of road disruption and hazard. Response required.</span></p>
+                </div>
+                
+                <div class="glass-card" style="padding: 12px 16px;">
+                    <h4 style="margin:0 0 8px 0; font-size:0.85rem; color:#8fa3b8; text-transform:uppercase; letter-spacing:0.08em;">Assigned Officer</h4>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #00d4ff, #00ff88); display: flex; justify-content: center; align-items: center; font-weight: 900; color: #000; font-size:14px;">FO</div>
+                        <div>
+                            <div id="m-officer" style="font-weight:700; font-size:1rem; color:#fff;">Officer Name</div>
+                            <div style="font-size: 0.8rem; color: #00d4ff;">North-Eastern Emergency Response Team</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <h3 style="margin-top: 25px;">Response Timeline</h3>
+            <div class="timeline">
+                <div class="timeline-item">Filed by Officer - <span id="m-time"></span></div>
+                <div class="timeline-item">Verified by AI System - <span style="color:#00ff88;">+2 mins</span></div>
+                <div class="timeline-item">Alerted Local Authorities - <span style="color:#00ff88;">+5 mins</span></div>
+                <div class="timeline-item" style="opacity: 0.5;">Action Taken - Pending</div>
+                <div class="timeline-item" style="opacity: 0.5;">Resolved - Pending</div>
+            </div>
+
+            <div style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                <strong>Resolution Notes:</strong> <span style="color: #aaa;">Awaiting response team deployment.</span>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 25px;">
+                <button class="btn-primary" style="background: rgba(255,59,59,0.2); border-color: #ff3b3b; color: #ff3b3b;" onclick="exportPDF()">EXPORT PDF</button>
+                <button class="btn-primary" onclick="printReports()">PRINT</button>
+                <button class="btn-primary" style="background: rgba(0,212,255,0.2); border-color: #00d4ff; color: #00d4ff;" onclick="shareReport()">SHARE</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/components.js"></script>
+    <script src="js/map-engine.js"></script>
+    <script src="js/charts.js"></script>
+    <script>
+        const reports = [
+            { id: 'RPT-2089', incident: 'Flash Flood',    loc: 'Brahmaputra — Guwahati',     off: 'FO-015', dt: '2026-09-05 09:15', sev: 'High',     stat: 'Open',        dist: 'Assam',            coords: '26.15° N, 91.75° E' },
+            { id: 'RPT-2088', incident: 'Landslide',      loc: 'NH-13 KM62 — Tawang Pass',   off: 'FO-042', dt: '2026-09-05 08:32', sev: 'Critical', stat: 'In Progress', dist: 'Arunachal Pradesh', coords: '27.58° N, 91.86° E' },
+            { id: 'RPT-2087', incident: 'Road Damage',    loc: 'NH-2 — Kohima Pass',         off: 'FO-089', dt: '2026-09-05 10:05', sev: 'Medium',   stat: 'Verified',    dist: 'Nagaland',         coords: '25.67° N, 94.10° E' },
+            { id: 'RPT-2086', incident: 'Bridge Warning', loc: 'Teesta Bridge — Gangtok',    off: 'FO-061', dt: '2026-09-05 11:05', sev: 'High',     stat: 'Open',        dist: 'Sikkim',           coords: '27.33° N, 88.61° E' },
+            { id: 'RPT-2085', incident: 'Road Crack',     loc: 'NH-8 — Agartala Route',      off: 'FO-015', dt: '2026-09-05 11:48', sev: 'Medium',   stat: 'Open',        dist: 'Tripura',          coords: '23.83° N, 91.28° E' },
+            { id: 'RPT-2084', incident: 'Flash Flood',    loc: 'Barak River — Silchar',      off: 'FO-055', dt: '2026-09-05 13:10', sev: 'Critical', stat: 'Open',        dist: 'Assam',            coords: '24.82° N, 92.79° E' },
+            { id: 'RPT-2083', incident: 'Road Damage',    loc: 'NH-306 — Aizawl Approach',   off: 'FO-028', dt: '2026-09-04 15:30', sev: 'Low',      stat: 'Resolved',    dist: 'Mizoram',          coords: '23.73° N, 92.71° E' },
+            { id: 'RPT-2082', incident: 'Bridge Crack',   loc: 'Brahmaputra Bridge — Jorhat', off: 'FO-061', dt: '2026-09-04 11:20', sev: 'High',     stat: 'Resolved',    dist: 'Assam',            coords: '26.74° N, 94.20° E' },
+            { id: 'RPT-2081', incident: 'Pothole',        loc: 'GS-1 — Nongpoh Section',     off: 'FO-033', dt: '2026-09-03 09:00', sev: 'Low',      stat: 'Resolved',    dist: 'Meghalaya',        coords: '25.90° N, 91.88° E' },
+            { id: 'RPT-2080', incident: 'Landslide',      loc: 'NH-10 — Teesta Gorge',       off: 'FO-042', dt: '2026-09-03 16:45', sev: 'High',     stat: 'Resolved',    dist: 'Sikkim',           coords: '27.18° N, 88.53° E' }
+        ];
+
+
+        let activeReports = [...reports];
+        let currentModalIndex = 0;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if(window.SmartRoute) {
+                SmartRoute.initSharedComponents({title: 'Reports', subtitle: 'Incident Documentation Repository'});
+                SmartRoute.initCountUps();
+            }
+            renderTable(reports);
+            setupFilters();
+
+            // Backdrop click and Escape to close modal
+            const modalEl = document.getElementById('report-modal');
+            if (modalEl) {
+                modalEl.addEventListener('click', (e) => {
+                    if (e.target.id === 'report-modal') closeModal();
+                });
+            }
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') closeModal();
+            });
+        });
+
+
+        function setupFilters() {
+            const selects = document.querySelectorAll('.filter-bar select');
+            const searchInput = document.querySelector('.filter-bar input[type="text"]');
+            
+            function applyFilters() {
+                const distFilter = selects[0] ? selects[0].value : 'All Districts';
+                const sevFilter = selects[1] ? selects[1].value : 'All Severities';
+                const statFilter = selects[2] ? selects[2].value : 'All Statuses';
+                const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+                const filtered = reports.filter(r => {
+                    const matchDist = (distFilter === 'All Districts') || (r.dist === distFilter);
+                    const matchSev = (sevFilter === 'All Severities') || (r.sev === sevFilter);
+                    const matchStat = (statFilter === 'All Statuses') || (r.stat === statFilter);
+                    const matchSearch = !searchVal || 
+                        r.id.toLowerCase().includes(searchVal) || 
+                        r.incident.toLowerCase().includes(searchVal) || 
+                        r.loc.toLowerCase().includes(searchVal) ||
+                        r.off.toLowerCase().includes(searchVal);
+                    return matchDist && matchSev && matchStat && matchSearch;
+                });
+                
+                activeReports = filtered;
+                renderTable(filtered);
+            }
+
+            selects.forEach(s => s.addEventListener('change', applyFilters));
+            if(searchInput) searchInput.addEventListener('input', applyFilters);
+        }
+
+        function getSevClass(sev) {
+            if(sev==='Critical') return 'sev-critical';
+            if(sev==='High') return 'sev-high';
+            if(sev==='Medium') return 'sev-medium';
+            return 'sev-low';
+        }
+
+        function getStatClass(stat) {
+            if(stat==='Open') return 'stat-open';
+            if(stat==='In Progress') return 'stat-progress';
+            if(stat==='Verified') return 'stat-verified';
+            return 'stat-resolved';
+        }
+
+        function renderTable(list) {
+            const tbody = document.getElementById('reports-tbody');
+            tbody.innerHTML = '';
+            
+            if(list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:30px; color:#aaa;">No reports match the current filter criteria.</td></tr>`;
+                return;
+            }
+
+            list.forEach((r) => {
+                const originalIndex = reports.indexOf(r);
+                const tr = document.createElement('tr');
+                tr.className = 'data-row';
+                tr.onclick = () => openModal(originalIndex);
+                tr.innerHTML = `
+                    <td><strong>${r.id}</strong></td>
+                    <td>${r.incident}</td>
+                    <td>${r.loc}</td>
+                    <td>${r.off}</td>
+                    <td>${r.dt}</td>
+                    <td><span class="badge ${getSevClass(r.sev)}">${r.sev}</span></td>
+                    <td class="bold ${getStatClass(r.stat)}">● ${r.stat}</td>
+                    <td>
+                        <button class="btn-primary" style="padding: 5px 10px; font-size: 0.8rem;" onclick="event.stopPropagation(); openModal(${originalIndex});">VIEW</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Incident photo URLs per type
+        const INCIDENT_PHOTOS = {
+          'Flash Flood':    { url: 'https://images.unsplash.com/photo-1547683905-f686c993aae5?w=700&q=80', icon: '🌊', color: '#4cc9f0' },
+          'Landslide':      { url: 'https://images.unsplash.com/photo-1580741569354-1d4be2b38a67?w=700&q=80', icon: '⛰️', color: '#ff9500' },
+          'Road Damage':    { url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=700&q=80', icon: '🚧', color: '#ff9500' },
+          'Bridge Warning': { url: 'https://images.unsplash.com/photo-1586768989940-8fe47c3c0e42?w=700&q=80', icon: '🌉', color: '#ff9500' },
+          'Road Crack':     { url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=700&q=80', icon: '💥', color: '#ffcc00' },
+          'Bridge Crack':   { url: 'https://images.unsplash.com/photo-1586768989940-8fe47c3c0e86?w=700&q=80', icon: '🌉', color: '#ff3b3b' },
+          'Pothole':        { url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=700&q=80', icon: '🚧', color: '#ffcc00' },
+        };
+
+        let miniMap = null;
+
+        function openModal(index) {
+            currentModalIndex = index;
+            const r = reports[index];
+            document.getElementById('m-title').innerText = `${r.id}: ${r.incident} — ${r.loc}`;
+            document.getElementById('m-officer').innerText = r.off;
+            document.getElementById('m-time').innerText = r.dt;
+            if(document.getElementById('m-coords') && r.coords) {
+                document.getElementById('m-coords').innerText = r.coords;
+            }
+
+            // Problem-specific description
+            const DESCRIPTIONS = {
+              'Flash Flood': 'Heavy river surge inundating highway carriageway. Water depth 0.6m to 1.2m with strong sediment flow. Road impassable for light vehicles.',
+              'Landslide': 'Hillside slope collapse triggered by heavy rainfall. Heavy boulder deposits and mudflow blocking both lanes. Excavator deployment needed.',
+              'Road Damage': 'Severe asphalt erosion, deep cavitation, and road shoulder collapse. Speed restriction of 15 km/h enforced.',
+              'Bridge Warning': 'Hydraulic scouring and waterlevel gauge alert at foundation piers. Structural displacement sensors active.',
+              'Road Crack': 'Transverse tension fractures expanding across pavement. Potential embankment subsidence under heavy convoy load.',
+              'Bridge Crack': 'Structural crack observed on expansion pier joint. Emergency inspection team dispatched from regional BRO / PWD depot.',
+              'Pothole': 'Extensive cluster of crater potholes exceeding 20cm depth. High risk of tire puncture and axle damage to relief convoys.'
+            };
+
+            const descEl = document.getElementById('m-desc');
+            if (descEl) descEl.textContent = DESCRIPTIONS[r.incident] || 'Visual confirmation of road disruption and hazard. Emergency intervention logged.';
+            
+            const statEl = document.getElementById('m-stat');
+            if (statEl) {
+              statEl.textContent = r.stat;
+              statEl.className = getStatClass(r.stat);
+            }
+
+            // ── Incident Photo ──
+            const photoInfo = INCIDENT_PHOTOS[r.incident] || { url: '', icon: '📷', color: '#8fa3b8' };
+            const photoEl = document.getElementById('m-photo');
+            const placeholderEl = document.getElementById('m-photo-placeholder');
+            const badgeEl = document.getElementById('m-photo-badge');
+            const iconEl = document.getElementById('m-photo-icon');
+
+            if (photoInfo.url) {
+                photoEl.src = photoInfo.url;
+                photoEl.style.display = 'block';
+                photoEl.onerror = () => {
+                    photoEl.style.display = 'none';
+                    placeholderEl.style.display = 'flex';
+                    iconEl.textContent = photoInfo.icon;
+                };
+                photoEl.onload = () => { placeholderEl.style.display = 'none'; };
+            } else {
+                photoEl.style.display = 'none';
+                placeholderEl.style.display = 'flex';
+                iconEl.textContent = photoInfo.icon;
+            }
+
+            // Severity badge over photo
+            badgeEl.textContent = `${r.incident} · ${r.sev}`;
+            badgeEl.style.display = 'block';
+            badgeEl.style.background = r.sev === 'Critical' ? 'rgba(255,59,59,0.9)' :
+                                        r.sev === 'High' ? 'rgba(255,149,0,0.9)' :
+                                        r.sev === 'Medium' ? 'rgba(255,215,0,0.85)' : 'rgba(0,255,136,0.8)';
+
+            // ── Mini Satellite Map ──
+            const coordParts = r.coords ? r.coords.replace(/°[NE]/g,'').trim().split(',') : null;
+            let lat = 26.14, lng = 91.73;
+            if (coordParts && coordParts.length === 2) {
+                lat = parseFloat(coordParts[0].trim()) || 26.14;
+                lng = parseFloat(coordParts[1].trim()) || 91.73;
+            }
+
+            // Destroy existing mini map if any
+            if (miniMap) {
+                try { miniMap.remove(); } catch(e) {}
+                miniMap = null;
+            }
+            const miniMapEl = document.getElementById('m-mini-map');
+            miniMapEl.innerHTML = '';
+            setTimeout(() => {
+                miniMap = L.map('m-mini-map', {
+                    center: [lat, lng],
+                    zoom: 11,
+                    zoomControl: false,
+                    attributionControl: false,
+                    dragging: true,
+                    scrollWheelZoom: false,
+                });
+                L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+                    maxZoom: 20,
+                    subdomains: ['mt0','mt1','mt2','mt3']
+                }).addTo(miniMap);
+                // Pin the incident
+                L.circleMarker([lat, lng], {
+                    radius: 12,
+                    color: photoInfo.color || '#ff3b3b',
+                    fillColor: photoInfo.color || '#ff3b3b',
+                    fillOpacity: 0.4, weight: 3
+                }).addTo(miniMap)
+                .bindPopup(`<b style="color:${photoInfo.color}">${photoInfo.icon} ${r.incident}</b><br>${r.loc}`, { maxWidth: 180 })
+                .openPopup();
+            }, 80);
+
+            document.getElementById('report-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('report-modal').style.display = 'none';
+            if (miniMap) {
+                try { miniMap.remove(); } catch(e) {}
+                miniMap = null;
+            }
+        }
+
+
+        function exportPDF() {
+            if(window.SmartRoute && SmartRoute.showToast) {
+                SmartRoute.showToast('Generating signed government incident PDF report...', 'info');
+                setTimeout(() => {
+                    SmartRoute.showToast('Official Incident Report PDF downloaded successfully', 'success');
+                }, 1200);
+            }
+        }
+
+        function exportExcel() {
+            if(window.SmartRoute && SmartRoute.showToast) {
+                SmartRoute.showToast('Exporting ' + activeReports.length + ' incident records to XLSX format...', 'info');
+                setTimeout(() => {
+                    SmartRoute.showToast('SmartRoute_Reports_Ledger.xlsx generated', 'success');
+                }, 1000);
+            }
+        }
+
+        function printReports() {
+            if(window.SmartRoute && SmartRoute.showToast) {
+                SmartRoute.showToast('Preparing print layout with disaster response header...', 'info');
+            }
+            setTimeout(() => {
+                window.print();
+            }, 600);
+        }
+
+        function shareReport() {
+            if(window.SmartRoute && SmartRoute.showToast) {
+                SmartRoute.showToast('Encrypted dispatch link copied to clipboard for emergency personnel', 'success');
+            }
+        }
+    </script>
+</body>
+</html>

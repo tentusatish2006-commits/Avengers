@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartRoute - Field Report</title>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+  
+      <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    .mobile-container {
+      max-width: 500px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      padding-bottom: 30px;
+    }
+    .officer-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      background: #00ff88;
+      border-radius: 50%;
+      display: inline-block;
+      box-shadow: 0 0 8px #00ff88;
+    }
+    #mini-map {
+      height: 200px;
+      width: 100%;
+      border-radius: 8px;
+      margin-top: 10px;
+      display: none;
+    }
+    .photo-preview {
+      border: 2px dashed rgba(0, 212, 255, 0.5);
+      border-radius: 8px;
+      height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 10px;
+      color: rgba(255,255,255,0.5);
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 0.9em;
+    }
+    .form-control {
+      width: 100%;
+      padding: 12px;
+      background: rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #fff;
+      border-radius: 8px;
+    }
+    .btn-large {
+      padding: 15px;
+      font-size: 1.1em;
+      width: 100%;
+      text-transform: uppercase;
+      font-weight: bold;
+    }
+    .loading-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(3,8,16,0.9);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid rgba(0,212,255,0.2);
+      border-top-color: #00d4ff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .success-screen {
+      display: none;
+      text-align: center;
+    }
+    .success-icon {
+      font-size: 4rem;
+      color: #00ff88;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="main-content" id="main-content">
+      <main class="page-body">
+        
+        <div class="mobile-container" id="report-form">
+          <div class="glass-card officer-info">
+            <div>
+              <strong>FO-042 | Ravi Kumar</strong><br>
+              <span class="text-sm" style="color:#00d4ff;">North-Eastern Command (Assam Sector)</span>
+            </div>
+            <div class="text-right">
+              <span class="status-dot"></span> Online<br>
+              <span class="text-sm" id="current-time"></span>
+            </div>
+          </div>
+          
+          <div class="glass-card">
+            <button class="btn btn-primary btn-large" id="btn-location">📍 GET LOCATION</button>
+            <div id="location-data" class="text-sm text-cyan" style="margin-top: 10px; font-family:'JetBrains Mono',monospace;">Lat: 26.1524, Lng: 91.7510 · Guwahati Riverfront, Assam</div>
+            <div id="mini-map" style="height:200px; border-radius:10px; margin-top:10px; border:1px solid rgba(0,212,255,0.3); overflow:hidden;"></div>
+          </div>
+          
+          <div class="glass-card">
+            <button class="btn btn-primary btn-large" id="btn-photo">📷 TAKE PHOTO / UPLOAD</button>
+            <input type="file" id="file-input" accept="image/*" style="display:none;">
+            <div class="photo-preview" id="photo-preview" style="background-size:cover; background-position:center; height:150px; border-radius:8px; margin-top:10px; display:flex; align-items:center; justify-content:center; background-color:#0d1b2a; border:1px dashed rgba(0,212,255,0.4); color:#8fa3b8; font-size:12px;">No photo selected — click button or choose sample below</div>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+              <button type="button" class="btn" style="flex:1; font-size:10px; padding:6px; background:rgba(255,59,59,0.2); border:1px solid #ff3b3b; color:#ff3b3b;" onclick="attachSamplePhoto('landslide')">⛰️ Landslide</button>
+              <button type="button" class="btn" style="flex:1; font-size:10px; padding:6px; background:rgba(0,212,255,0.2); border:1px solid #00d4ff; color:#00d4ff;" onclick="attachSamplePhoto('flood')">🌊 Flood</button>
+              <button type="button" class="btn" style="flex:1; font-size:10px; padding:6px; background:rgba(255,215,0,0.2); border:1px solid #ffd700; color:#ffd700;" onclick="attachSamplePhoto('pothole')">🚧 Potholes</button>
+            </div>
+          </div>
+
+          
+          <div class="glass-card">
+            <div class="form-group">
+              <label>Incident Type</label>
+              <select id="inc-type" class="form-control">
+                <option>Landslide</option>
+                <option>Flood</option>
+                <option>Road Damage</option>
+                <option>Bridge Issue</option>
+                <option>Tree Fall</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Severity</label>
+              <select id="inc-severity" class="form-control">
+                <option>Critical</option>
+                <option>High</option>
+                <option>Medium</option>
+                <option>Low</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Description</label>
+              <textarea id="inc-desc" class="form-control" rows="4" placeholder="Enter details of obstruction, damage, or hazard..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>Road/Location Name</label>
+              <input id="inc-road" type="text" class="form-control" placeholder="e.g. SH-39 KM 52 near Paderu" value="SH-39 KM 48 (Paderu Sector)">
+            </div>
+            <button class="btn btn-large" style="background: #ff3b3b; color: white;" id="btn-submit">🚨 SUBMIT REPORT</button>
+          </div>
+        </div>
+        
+        <div class="loading-overlay" id="loading">
+          <div class="spinner"></div>
+          <h3 style="margin-top: 20px;">Submitting Report to Command Center...</h3>
+        </div>
+        
+        <div class="mobile-container success-screen" id="success-screen">
+          <div class="glass-card" style="padding: 40px 20px;">
+            <div class="success-icon">✅</div>
+            <h2>Incident Report Successfully Submitted</h2>
+            <p id="report-id-text" class="text-cyan" style="margin: 20px 0; font-size: 1.2em;">Report ID: RPT-2089</p>
+            <button class="btn btn-primary btn-large" onclick="location.reload()">Back to Dashboard</button>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="js/components.js"></script>
+  <script src="js/map-engine.js"></script>
+  <script src="js/charts.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.SmartRoute) {
+        SmartRoute.initSharedComponents({
+          title: 'Field Report', 
+          subtitle: 'Officer Incident Reporting Interface'
+        });
+      }
+      
+      let acquiredLat = 26.1524;
+      let acquiredLng = 91.7510;
+      let fieldMap = null;
+
+      document.getElementById('current-time').textContent = new Date().toLocaleTimeString();
+
+      function renderMapLoc(lat, lng) {
+        document.getElementById('location-data').innerHTML = `Lat: ${lat.toFixed(4)}° N, Lng: ${lng.toFixed(4)}° E <br>Timestamp: ${new Date().toLocaleString()} · Guwahati / Brahmaputra Sector`;
+        const mapEl = document.getElementById('mini-map');
+        
+        if (fieldMap) {
+          try { fieldMap.remove(); } catch(e) {}
+          fieldMap = null;
+        }
+        mapEl.innerHTML = '';
+
+        fieldMap = L.map('mini-map', {
+          center: [lat, lng],
+          zoom: 11,
+          zoomControl: true,
+          attributionControl: false
+        });
+
+        // Google Satellite Hybrid matching uploaded photo
+        L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+          maxZoom: 20,
+          subdomains: ['mt0','mt1','mt2','mt3']
+        }).addTo(fieldMap);
+
+        if (window.MapEngine && window.MapEngine.addRegionLabels) {
+          MapEngine.addRegionLabels(fieldMap);
+        }
+
+        const officerIcon = L.divIcon({
+          className: '',
+          html: `
+            <div style="position:relative; width:34px; height:34px; display:flex; align-items:center; justify-content:center; transform:translate(-50%, -50%);">
+              <div style="position:absolute; inset:0; border-radius:50%; background:rgba(0,212,255,0.45); animation:ripple 2s infinite ease-out;"></div>
+              <div style="width:16px; height:16px; border-radius:50%; background:#00d4ff; border:2.5px solid #fff; box-shadow:0 0 16px #00d4ff; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:900; color:#000;">RK</div>
+            </div>
+          `,
+          iconSize: [1, 1],
+          iconAnchor: [0, 0]
+        });
+
+        L.marker([lat, lng], {icon: officerIcon}).addTo(fieldMap)
+         .bindPopup('<b>Officer Ravi Kumar (FO-042)</b><br>Guwahati Riverfront Base, Assam<br><span style="color:#00ff88;">● Live GPS Telemetry Synced</span>')
+         .openPopup();
+
+        setTimeout(() => fieldMap.invalidateSize(), 150);
+      }
+
+      // Render satellite map under GET LOCATION on load
+      renderMapLoc(acquiredLat, acquiredLng);
+      
+      document.getElementById('btn-location').addEventListener('click', () => {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              acquiredLat = pos.coords.latitude;
+              acquiredLng = pos.coords.longitude;
+              renderMapLoc(acquiredLat, acquiredLng);
+              if(window.SmartRoute && SmartRoute.showToast) SmartRoute.showToast('GPS lock acquired: ' + acquiredLat.toFixed(4) + ', ' + acquiredLng.toFixed(4), 'success');
+            },
+            () => {
+              renderMapLoc(acquiredLat, acquiredLng);
+              if(window.SmartRoute && SmartRoute.showToast) SmartRoute.showToast('Using North-Eastern base GPS coordinates', 'info');
+            },
+            { timeout: 3000 }
+          );
+        } else {
+          renderMapLoc(acquiredLat, acquiredLng);
+        }
+      });
+
+      // Sample damage photos helper
+      const samplePhotos = {
+        landslide: 'https://images.unsplash.com/photo-1580741569354-1d4be2b38a67?w=700&q=80',
+        flood: 'https://images.unsplash.com/photo-1547683905-f686c993aae5?w=700&q=80',
+        pothole: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=700&q=80'
+      };
+
+      window.attachSamplePhoto = function(type) {
+        const url = samplePhotos[type];
+        if(!url) return;
+        const preview = document.getElementById('photo-preview');
+        preview.style.backgroundImage = `url(${url})`;
+        preview.textContent = '';
+        const incSelect = document.getElementById('inc-type');
+        if (incSelect) {
+          if (type === 'landslide') incSelect.value = 'Landslide';
+          else if (type === 'flood') incSelect.value = 'Flash Flood';
+          else if (type === 'pothole') incSelect.value = 'Road Crack';
+        }
+        if(window.SmartRoute && SmartRoute.showToast) {
+          SmartRoute.showToast(`Ground photo attached: ${type.toUpperCase()}`, 'success');
+        }
+      };
+      
+      document.getElementById('btn-photo').addEventListener('click', () => {
+        document.getElementById('file-input').click();
+      });
+
+      document.getElementById('file-input').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if(file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const preview = document.getElementById('photo-preview');
+            preview.style.backgroundImage = `url(${event.target.result})`;
+            preview.textContent = '';
+            if(window.SmartRoute && SmartRoute.showToast) {
+              SmartRoute.showToast('Incident photo attached with EXIF GPS metadata', 'success');
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      
+      document.getElementById('btn-submit').addEventListener('click', async () => {
+        const type = document.getElementById('inc-type').value;
+        const severity = document.getElementById('inc-severity').value;
+        const desc = document.getElementById('inc-desc').value.trim() || `${type} obstruction reported by field officer.`;
+        const road = document.getElementById('inc-road').value.trim() || 'SH-39 Paderu Sector';
+
+        document.getElementById('loading').style.display = 'flex';
+        
+        let reportCode = `RPT-${Math.floor(1000 + Math.random() * 9000)}`;
+        try {
+          if (window.SmartRouteAPI && window.SmartRouteAPI.reportIncident) {
+            const res = await window.SmartRouteAPI.reportIncident({
+              title: `${type} at ${road}`,
+              road_name: road,
+              type: type,
+              severity: severity,
+              description: desc,
+              lat: acquiredLat,
+              lng: acquiredLng,
+              reporter: 'FO-042 (Ramesh Babu)',
+              status: 'ACTIVE'
+            });
+            if (res && (res.report_code || res.incident_code || (res.data && res.data.code))) {
+              reportCode = res.report_code || res.incident_code || res.data.code;
+            }
+          }
+        } catch(err) {
+          console.warn('Incident report API error, saved locally:', err);
+        }
+
+        await new Promise(r => setTimeout(r, 900));
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('report-form').style.display = 'none';
+        document.getElementById('report-id-text').textContent = `Report ID: ${reportCode}`;
+        document.getElementById('success-screen').style.display = 'block';
+
+        if (window.SmartRoute && SmartRoute.showToast) {
+          SmartRoute.showToast(`Incident ${reportCode} submitted & broadcast to Command Center`, 'success');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

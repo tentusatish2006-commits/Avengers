@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartRoute - Deliveries</title>
+  
+  <!-- CDN Libraries -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+  
+  <!-- Local Files -->
+      <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    .deliveries-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      height: calc(100vh - 100px);
+    }
+    .categories {
+      display: flex;
+      gap: 15px;
+      overflow-x: auto;
+      padding-bottom: 10px;
+    }
+    .cat-card {
+      min-width: 180px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .main-area {
+      display: flex;
+      gap: 20px;
+      flex: 1;
+      min-height: 0;
+    }
+    .list-panel {
+      width: 40%;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .map-panel {
+      width: 60%;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    #delivery-map {
+      width: 100%;
+      height: 100%;
+    }
+    .delivery-card {
+      padding: 15px;
+      cursor: pointer;
+    }
+    .delivery-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .stepper {
+      display: flex;
+      justify-content: space-between;
+      position: relative;
+      margin: 15px 0;
+    }
+    .stepper::before {
+      content: '';
+      position: absolute;
+      top: 5px;
+      left: 10px;
+      right: 10px;
+      height: 2px;
+      background: rgba(255,255,255,0.2);
+      z-index: 0;
+    }
+    .step {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #333;
+      z-index: 1;
+      position: relative;
+    }
+    .step.active {
+      background: #00d4ff;
+      box-shadow: 0 0 10px #00d4ff;
+    }
+    .ai-panel {
+      margin-top: 10px;
+      border: 1px solid rgba(255, 149, 0, 0.3);
+      padding: 15px;
+      background: rgba(255, 149, 0, 0.05);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="main-content" id="main-content">
+      <main class="page-body">
+        <div class="deliveries-layout">
+          
+          <div class="categories">
+            <div class="glass-card cat-card">
+              <span class="text-cyan">💊 Medicines</span>
+              <h2 class="count-up">12</h2>
+              <span class="badge badge-warn">2 at risk</span>
+            </div>
+            <div class="glass-card cat-card">
+              <span class="text-safe">🍚 Food</span>
+              <h2 class="count-up">24</h2>
+              <span class="badge badge-safe">On track</span>
+            </div>
+            <div class="glass-card cat-card">
+              <span class="text-warn">🌾 Agriculture</span>
+              <h2 class="count-up">8</h2>
+              <span class="badge badge-danger">1 blocked</span>
+            </div>
+            <div class="glass-card cat-card">
+              <span class="text-safe">🏗 Construction</span>
+              <h2 class="count-up">15</h2>
+              <span class="badge badge-safe">On track</span>
+            </div>
+            <div class="glass-card cat-card">
+              <span class="text-danger">🚨 Emergency</span>
+              <h2 class="count-up">5</h2>
+              <span class="badge badge-danger">1 critical</span>
+            </div>
+          </div>
+          
+          <div class="main-area">
+            <div class="list-panel">
+              <div class="glass-card delivery-card">
+                <div class="delivery-header">
+                  <strong>DEL-001 <span class="text-cyan">💊 Medicines</span></strong>
+                  <span class="badge badge-warn">At-risk</span>
+                </div>
+                <div class="text-sm">VH-001 | Guwahati → Bongaigaon PHC | ETA: 14:30</div>
+                <div class="stepper">
+                  <div class="step active"></div>
+                  <div class="step active"></div>
+                  <div class="step"></div>
+                  <div class="step"></div>
+                </div>
+              </div>
+              <div class="glass-card delivery-card">
+                <div class="delivery-header">
+                  <strong>DEL-002 <span class="text-safe">🍚 Food</span></strong>
+                  <span class="badge badge-warn">Delayed</span>
+                </div>
+                <div class="text-sm">VH-002 | Guwahati → Shillong | ETA: 16:45</div>
+                <div class="stepper">
+                  <div class="step active"></div>
+                  <div class="step active"></div>
+                  <div class="step"></div>
+                  <div class="step"></div>
+                </div>
+              </div>
+              <div class="glass-card delivery-card">
+                <div class="delivery-header">
+                  <strong>DEL-003 <span class="text-danger">🚨 Emergency</span></strong>
+                  <span class="badge badge-warn">At-risk</span>
+                </div>
+                <div class="text-sm">VH-003 | Tezpur → Tawang Pass | ETA: 15:10</div>
+                <div class="stepper">
+                  <div class="step active"></div>
+                  <div class="step active"></div>
+                  <div class="step active"></div>
+                  <div class="step"></div>
+                </div>
+              </div>
+              <div class="glass-card delivery-card">
+                <div class="delivery-header">
+                  <strong>DEL-004 <span class="text-cyan">💊 Medicines</span></strong>
+                  <span class="badge badge-safe">On-time</span>
+                </div>
+                <div class="text-sm">VH-006 | Dimapur → Kohima PHC | ETA: 14:50</div>
+                <div class="stepper">
+                  <div class="step active"></div>
+                  <div class="step active"></div>
+                  <div class="step"></div>
+                  <div class="step"></div>
+                </div>
+              </div>
+              <div class="glass-card delivery-card">
+                <div class="delivery-header">
+                  <strong>DEL-005 <span class="text-warn">🌾 Agriculture</span></strong>
+                  <span class="badge badge-danger">Blocked</span>
+                </div>
+                <div class="text-sm">VH-005 | Silchar → Lakhipur | ETA: Delayed</div>
+                <div class="stepper">
+                  <div class="step active"></div>
+                  <div class="step active"></div>
+                  <div class="step"></div>
+                  <div class="step"></div>
+                </div>
+              </div>
+              <div class="glass-card delivery-card">
+                <div class="delivery-header">
+                  <strong>DEL-006 <span class="text-safe">🍚 Food</span></strong>
+                  <span class="badge badge-safe">Delivered</span>
+                </div>
+                <div class="text-sm">VH-new | Aizawl → Champhai | ETA: 13:30</div>
+                <div class="stepper">
+                  <div class="step active"></div>
+                  <div class="step active"></div>
+                  <div class="step active"></div>
+                  <div class="step active"></div>
+                </div>
+              </div>
+              <div class="glass-card delivery-card">
+                <div class="delivery-header">
+                  <strong>DEL-007 <span class="text-safe">🏗 Construction</span></strong>
+                  <span class="badge badge-info">Moderate</span>
+                </div>
+                <div class="text-sm">VH-new | Lunglei → Tlabung | ETA: 17:00</div>
+                <div class="stepper">
+                  <div class="step active"></div>
+                  <div class="step"></div>
+                  <div class="step"></div>
+                  <div class="step"></div>
+                </div>
+              </div>
+              <div class="glass-card delivery-card">
+                <div class="delivery-header">
+                  <strong>DEL-008 <span class="text-danger">🚨 Emergency</span></strong>
+                  <span class="badge badge-danger">Critical</span>
+                </div>
+                <div class="text-sm">VH-004 | Imphal → Moreh Border | ETA: 13:55</div>
+                <div class="stepper">
+                  <div class="step active"></div>
+                  <div class="step active"></div>
+                  <div class="step"></div>
+                  <div class="step"></div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="map-panel glass-card">
+              <div id="delivery-map"></div>
+            </div>
+          </div>
+          
+          <div class="glass-card ai-panel" id="ai-panel">
+            <h4 class="text-warn" id="ai-pred-title">🤖 AI PREDICTION: 3 deliveries may face 2+ hour delays due to NH-13 Tawang Pass landslide</h4>
+            <p class="text-sm" id="ai-pred-desc">Affected: DEL-001, DEL-003, DEL-008 | Alternate route via NH-27 Brahmaputra Corridor available</p>
+            <button class="btn btn-primary" id="btn-reroute" style="margin-top: 10px;" onclick="applyReroute()">Reroute via Brahmaputra Corridor</button>
+          </div>
+
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="js/components.js"></script>
+  <script src="js/map-engine.js"></script>
+  <script src="js/charts.js"></script>
+  <script>
+    let delMap = null;
+    let rerouted = false;
+
+    const deliveryCoords = {
+      'DEL-001': [26.14, 91.73],   // Guwahati
+      'DEL-002': [25.57, 91.89],   // Shillong
+      'DEL-003': [27.58, 91.86],   // Tawang
+      'DEL-004': [25.67, 94.10],   // Kohima
+      'DEL-005': [24.82, 92.79],   // Silchar
+      'DEL-006': [23.73, 92.72],   // Aizawl
+      'DEL-007': [24.21, 92.87],   // Lunglei
+      'DEL-008': [24.82, 93.95],   // Imphal
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.SmartRoute) {
+        SmartRoute.initSharedComponents({
+          title: 'Essential Deliveries', 
+          subtitle: 'Critical Supply Chain Monitoring'
+        });
+        SmartRoute.initCountUps();
+      }
+      
+      // Google Satellite Hybrid map — NE India (matches reference photo)
+      if (window.MapEngine && window.MapEngine.initMap) {
+        delMap = MapEngine.initMap('delivery-map', {
+          center: [25.80, 91.60],
+          zoom: 7,
+          zoomControl: true,
+          regionLabels: true
+        });
+        if (delMap) {
+          MapEngine.addRoads(delMap);
+          MapEngine.addIncidents(delMap);
+          MapEngine.addVehicles(delMap);
+        }
+      } else {
+        // Fallback
+        delMap = L.map('delivery-map').setView([25.80, 91.60], 7);
+        L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+          subdomains: ['0','1','2','3'], attribution: '© Google'
+        }).addTo(delMap);
+      }
+      
+      // Wire delivery cards
+      const cards = document.querySelectorAll('.delivery-card');
+      cards.forEach(card => {
+        card.addEventListener('click', () => {
+          cards.forEach(c => c.style.borderColor = 'rgba(255,255,255,0.1)');
+          card.style.borderColor = '#00d4ff';
+          card.style.background = 'rgba(0,212,255,0.05)';
+          
+          const text = card.querySelector('strong').textContent;
+          const match = text.match(/DEL-\d+/);
+          if(match && deliveryCoords[match[0]] && delMap) {
+            delMap.flyTo(deliveryCoords[match[0]], 11, { duration: 1.2 });
+            if(window.SmartRoute && SmartRoute.showToast) {
+              SmartRoute.showToast(`Tracking delivery ${match[0]} — ${text}`, 'info');
+            }
+          }
+        });
+      });
+    });
+
+    function applyReroute() {
+      if(rerouted) {
+        if(window.SmartRoute && SmartRoute.showToast) {
+          SmartRoute.showToast('Deliveries are already operating on the optimal alternate corridor.', 'info');
+        }
+        return;
+      }
+      rerouted = true;
+
+      // Update AI panel UI
+      const panel = document.getElementById('ai-panel');
+      panel.style.borderColor = 'rgba(0, 255, 136, 0.4)';
+      panel.style.background = 'rgba(0, 255, 136, 0.08)';
+      
+      document.getElementById('ai-pred-title').className = 'text-safe';
+      document.getElementById('ai-pred-title').innerHTML = '✅ AI DYNAMIC REROUTE ACTIVE: 3 deliveries rerouted via NH-27 Brahmaputra Corridor';
+      document.getElementById('ai-pred-desc').innerHTML = 'ETA impact: <strong>-1h 45m delay saved</strong>. All 3 convoys now operating on green roads.';
+      
+      const btn = document.getElementById('btn-reroute');
+      btn.textContent = 'Reroute Applied ✓';
+      btn.className = 'btn btn-secondary';
+      btn.style.background = 'rgba(0, 255, 136, 0.2)';
+      btn.style.borderColor = '#00ff88';
+      btn.style.color = '#00ff88';
+
+      // Update badges for DEL-001, DEL-003, DEL-008
+      const cards = document.querySelectorAll('.delivery-card');
+      cards.forEach(card => {
+        const strong = card.querySelector('strong').textContent;
+        if(strong.includes('DEL-001') || strong.includes('DEL-003') || strong.includes('DEL-008')) {
+          const badge = card.querySelector('.badge');
+          if(badge) {
+            badge.className = 'badge badge-safe';
+            badge.textContent = 'Rerouted (On-time)';
+          }
+        }
+      });
+
+      // Draw alternate route visualization on map
+      if(window.MapEngine && MapEngine.drawAlternateRoutes) {
+        MapEngine.drawAlternateRoutes(delMap);
+      }
+
+      if(window.SmartRoute && SmartRoute.showToast) {
+        SmartRoute.showToast('AI Dynamic Reroute successfully dispatched to 3 delivery drivers', 'success');
+      }
+    }
+  </script>
+</body>
+</html>

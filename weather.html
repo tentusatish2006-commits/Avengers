@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather & Risk - SmartRoute</title>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+
+      <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    .rain-container {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      z-index: 1000;
+      overflow: hidden;
+    }
+    .rain-drop {
+      position: absolute;
+      width: 2px;
+      height: 20px;
+      background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(100,200,255,0.8));
+      animation: rain-fall linear infinite;
+    }
+    @keyframes rain-fall {
+      0% { transform: translateY(-20px); opacity: 0; }
+      20% { opacity: 1; }
+      100% { transform: translateY(300px); opacity: 0; }
+    }
+    .risk-dial-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 150px;
+      position: relative;
+    }
+    .risk-dial {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: conic-gradient(#ff3b3b 0% 72%, rgba(255,255,255,0.1) 72% 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 0 20px rgba(255, 59, 59, 0.4);
+    }
+    .risk-dial-inner {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: #030810;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .kpi-card {
+      padding: 15px;
+      text-align: center;
+    }
+    .main-grid {
+      display: grid;
+      grid-template-columns: 60% 38%;
+      gap: 2%;
+    }
+    .map-container {
+      height: 400px;
+      position: relative;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="main-content" id="main-content">
+      <main class="page-body p-4">
+        <div class="kpi-row">
+          <div class="glass-card kpi-card">
+            <div class="text-sm text-gray">🌧 Rainfall</div>
+            <div class="text-2xl text-danger font-bold mt-2"><span class="count-up" data-value="78">0</span>mm</div>
+            <div class="text-xs text-danger mt-1">High</div>
+          </div>
+          <div class="glass-card kpi-card">
+            <div class="text-sm text-gray">🌡 Temperature</div>
+            <div class="text-2xl text-cyan font-bold mt-2"><span class="count-up" data-value="28">0</span>°C</div>
+            <div class="text-xs text-cyan mt-1">Normal</div>
+          </div>
+          <div class="glass-card kpi-card pulse-danger" style="border-color: #ff3b3b">
+            <div class="text-sm text-gray">🌊 Flood Risk</div>
+            <div class="text-2xl text-danger font-bold mt-2">VERY HIGH</div>
+            <div class="text-xs text-danger mt-1">Action Required</div>
+          </div>
+          <div class="glass-card kpi-card" style="border-color: #ff9500">
+            <div class="text-sm text-gray">⛰ Landslide Risk</div>
+            <div class="text-2xl text-warn font-bold mt-2">HIGH</div>
+            <div class="text-xs text-warn mt-1">Monitoring</div>
+          </div>
+          <div class="glass-card kpi-card">
+            <div class="text-sm text-gray">🛣 Road Disruption</div>
+            <div class="text-2xl text-warn font-bold mt-2"><span class="count-up" data-value="12">0</span></div>
+            <div class="text-xs text-warn mt-1">Roads Affected</div>
+          </div>
+        </div>
+
+        <div class="main-grid mb-4">
+          <div class="glass-card map-container p-2">
+            <div id="map"></div>
+            <div class="rain-container" id="rain-layer"></div>
+          </div>
+          
+          <div class="glass-card p-4 flex flex-col gap-4">
+            <h3 class="text-xl gradient-text font-bold">Overall Risk Assessment</h3>
+            <div class="risk-dial-container">
+              <div class="risk-dial">
+                <div class="risk-dial-inner">
+                  <span class="text-3xl font-bold text-danger">72%</span>
+                  <span class="text-xs text-gray">Risk Score</span>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h4 class="text-lg font-bold mb-2">District Risk Map</h4>
+              <div class="glass-card p-2 mb-2 flex justify-between items-center" style="border-left: 4px solid #ff3b3b">
+                <span>Alluri SR Raju</span>
+                <span class="text-danger font-bold">86% CRITICAL</span>
+              </div>
+              <div class="glass-card p-2 mb-2 flex justify-between items-center" style="border-left: 4px solid #ff9500">
+                <span>Vizag</span>
+                <span class="text-warn font-bold">68% HIGH</span>
+              </div>
+              <div class="glass-card p-2 flex justify-between items-center" style="border-left: 4px solid #facc15">
+                <span>Parvathipuram</span>
+                <span class="text-yellow-400 font-bold">51% MODERATE</span>
+              </div>
+            </div>
+            
+            <div>
+              <h4 class="text-lg font-bold mb-2">Forecast</h4>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="glass-card p-2 text-center">
+                  <div class="text-sm text-gray">Next 6 Hours</div>
+                  <div class="text-danger font-bold">Heavy Rain</div>
+                </div>
+                <div class="glass-card p-2 text-center">
+                  <div class="text-sm text-gray">Next 24 Hours</div>
+                  <div class="text-warn font-bold">Scattered Storms</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="glass-card p-4">
+            <h3 class="text-lg font-bold mb-2">Rainfall vs Disruptions</h3>
+            <div style="height: 200px">
+              <canvas id="rainfallChart"></canvas>
+            </div>
+          </div>
+          
+          <div class="glass-card p-4 overflow-y-auto" style="max-height: 260px;">
+            <h3 class="text-lg font-bold mb-2">Affected Roads</h3>
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-gray-700 text-sm text-gray">
+                  <th class="py-2">Road</th>
+                  <th class="py-2">Status</th>
+                  <th class="py-2">Cause</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="border-b border-gray-800">
+                  <td class="py-2">Paderu-Araku Rd</td>
+                  <td class="py-2 text-danger">Blocked</td>
+                  <td class="py-2">Landslide</td>
+                </tr>
+                <tr class="border-b border-gray-800">
+                  <td class="py-2">Chintapalle-Narsipatnam</td>
+                  <td class="py-2 text-danger">Blocked</td>
+                  <td class="py-2">Flood</td>
+                </tr>
+                <tr class="border-b border-gray-800">
+                  <td class="py-2">GK Veedhi Main</td>
+                  <td class="py-2 text-warn">Partial</td>
+                  <td class="py-2">Waterlogging</td>
+                </tr>
+                <tr class="border-b border-gray-800">
+                  <td class="py-2">Vizag-Araku Valley</td>
+                  <td class="py-2 text-warn">Partial</td>
+                  <td class="py-2">Heavy Traffic / Rain</td>
+                </tr>
+              </tbody>
+            </table>
+            
+            <div class="mt-4 p-3 bg-blue-900 bg-opacity-20 rounded border border-blue-800">
+              <h4 class="text-cyan font-bold text-sm mb-1">IMD Advisory</h4>
+              <p class="text-xs text-gray-300">Red alert issued for coastal and agency areas. Flash floods possible in low-lying areas. Avoid non-essential travel.</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="js/components.js"></script>
+  <script src="js/map-engine.js"></script>
+  <script src="js/charts.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      SmartRoute.initSharedComponents({title: 'Weather & Risk', subtitle: 'Real-Time Meteorological Risk Assessment'});
+      SmartRoute.initCountUps();
+      
+      MapEngine.initMap('map');
+      MapEngine.addRoads();
+      MapEngine.addIncidents();
+      MapEngine.addVehicles();
+      
+      // Add flood zone polygon
+      L.polygon([[18.1, 82.6], [18.2, 82.5], [18.3, 82.7], [18.1, 82.8]], {
+        color: '#00d4ff', fillColor: '#00d4ff', fillOpacity: 0.2, weight: 2
+      }).addTo(MapEngine.map).bindPopup("Flood Zone");
+
+      // Add high risk terrain polygon
+      L.polygon([[18.3, 82.8], [18.4, 82.7], [18.5, 82.9], [18.4, 83.0]], {
+        color: '#ff9500', fillColor: '#ff9500', fillOpacity: 0.3, weight: 2
+      }).addTo(MapEngine.map).bindPopup("High Risk Terrain");
+      
+      if(window.Charts && Charts.createRainfallChart) {
+        Charts.createRainfallChart(document.getElementById('rainfallChart'));
+      } else {
+        new Chart(document.getElementById('rainfallChart'), {
+          type: 'line',
+          data: {
+            labels: ['00:00','04:00','08:00','12:00','16:00','20:00'],
+            datasets: [{label:'Rainfall (mm)', data: [10,25,78,60,40,20], borderColor: '#00d4ff', tension: 0.4}]
+          },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+      }
+      
+      // Rain animation setup
+      const rainContainer = document.getElementById('rain-layer');
+      for(let i=0; i<100; i++) {
+        let drop = document.createElement('div');
+        drop.className = 'rain-drop';
+        drop.style.left = Math.random() * 100 + '%';
+        drop.style.animationDuration = (0.5 + Math.random() * 0.5) + 's';
+        drop.style.animationDelay = Math.random() * 2 + 's';
+        rainContainer.appendChild(drop);
+      }
+    });
+  </script>
+</body>
+</html>

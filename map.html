@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live GIS Map - SmartRoute</title>
+    
+    <!-- CDNs -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+    
+    <!-- Local CSS -->
+        <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/components.css">
+
+    <style>
+        .map-wrapper {
+            position: relative;
+            width: 100%;
+            height: calc(100vh - 64px);
+            overflow: hidden;
+            background: #030814;
+        }
+        #map-2d, #map-3d {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            transition: opacity 0.5s ease;
+        }
+        #map-3d {
+            display: none;
+            z-index: 2;
+        }
+        #map-2d {
+            z-index: 1;
+        }
+        
+        /* Floating Panels */
+        .floating-panel {
+            position: absolute;
+            z-index: 500;
+            background: rgba(8, 18, 38, 0.88);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            border-radius: 16px;
+            padding: 18px;
+            color: #fff;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+        }
+        
+        /* Mode Switcher Banner */
+        .mode-switcher-bar {
+            position: absolute;
+            top: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 550;
+            display: flex;
+            align-items: center;
+            background: rgba(5, 12, 28, 0.92);
+            border: 1px solid rgba(0, 212, 255, 0.35);
+            border-radius: 30px;
+            padding: 4px;
+            box-shadow: 0 8px 30px rgba(0, 212, 255, 0.2);
+        }
+        .mode-tab {
+            padding: 8px 20px;
+            border-radius: 24px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #8fa3b8;
+            cursor: pointer;
+            transition: all 0.25s;
+            border: none;
+            background: transparent;
+        }
+        .mode-tab.active {
+            background: linear-gradient(135deg, #00d4ff, #0097b3);
+            color: #030810;
+            box-shadow: 0 0 16px rgba(0, 212, 255, 0.5);
+        }
+        
+        /* Layers Panel */
+        .layers-panel {
+            top: 20px;
+            left: 20px;
+            width: 250px;
+            animation: slideInLeft 0.5s ease-out;
+        }
+        .layers-panel h3 {
+            margin: 0 0 14px 0;
+            font-size: 13px;
+            color: var(--cyan);
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            font-family: 'Outfit', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .layer-toggle {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .layer-toggle input {
+            display: none;
+        }
+        .toggle-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 12px;
+            border: 2px solid rgba(255,255,255,0.3);
+            transition: all 0.25s ease;
+        }
+        .layer-toggle input:checked + .toggle-dot {
+            box-shadow: 0 0 10px currentColor;
+        }
+        .layer-toggle input:checked + .toggle-dot.safe { background: #00ff88; border-color: #00ff88; color: #00ff88; }
+        .layer-toggle input:checked + .toggle-dot.partial { background: #ff9500; border-color: #ff9500; color: #ff9500; }
+        .layer-toggle input:checked + .toggle-dot.risk { background: #ff3b3b; border-color: #ff3b3b; color: #ff3b3b; }
+        .layer-toggle input:checked + .toggle-dot.cyan { background: #00d4ff; border-color: #00d4ff; color: #00d4ff; }
+        
+        .layer-toggle span {
+            font-size: 13px;
+            font-family: 'Outfit', sans-serif;
+            color: #b4d2f0;
+            transition: color 0.2s;
+        }
+        .layer-toggle:hover span {
+            color: #fff;
+        }
+        
+        /* Controls Panel */
+        .controls-panel {
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            animation: slideInRight 0.5s ease-out;
+            min-width: 160px;
+        }
+        .control-btn {
+            background: rgba(10, 22, 45, 0.9);
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            color: #e8f4ff;
+            padding: 9px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Outfit', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .control-btn:hover {
+            background: rgba(0, 212, 255, 0.2);
+            border-color: #00d4ff;
+            box-shadow: 0 0 14px rgba(0,212,255,0.35);
+            transform: translateX(-2px);
+        }
+        .preset-group {
+            margin-top: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 8px;
+        }
+        
+        /* Legend */
+        .legend-panel {
+            bottom: 24px;
+            left: 20px;
+            animation: slideInUp 0.5s ease-out;
+            min-width: 180px;
+        }
+        .legend-title {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--cyan);
+            margin-bottom: 8px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            font-size: 12px;
+            font-family: 'Outfit', sans-serif;
+            color: #8fa3b8;
+        }
+        .legend-line {
+            width: 22px;
+            height: 4px;
+            margin-right: 10px;
+            border-radius: 2px;
+        }
+
+        /* Floating 3D Telemetry Information Panel */
+        .telemetry-card {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            z-index: 600;
+            width: 340px;
+            background: rgba(6, 15, 34, 0.94);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border: 1px solid var(--border-hover);
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7), 0 0 30px rgba(0,212,255,0.2);
+            display: none;
+            animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        .telemetry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding-bottom: 10px;
+        }
+        .telemetry-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: #fff;
+        }
+        .telemetry-close {
+            background: transparent;
+            border: none;
+            color: #8fa3b8;
+            font-size: 18px;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .telemetry-close:hover { color: #fff; }
+        .telemetry-stat {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .telemetry-stat span:first-child { color: #8fa3b8; }
+        .telemetry-stat span:last-child { font-weight: 700; color: #fff; }
+        .telemetry-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <div class="main-content" id="main-content">
+            <main class="page-body" style="padding: 0;">
+                <div class="map-wrapper fade-in">
+                    <!-- Mode Switcher Banner -->
+                    <div class="mode-switcher-bar">
+                        <button class="mode-tab" id="tab-3d" onclick="switchViewMode('3d')">🌐 3D TERRAIN VIEW</button>
+                        <button class="mode-tab active" id="tab-2d" onclick="switchViewMode('2d')">🛰️ SATELLITE MAP</button>
+                    </div>
+
+                    <!-- 3D GIS Three.js View Container -->
+                    <div id="map-3d"></div>
+
+                    <!-- 2D Leaflet Tactical Map Container -->
+                    <div id="map-2d"></div>
+                    
+                    <!-- Layers Panel -->
+                    <div class="floating-panel layers-panel glass-card">
+                        <h3>
+                            <span>MAP LAYERS</span>
+                            <span style="font-size:10px;color:var(--text-muted);">LIVE</span>
+                        </h3>
+                        <label class="layer-toggle">
+                            <input type="checkbox" checked onchange="toggleLayer('safe', this.checked)">
+                            <div class="toggle-dot safe"></div>
+                            <span>Safe Roads</span>
+                        </label>
+                        <label class="layer-toggle">
+                            <input type="checkbox" checked onchange="toggleLayer('partial', this.checked)">
+                            <div class="toggle-dot partial"></div>
+                            <span>Partial Roads</span>
+                        </label>
+                        <label class="layer-toggle">
+                            <input type="checkbox" checked onchange="toggleLayer('risk', this.checked)">
+                            <div class="toggle-dot partial"></div>
+                            <span>High-Risk Roads</span>
+                        </label>
+                        <label class="layer-toggle">
+                            <input type="checkbox" checked onchange="toggleLayer('blocked', this.checked)">
+                            <div class="toggle-dot risk"></div>
+                            <span>Blocked Roads</span>
+                        </label>
+                        <div style="height:1px; background:rgba(255,255,255,0.08); margin:8px 0;"></div>
+                        <label class="layer-toggle">
+                            <input type="checkbox" checked onchange="toggleLayer('vehicles', this.checked)">
+                            <div class="toggle-dot cyan"></div>
+                            <span>Vehicles (GPS)</span>
+                        </label>
+                        <label class="layer-toggle">
+                            <input type="checkbox" checked onchange="toggleLayer('incidents', this.checked)">
+                            <div class="toggle-dot risk"></div>
+                            <span>Active Incidents</span>
+                        </label>
+                        <label class="layer-toggle">
+                            <input type="checkbox" checked onchange="toggleLayer('flood', this.checked)">
+                            <div class="toggle-dot cyan"></div>
+                            <span>Flood Zones</span>
+                        </label>
+                        <label class="layer-toggle">
+                            <input type="checkbox" checked onchange="toggleLayer('bridges', this.checked)">
+                            <div class="toggle-dot partial"></div>
+                            <span>Mountain Bridges</span>
+                        </label>
+                        <label class="layer-toggle">
+                            <input type="checkbox" checked onchange="toggleLayer('boundaries', this.checked)">
+                            <div class="toggle-dot cyan"></div>
+                            <span>District Fences</span>
+                        </label>
+                    </div>
+
+                    <!-- Right Controls Panel -->
+                    <div class="floating-panel controls-panel glass-card">
+                        <button class="control-btn" onclick="zoomInCurrent()"><span>🔍</span> ZOOM IN (+)</button>
+                        <button class="control-btn" onclick="zoomOutCurrent()"><span>🔍</span> ZOOM OUT (-)</button>
+                        <button class="control-btn" onclick="toggleTilt()"><span>🔄</span> TILT & ROTATE</button>
+                        <button class="control-btn" onclick="toggleFullScreen()"><span>⛶</span> FULLSCREEN</button>
+                        <div class="preset-group">
+                            <span style="font-size: 10px; color: #8fa3b8; text-align: center; font-weight: 700; letter-spacing: 0.08em;">CAMERA PRESETS</span>
+                            <button class="control-btn" onclick="applyPreset('overview')">📍 NE OVERVIEW</button>
+                            <button class="control-btn" onclick="applyPreset('risk')">⚠ TAWANG PASS</button>
+                            <button class="control-btn" onclick="applyPreset('traffic')">🛣 BRAHMAPUTRA</button>
+                        </div>
+                    </div>
+
+                    <!-- Legend Panel -->
+                    <div class="floating-panel legend-panel glass-card">
+                        <div class="legend-title">CORRIDOR STATUS</div>
+                        <div class="legend-item"><div class="legend-line" style="background: #00ff88;"></div> Accessible (Safe)</div>
+                        <div class="legend-item"><div class="legend-line" style="background: #ff9500;"></div> Moderate / Rain Risk</div>
+                        <div class="legend-item"><div class="legend-line" style="background: #ffcc00;"></div> Partial Disruption</div>
+                        <div class="legend-item"><div class="legend-line" style="background: #ff3b3b;"></div> Critical (Blocked)</div>
+                    </div>
+
+                    <!-- Floating 3D Telemetry Information Panel -->
+                    <div class="telemetry-card" id="telemetry-panel">
+                        <div class="telemetry-header">
+                            <div>
+                                <div class="telemetry-title" id="tel-title">SH-39 (Narsipatnam–Paderu)</div>
+                                <div style="font-size: 11px; color: #00d4ff;" id="tel-subtitle">State Highway · KM 48</div>
+                            </div>
+                            <button class="telemetry-close" onclick="closeTelemetry()">✕</button>
+                        </div>
+                        <div class="telemetry-stat">
+                            <span>Status:</span>
+                            <span id="tel-status" style="color: #ff3b3b;">BLOCKED</span>
+                        </div>
+                        <div class="telemetry-stat">
+                            <span>Risk Level:</span>
+                            <span id="tel-risk" style="color: #ff3b3b;">CRITICAL (86/100)</span>
+                        </div>
+                        <div class="telemetry-stat">
+                            <span>Cause:</span>
+                            <span id="tel-cause">Landslide Debris</span>
+                        </div>
+                        <div class="telemetry-stat">
+                            <span>Disruption Length:</span>
+                            <span id="tel-length">4.2 km</span>
+                        </div>
+                        <div class="telemetry-stat">
+                            <span>Affected Deliveries:</span>
+                            <span id="tel-vehicles" style="color: #00d4ff;">MED-Truck-01, FOOD-Van-03</span>
+                        </div>
+                        <div class="telemetry-actions">
+                            <a href="alternate-routes.html" class="btn-primary" style="flex:1;text-align:center;padding:8px 12px;font-size:11px;border-radius:8px;text-decoration:none;">REROUTE VEHICLE</a>
+                            <a href="emergency.html" class="btn-secondary" style="flex:1;text-align:center;padding:8px 12px;font-size:11px;border-radius:8px;text-decoration:none;">DISPATCH NDRF</a>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Local JS -->
+    <script src="js/components.js"></script>
+    <script src="js/map-engine.js"></script>
+    <script src="js/charts.js"></script>
+    
+    <script>
+        let currentMode = '3d';
+        let scene3D = null;
+        let leafletMap = null;
+        let roadLayers = {};
+        let incidentMarkers = {};
+        let vehicleMarkers = {};
+        let floodLayer = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.SmartRoute) {
+                SmartRoute.initSharedComponents({
+                    title: 'Live GIS Map',
+                    subtitle: 'National Emergency 3D Terrain & Tactical Monitoring'
+                });
+            }
+
+            // Initialize both engines
+            init2DEngine();
+            init3DEngine();
+
+            // Default to 2D Satellite View (matching photo)
+            switchViewMode('2d');
+        });
+
+        function init3DEngine() {
+            if (window.MapEngine && MapEngine.create3DScene) {
+                scene3D = MapEngine.create3DScene('map-3d', {
+                    autoRotate: false,
+                    onSelect: handleItemSelect
+                });
+            }
+        }
+
+        function init2DEngine() {
+            if (window.MapEngine) {
+                leafletMap = MapEngine.initMap('map-2d', { zoomControl: true });
+            } else {
+                leafletMap = L.map('map-2d', {
+                    zoomControl: true,
+                    attributionControl: false
+                }).setView([26.15, 92.80], 7);
+
+                L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+                    maxZoom: 20
+                }).addTo(leafletMap);
+            }
+
+            if (window.MapEngine && leafletMap) {
+                roadLayers = MapEngine.addRoads(leafletMap, null, (road) => {
+                    showTelemetry('road', road);
+                });
+                incidentMarkers = MapEngine.addIncidents(leafletMap, null, (inc) => {
+                    showTelemetry('incident', inc);
+                });
+                vehicleMarkers = MapEngine.addVehicles(leafletMap, null, (veh) => {
+                    showTelemetry('vehicle', veh);
+                });
+                floodLayer = MapEngine.addFloodZone(leafletMap, [26.15, 91.75], 0.12);
+                MapEngine.animateVehicles(leafletMap, vehicleMarkers);
+            }
+        }
+
+        function switchViewMode(mode) {
+            currentMode = mode;
+            const container3D = document.getElementById('map-3d');
+            const container2D = document.getElementById('map-2d');
+            const tab3D = document.getElementById('tab-3d');
+            const tab2D = document.getElementById('tab-2d');
+
+            if (mode === '3d') {
+                container3D.style.display = 'block';
+                container2D.style.display = 'none';
+                tab3D.classList.add('active');
+                tab2D.classList.remove('active');
+                if (window.SmartRoute) SmartRoute.showToast('Switched to 3D Terrain View', 'info', 2500);
+            } else {
+                container3D.style.display = 'none';
+                container2D.style.display = 'block';
+                tab2D.classList.add('active');
+                tab3D.classList.remove('active');
+                if (leafletMap) leafletMap.invalidateSize();
+                if (window.SmartRoute) SmartRoute.showToast('Switched to 2D Tactical View', 'info', 2500);
+            }
+        }
+
+        function handleItemSelect(event) {
+            if (!event || !event.data) return;
+            showTelemetry(event.type, event.data);
+        }
+
+        function showTelemetry(type, data) {
+            const panel = document.getElementById('telemetry-panel');
+            if (!panel) return;
+
+            if (type === 'road') {
+                document.getElementById('tel-title').textContent = data.name || data.id;
+                document.getElementById('tel-subtitle').textContent = `Status: ${String(data.status||'').toUpperCase()}`;
+                document.getElementById('tel-status').textContent = (data.status || 'Active').toUpperCase();
+                document.getElementById('tel-status').style.color = data.status === 'blocked' ? '#ff3b3b' : data.status === 'partial' ? '#ff9500' : '#00ff88';
+                document.getElementById('tel-risk').textContent = `${(data.risk || 'Low').toUpperCase()}`;
+                document.getElementById('tel-cause').textContent = data.cause || 'No active impediment';
+                document.getElementById('tel-length').textContent = data.status === 'blocked' ? '4.8 km blocked' : 'Fully passable';
+            } else if (type === 'vehicle') {
+                document.getElementById('tel-title').textContent = `${data.name} (${data.id})`;
+                document.getElementById('tel-subtitle').textContent = `Cargo: ${data.cargo || 'Essential'}`;
+                document.getElementById('tel-status').textContent = (data.status || 'En Route').toUpperCase();
+                document.getElementById('tel-risk').textContent = data.speed ? `${data.speed} km/h` : 'Stopped';
+                document.getElementById('tel-cause').textContent = `Destination: ${data.dest || 'District Center'}`;
+                document.getElementById('tel-length').textContent = `ETA: ${data.eta || '14:30'}`;
+            } else if (type === 'incident') {
+                document.getElementById('tel-title').textContent = data.title || data.id;
+                document.getElementById('tel-subtitle').textContent = `Type: ${(data.type || 'Incident').toUpperCase()}`;
+                document.getElementById('tel-status').textContent = (data.severity || 'Critical').toUpperCase();
+                document.getElementById('tel-risk').textContent = 'HIGH DANGER ZONE';
+                document.getElementById('tel-cause').textContent = data.road || 'Sector Corridor';
+                document.getElementById('tel-length').textContent = `Reported: ${data.time || '08:30'}`;
+            }
+
+            panel.style.display = 'block';
+        }
+
+        function closeTelemetry() {
+            const panel = document.getElementById('telemetry-panel');
+            if (panel) panel.style.display = 'none';
+        }
+
+        // Layer Toggling
+        function toggleLayer(layerId, isVisible) {
+            // 3D Engine toggle
+            if (scene3D && scene3D.setLayerVisibility) {
+                if (layerId === 'safe' || layerId === 'partial' || layerId === 'risk' || layerId === 'blocked') {
+                    scene3D.setLayerVisibility('roads', isVisible);
+                } else {
+                    scene3D.setLayerVisibility(layerId, isVisible);
+                }
+            }
+
+            // 2D Leaflet toggle
+            if (leafletMap) {
+                if (layerId === 'vehicles') {
+                    Object.values(vehicleMarkers).forEach(m => isVisible ? leafletMap.addLayer(m) : leafletMap.removeLayer(m));
+                } else if (layerId === 'incidents') {
+                    Object.values(incidentMarkers).forEach(m => isVisible ? leafletMap.addLayer(m) : leafletMap.removeLayer(m));
+                } else if (layerId === 'flood' && floodLayer) {
+                    isVisible ? leafletMap.addLayer(floodLayer) : leafletMap.removeLayer(floodLayer);
+                } else if (['safe','partial','risk','blocked'].includes(layerId)) {
+                    Object.entries(roadLayers).forEach(([id, obj]) => {
+                        const road = MapEngine.ROAD_DATA.find(r => r.id === id);
+                        if (road && road.status === (layerId === 'risk' ? 'high' : layerId)) {
+                            if (isVisible) {
+                                leafletMap.addLayer(obj.line);
+                                leafletMap.addLayer(obj.glowLine);
+                            } else {
+                                leafletMap.removeLayer(obj.line);
+                                leafletMap.removeLayer(obj.glowLine);
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        // Camera Controls
+        function zoomInCurrent() {
+            if (currentMode === '3d' && scene3D) {
+                scene3D.camera.position.multiplyScalar(0.85);
+            } else if (leafletMap) {
+                leafletMap.zoomIn();
+            }
+        }
+
+        function zoomOutCurrent() {
+            if (currentMode === '3d' && scene3D) {
+                scene3D.camera.position.multiplyScalar(1.15);
+            } else if (leafletMap) {
+                leafletMap.zoomOut();
+            }
+        }
+
+        let isTilted = false;
+        function toggleTilt() {
+            if (currentMode === '3d' && scene3D) {
+                scene3D.setPreset('risk');
+            } else {
+                const mapEl = document.getElementById('map-2d');
+                isTilted = !isTilted;
+                mapEl.style.transform = isTilted ? "perspective(900px) rotateX(42deg)" : "perspective(900px) rotateX(0deg)";
+                mapEl.style.transition = "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)";
+            }
+        }
+
+        function toggleFullScreen() {
+            const wrap = document.querySelector('.map-wrapper');
+            if (!document.fullscreenElement) {
+                wrap.requestFullscreen().catch(err => {});
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function applyPreset(preset) {
+            if (currentMode === '3d' && scene3D) {
+                scene3D.setPreset(preset);
+            } else if (leafletMap) {
+                if (preset === 'risk') {
+                    // NH-13 Tawang Landslide area
+                    leafletMap.flyTo([27.58, 91.86], 10, { duration: 1.5 });
+                } else if (preset === 'overview') {
+                    // Full NE India overview matching photo framing
+                    leafletMap.flyTo([26.00, 91.50], 7, { duration: 1.5 });
+                } else if (preset === 'traffic') {
+                    // Brahmaputra valley / Guwahati-Dibrugarh corridor
+                    leafletMap.flyTo([26.35, 93.00], 9, { duration: 1.5 });
+                }
+            }
+        }
+
+    </script>
+</body>
+</html>

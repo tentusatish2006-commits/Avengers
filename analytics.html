@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics & Reports - SmartRoute</title>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+
+      <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .chart-card {
+      padding: 20px;
+      animation: fade-in-up 0.5s ease backwards;
+    }
+    .chart-container {
+      position: relative;
+      height: 220px;
+      width: 100%;
+      margin-top: 15px;
+    }
+    .filter-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 5px 15px;
+      border-radius: 20px;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .filter-btn.active {
+      background: rgba(0, 212, 255, 0.2);
+      border-color: #00d4ff;
+      color: #00d4ff;
+    }
+    
+    @keyframes fade-in-up {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="main-content" id="main-content">
+      <main class="page-body p-4">
+        
+        <div class="flex justify-between items-center mb-6">
+          <div class="flex gap-2" id="time-filters">
+            <button class="filter-btn active" onclick="setFilter(this)">Today</button>
+            <button class="filter-btn" onclick="setFilter(this)">7 Days</button>
+            <button class="filter-btn" onclick="setFilter(this)">30 Days</button>
+            <button class="filter-btn" onclick="setFilter(this)">Custom</button>
+          </div>
+          <div class="flex gap-2">
+            <button class="btn-outline text-xs px-3 py-1" onclick="exportData('PDF')">EXPORT PDF</button>
+            <button class="btn-outline text-xs px-3 py-1" onclick="exportData('EXCEL')">EXPORT EXCEL</button>
+            <button class="btn-primary text-xs px-3 py-1" onclick="exportData('REPORT')">GENERATE REPORT</button>
+          </div>
+        </div>
+
+        <div class="kpi-row">
+          <div class="glass-card p-4 flex items-center justify-between">
+            <div>
+              <div class="text-gray text-sm uppercase">Total Incidents</div>
+              <div class="text-3xl font-bold mt-1">1,248</div>
+              <div class="text-danger text-xs mt-1">↑ 12% vs last period</div>
+            </div>
+            <div class="text-4xl opacity-50">⚠️</div>
+          </div>
+          <div class="glass-card p-4 flex items-center justify-between">
+            <div>
+              <div class="text-gray text-sm uppercase">Avg Response Time</div>
+              <div class="text-3xl font-bold mt-1 text-cyan">14.2 m</div>
+              <div class="text-safe text-xs mt-1">↓ 2.1m vs last period</div>
+            </div>
+            <div class="text-4xl opacity-50">⏱️</div>
+          </div>
+          <div class="glass-card p-4 flex items-center justify-between">
+            <div>
+              <div class="text-gray text-sm uppercase">Road Reliability</div>
+              <div class="text-3xl font-bold mt-1">78.5%</div>
+              <div class="text-warn text-xs mt-1">-5% vs last period</div>
+            </div>
+            <div class="text-4xl opacity-50">🛣️</div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="glass-card chart-card" style="animation-delay: 0.1s">
+            <h3 class="font-bold text-lg">Road Disruptions Over Time</h3>
+            <div class="text-sm text-gray">Daily breakdown of road blockages and partial closures</div>
+            <div class="chart-container"><canvas id="c-disruptions"></canvas></div>
+          </div>
+          
+          <div class="glass-card chart-card" style="animation-delay: 0.2s">
+            <h3 class="font-bold text-lg">District Accessibility Index</h3>
+            <div class="text-sm text-gray">Comparison of functional road network percentage</div>
+            <div class="chart-container"><canvas id="c-districts"></canvas></div>
+          </div>
+          
+          <div class="glass-card chart-card" style="animation-delay: 0.3s">
+            <h3 class="font-bold text-lg">Rainfall vs Incidents</h3>
+            <div class="text-sm text-gray">Correlation between mm of rain and reported incidents</div>
+            <div class="chart-container"><canvas id="c-rain"></canvas></div>
+          </div>
+          
+          <div class="glass-card chart-card" style="animation-delay: 0.4s">
+            <h3 class="font-bold text-lg">Incident Typology</h3>
+            <div class="text-sm text-gray">Distribution of primary causes for disruption</div>
+            <div class="chart-container flex justify-center"><canvas id="c-types" style="max-width: 220px;"></canvas></div>
+          </div>
+          
+          <div class="glass-card chart-card" style="animation-delay: 0.5s">
+            <h3 class="font-bold text-lg">Emergency Vehicle Activity</h3>
+            <div class="text-sm text-gray">Hourly deployment and movement of transport vehicles</div>
+            <div class="chart-container"><canvas id="c-vehicles"></canvas></div>
+          </div>
+          
+          <div class="glass-card chart-card" style="animation-delay: 0.6s">
+            <h3 class="font-bold text-lg">Response Time Distribution</h3>
+            <div class="text-sm text-gray">Time taken to deploy resources post-incident report</div>
+            <div class="chart-container"><canvas id="c-response"></canvas></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 border border-cyan text-white px-4 py-2 rounded shadow-lg transform transition-transform translate-y-20 opacity-0 z-50">
+    <span id="toast-msg"></span>
+  </div>
+
+  <script src="js/components.js"></script>
+  <script src="js/map-engine.js"></script>
+  <script src="js/charts.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      SmartRoute.initSharedComponents({title: 'Analytics', subtitle: 'Operational Intelligence & Performance Metrics'});
+      
+      // Fallback data if Charts methods are missing
+      const chartDefaults = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#ccc' } } },
+        scales: { 
+          y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#aaa' } },
+          x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#aaa' } }
+        }
+      };
+
+      if(window.Charts && Charts.createDisruptionsChart) Charts.createDisruptionsChart(document.getElementById('c-disruptions'));
+      else {
+        new Chart(document.getElementById('c-disruptions'), {
+          type: 'line',
+          data: { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], datasets: [{label: 'Disruptions', data: [12,19,3,5,2,3,9], borderColor: '#ff3b3b', tension: 0.4}] },
+          options: chartDefaults
+        });
+      }
+
+      if(window.Charts && Charts.createDistrictChart) Charts.createDistrictChart(document.getElementById('c-districts'));
+      else {
+        new Chart(document.getElementById('c-districts'), {
+          type: 'bar',
+          data: { labels: ['ASR','Vizag','Parvathipuram','Anakapalli','Eluru'], datasets: [{label: 'Accessibility %', data: [42,68,71,91,94], backgroundColor: ['#ff3b3b','#ff9500','#facc15','#00ff88','#00ff88']}] },
+          options: chartDefaults
+        });
+      }
+
+      if(window.Charts && Charts.createRainfallChart) Charts.createRainfallChart(document.getElementById('c-rain'));
+      else {
+        new Chart(document.getElementById('c-rain'), {
+          type: 'scatter',
+          data: { datasets: [{label: 'Incidents vs Rain', data: [{x:10,y:2},{x:40,y:5},{x:78,y:12}], backgroundColor: '#00d4ff'}] },
+          options: chartDefaults
+        });
+      }
+
+      if(window.Charts && Charts.createIncidentTypeChart) Charts.createIncidentTypeChart(document.getElementById('c-types'));
+      else {
+        new Chart(document.getElementById('c-types'), {
+          type: 'doughnut',
+          data: { labels: ['Landslide','Flood','Traffic','Construction'], datasets: [{data: [45, 30, 15, 10], backgroundColor: ['#ff3b3b','#00d4ff','#ff9500','#facc15'], borderWidth: 0}] },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#ccc' } } } }
+        });
+      }
+
+      if(window.Charts && Charts.createVehicleActivityChart) Charts.createVehicleActivityChart(document.getElementById('c-vehicles'));
+      else {
+        new Chart(document.getElementById('c-vehicles'), {
+          type: 'line',
+          data: { labels: ['00','04','08','12','16','20','24'], datasets: [{label: 'Active Vehicles', data: [10,8,45,60,55,30,15], borderColor: '#00ff88', backgroundColor: 'rgba(0,255,136,0.1)', fill: true, tension: 0.4}] },
+          options: chartDefaults
+        });
+      }
+
+      if(window.Charts && Charts.createResponseTimeChart) Charts.createResponseTimeChart(document.getElementById('c-response'));
+      else {
+        new Chart(document.getElementById('c-response'), {
+          type: 'bar',
+          data: { labels: ['<5m','5-15m','15-30m','>30m'], datasets: [{label: 'Responses', data: [20, 50, 15, 5], backgroundColor: '#00d4ff'}] },
+          options: chartDefaults
+        });
+      }
+    });
+
+    let chartsInstances = {};
+
+    function setFilter(btn) {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const timeFrame = btn.innerText.trim();
+
+      if(window.SmartRoute) {
+        SmartRoute.showToast(`Loading Analytics dataset: ${timeFrame}`, 'info', 2000);
+      }
+
+      // Dynamic data adjustments based on time window
+      const factor = timeFrame === 'Today' ? 1 : timeFrame === '7 Days' ? 4.2 : timeFrame === '30 Days' ? 14.8 : 8.5;
+      const kpis = document.querySelectorAll('.kpi-row .text-3xl');
+      if (kpis.length >= 3) {
+        kpis[0].innerText = Math.round(1248 * (factor / 7.5)).toLocaleString();
+        kpis[1].innerText = (14.2 + (factor > 5 ? -1.8 : 0.8)).toFixed(1) + ' m';
+        kpis[2].innerText = (78.5 + (factor > 5 ? 3.5 : -2.0)).toFixed(1) + '%';
+      }
+
+      // Re-animate charts
+      if (window.Charts) {
+        Charts.createDisruptionsChart('c-disruptions');
+        Charts.createDistrictChart('c-districts');
+        Charts.createRainfallChart('c-rain');
+        Charts.createIncidentTypeChart('c-types');
+        Charts.createVehicleActivityChart('c-vehicles');
+        Charts.createResponseTimeChart('c-response');
+      }
+    }
+
+    function exportData(type) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-msg').innerText = `Generating ${type} report...`;
+      toast.style.transform = 'translateY(0)';
+      toast.style.opacity = '1';
+      setTimeout(() => {
+        toast.style.transform = 'translateY(20px)';
+        toast.style.opacity = '0';
+      }, 3000);
+    }
+  </script>
+</body>
+</html>

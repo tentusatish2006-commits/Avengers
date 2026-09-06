@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Tracking - SmartRoute</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Local CSS -->
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/components.css">
+
+    <style>
+        .page-body {
+            display: grid;
+            grid-template-columns: 60% 40%;
+            gap: 20px;
+            height: calc(100vh - 80px);
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .map-container {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-dark);
+        }
+
+        .tracking-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow: hidden;
+        }
+
+        .fleet-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .stat-box {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .stat-box .val {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-light);
+        }
+
+        .stat-box .lbl {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .stat-box.safe .val { color: var(--status-safe); }
+        .stat-box.warn .val { color: var(--status-warn); }
+        .stat-box.danger .val { color: var(--status-danger); }
+        .stat-box.info .val { color: var(--accent-cyan); }
+
+        .vehicle-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-right: 5px;
+        }
+
+        .vehicle-item {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .vehicle-item:hover, .vehicle-item.selected {
+            background: rgba(255,255,255,0.08);
+            border-color: var(--accent-cyan);
+            transform: translateX(5px);
+        }
+
+        .v-icon {
+            font-size: 1.5rem;
+            background: rgba(0,0,0,0.5);
+            width: 40px; height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+
+        .v-info {
+            flex: 1;
+        }
+
+        .v-id {
+            font-weight: 600;
+            margin: 0 0 3px 0;
+            color: var(--text-light);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .v-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            gap: 10px;
+        }
+
+        .badge {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .badge.on-route { background: rgba(0, 255, 136, 0.2); color: var(--status-safe); border: 1px solid rgba(0, 255, 136, 0.4); }
+        .badge.delayed { background: rgba(255, 149, 0, 0.2); color: var(--status-warn); border: 1px solid rgba(255, 149, 0, 0.4); }
+        .badge.blocked { background: rgba(255, 59, 59, 0.2); color: var(--status-danger); border: 1px solid rgba(255, 59, 59, 0.4); }
+
+        /* Vehicle Detail Panel */
+        .vehicle-detail {
+            background: rgba(0,0,0,0.6);
+            border: 1px solid var(--accent-cyan);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 10px;
+            display: none; /* hidden initially */
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .vehicle-detail.active {
+            display: block;
+        }
+
+        .vd-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .vd-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .vd-item .l { font-size: 0.75rem; color: var(--text-muted); }
+        .vd-item .v { font-size: 0.9rem; color: var(--text-light); font-weight: 500; }
+
+        .progress-container {
+            margin: 15px 0;
+        }
+
+        .progress-track {
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            position: relative;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            position: absolute;
+            height: 100%;
+            background: var(--accent-cyan);
+            border-radius: 2px;
+            width: 60%;
+            box-shadow: 0 0 10px var(--accent-cyan);
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .vd-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .vd-actions button {
+            flex: 1;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background: rgba(255,255,255,0.05);
+            color: var(--text-light);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+        }
+
+        .vd-actions button:hover {
+            background: rgba(255,255,255,0.15);
+        }
+
+        .vd-actions button.primary {
+            background: rgba(0, 212, 255, 0.2);
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <div class="main-content" id="main-content">
+            <main class="page-body">
+                
+                <!-- LEFT: Map -->
+                <div class="map-container">
+                    <div id="map"></div>
+                </div>
+
+                <!-- RIGHT: Tracking Panel -->
+                <div class="glass-card tracking-panel">
+                    
+                    <h2 class="gradient-text" style="font-size: 1.2rem; margin: 0;">FLEET STATUS</h2>
+                    
+                    <div class="fleet-stats">
+                        <div class="stat-box info">
+                            <div class="val count-up" data-target="126">0</div>
+                            <div class="lbl">Total</div>
+                        </div>
+                        <div class="stat-box safe">
+                            <div class="val count-up" data-target="98">0</div>
+                            <div class="lbl">On Route</div>
+                        </div>
+                        <div class="stat-box warn">
+                            <div class="val count-up" data-target="18">0</div>
+                            <div class="lbl">Delayed</div>
+                        </div>
+                        <div class="stat-box danger">
+                            <div class="val count-up" data-target="10">0</div>
+                            <div class="lbl">Blocked</div>
+                        </div>
+                    </div>
+
+                    <div class="vehicle-list">
+                        <!-- Vehicle 1 -->
+                        <div class="vehicle-item" onclick="selectVehicle(this, 'TRK-9042', 'Medicine', 'on-route', '45 km/h', '14:30', 'Paderu GH')">
+                            <div class="v-icon">🚚</div>
+                            <div class="v-info">
+                                <div class="v-id">TRK-9042 <span class="badge on-route">ON ROUTE</span></div>
+                                <div class="v-meta">
+                                    <span>Medicine</span> • <span>45 km/h</span> • <span>ETA 14:30</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vehicle 2 -->
+                        <div class="vehicle-item" onclick="selectVehicle(this, 'EMG-102', 'Ambulance', 'delayed', '20 km/h', '15:15', 'Araku Valley')">
+                            <div class="v-icon">🚑</div>
+                            <div class="v-info">
+                                <div class="v-id">EMG-102 <span class="badge delayed">DELAYED</span></div>
+                                <div class="v-meta">
+                                    <span>Critical</span> • <span>20 km/h</span> • <span>ETA 15:15</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vehicle 3 -->
+                        <div class="vehicle-item" onclick="selectVehicle(this, 'FOD-445', 'Food Supply', 'blocked', '0 km/h', 'Unknown', 'Chintapalle')">
+                            <div class="v-icon">🍱</div>
+                            <div class="v-info">
+                                <div class="v-id">FOD-445 <span class="badge blocked">BLOCKED</span></div>
+                                <div class="v-meta">
+                                    <span>Rations</span> • <span>0 km/h</span> • <span>ETA Unknown</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Vehicle 4 -->
+                        <div class="vehicle-item" onclick="selectVehicle(this, 'TRK-8812', 'Construction', 'on-route', '38 km/h', '16:00', 'Narsipatnam')">
+                            <div class="v-icon">🚜</div>
+                            <div class="v-info">
+                                <div class="v-id">TRK-8812 <span class="badge on-route">ON ROUTE</span></div>
+                                <div class="v-meta">
+                                    <span>Heavy</span> • <span>38 km/h</span> • <span>ETA 16:00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vehicle Detail Panel -->
+                    <div class="vehicle-detail" id="vehicle-detail">
+                        <div class="vd-header">
+                            <h3 style="margin:0; display:flex; align-items:center; gap:10px;">
+                                <span id="vd-icon">🚚</span> <span id="vd-id">TRK-9042</span>
+                            </h3>
+                            <span id="vd-badge" class="badge on-route">ON ROUTE</span>
+                        </div>
+                        
+                        <div class="vd-grid">
+                            <div class="vd-item">
+                                <div class="l">Cargo</div>
+                                <div class="v" id="vd-cargo">Medicine</div>
+                            </div>
+                            <div class="vd-item">
+                                <div class="l">Location</div>
+                                <div class="v">17.92, 82.51</div>
+                            </div>
+                            <div class="vd-item">
+                                <div class="l">Speed</div>
+                                <div class="v" id="vd-speed">45 km/h</div>
+                            </div>
+                            <div class="vd-item">
+                                <div class="l">ETA</div>
+                                <div class="v" id="vd-eta">14:30</div>
+                            </div>
+                            <div class="vd-item" style="grid-column: span 2;">
+                                <div class="l">Destination</div>
+                                <div class="v" id="vd-dest">Paderu GH</div>
+                            </div>
+                        </div>
+
+                        <div class="progress-container">
+                            <div class="progress-track">
+                                <div class="progress-fill" id="vd-progress"></div>
+                            </div>
+                            <div class="progress-steps">
+                                <span>Warehouse</span>
+                                <span>In Transit</span>
+                                <span>Checkpoint</span>
+                                <span>Destination</span>
+                            </div>
+                        </div>
+
+                        <div class="vd-actions">
+                            <button class="primary" id="btn-track-live">TRACK LIVE</button>
+                            <button id="btn-contact-driver">CONTACT DRIVER</button>
+                            <button id="btn-reroute-vehicle">REROUTE</button>
+                        </div>
+                    </div>
+
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+    
+    <script src="js/components.js"></script>
+    <script src="js/map-engine.js"></script>
+    <script src="js/charts.js"></script>
+
+    <script>
+        let activeVehicles = [];
+        let vehicleMarkers = {};
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if(window.SmartRoute) {
+                SmartRoute.initSharedComponents({
+                    title: 'Vehicle Tracking',
+                    subtitle: 'Real-Time GPS Fleet Management'
+                });
+                SmartRoute.initCountUps();
+            }
+
+            if(window.MapEngine) {
+                MapEngine.initMap('map', { center: [17.935, 82.520], zoom: 9 });
+                MapEngine.addRoads();
+
+                try {
+                    if (window.SmartRouteAPI && window.SmartRouteAPI.getVehicles) {
+                        const vList = await window.SmartRouteAPI.getVehicles();
+                        if (vList && vList.length) {
+                            activeVehicles = vList;
+                        }
+                    }
+                } catch(e) {
+                    console.warn('API vehicle load:', e);
+                }
+
+                if (!activeVehicles.length && window.MapEngine.VEHICLE_DATA) {
+                    activeVehicles = window.MapEngine.VEHICLE_DATA;
+                }
+
+                vehicleMarkers = MapEngine.addVehicles(MapEngine.map, activeVehicles, (v) => {
+                    const el = document.querySelector(`.vehicle-item`) || document.body;
+                    selectVehicle(el, v.id, v.cargo, v.status, (v.speed || 40) + ' km/h', v.eta || '14:30', v.dest || 'Paderu');
+                });
+                
+                MapEngine.animateVehicles(MapEngine.map, vehicleMarkers);
+
+                // Update vehicle positions every 4 seconds
+                setInterval(async () => {
+                    try {
+                        if (window.SmartRouteAPI && window.SmartRouteAPI.getVehicles) {
+                            const updated = await window.SmartRouteAPI.getVehicles();
+                            if (updated && updated.length) {
+                                updated.forEach(uv => {
+                                    const m = vehicleMarkers[uv.id] || vehicleMarkers[uv.code];
+                                    if (m && uv.lat && uv.lng) {
+                                        m.setLatLng([uv.lat, uv.lng]);
+                                    }
+                                });
+                            }
+                        }
+                    } catch(e) {}
+                }, 4000);
+            }
+
+            // Wire action buttons
+            const btnTrack = document.getElementById('btn-track-live');
+            if (btnTrack) {
+                btnTrack.addEventListener('click', () => {
+                    const vid = document.getElementById('vd-id').textContent.trim();
+                    const m = vehicleMarkers[vid];
+                    if (m && window.MapEngine && MapEngine.map) {
+                        MapEngine.map.flyTo(m.getLatLng(), 12, { duration: 1.2 });
+                    }
+                    if (window.SmartRoute) SmartRoute.showToast(`Live satellite GPS telemetry locked on ${vid}`, 'info');
+                });
+            }
+
+            const btnContact = document.getElementById('btn-contact-driver');
+            if (btnContact) {
+                btnContact.addEventListener('click', () => {
+                    const vid = document.getElementById('vd-id').textContent.trim();
+                    if (window.SmartRoute) SmartRoute.showToast(`Emergency radio channel opened to ${vid} driver`, 'success');
+                });
+            }
+
+            const btnReroute = document.getElementById('btn-reroute-vehicle');
+            if (btnReroute) {
+                btnReroute.addEventListener('click', async () => {
+                    const vid = document.getElementById('vd-id').textContent.trim();
+                    try {
+                        if (window.SmartRouteAPI && window.SmartRouteAPI.rerouteVehicle) {
+                            await window.SmartRouteAPI.rerouteVehicle(vid, 'CHINTAPALLE_BYPASS', '+1h 15m');
+                        }
+                    } catch(e) {}
+                    const badge = document.getElementById('vd-badge');
+                    if (badge) {
+                        badge.className = 'badge on-route';
+                        badge.textContent = 'REROUTED (ON-TRACK)';
+                    }
+                    document.getElementById('vd-eta').textContent = '15:45 (REROUTED)';
+                    if (window.SmartRoute) SmartRoute.showToast(`${vid} rerouted via Chintapalle bypass. ETA updated.`, 'warn', 3000);
+                });
+            }
+        });
+
+        function selectVehicle(el, id, cargo, status, speed, eta, dest) {
+            document.querySelectorAll('.vehicle-item').forEach(i => i.classList.remove('selected'));
+            if (el && el.classList) el.classList.add('selected');
+
+            document.getElementById('vd-id').textContent = id;
+            document.getElementById('vd-cargo').textContent = cargo;
+            document.getElementById('vd-speed').textContent = speed;
+            document.getElementById('vd-eta').textContent = eta;
+            document.getElementById('vd-dest').textContent = dest;
+            
+            const badge = document.getElementById('vd-badge');
+            badge.className = 'badge ' + status;
+            badge.textContent = status.replace('-', ' ').toUpperCase();
+
+            let prog = '60%';
+            if(status === 'blocked') prog = '30%';
+            if(status === 'delayed') prog = '45%';
+            document.getElementById('vd-progress').style.width = prog;
+
+            document.getElementById('vehicle-detail').classList.add('active');
+            
+            if(window.MapEngine && MapEngine.map) {
+                let coord = [17.935, 82.520];
+                if(id.includes('102') || id.includes('001')) coord = [17.75, 83.05];
+                if(id.includes('445') || id.includes('002')) coord = [18.10, 82.80];
+                if(id.includes('003')) coord = [17.85, 83.00];
+                
+                MapEngine.map.flyTo(coord, 11, { duration: 1.2 });
+            }
+        }
+    </script>
+</body>
+</html>
