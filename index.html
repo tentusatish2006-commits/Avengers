@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
     <link rel="stylesheet" href="css/design-system.css">
     <link rel="stylesheet" href="css/animations.css">
@@ -20,7 +19,7 @@
             background: radial-gradient(circle at center, rgba(3,8,16,0.5) 0%, rgba(3,8,16,0.88) 100%);
             display:flex; align-items:center; justify-content:center; pointer-events:none;
         }
-        .hero-content { position:relative; z-index:2; width:92%; max-width:1200px; text-align:center; pointer-events:auto; }
+        .hero-content { position:relative; z-index:2; width:92%; max-width:1100px; text-align:center; pointer-events:auto; }
         .main-panel {
             padding:36px 44px; border-radius:28px; display:flex; flex-direction:column; align-items:center;
             animation: slideUpFade 1s cubic-bezier(0.16,1,0.3,1) forwards;
@@ -56,21 +55,19 @@
         }
         .stat-value { font-size:1.8rem; font-weight:800; color:#00d4ff; font-family:'JetBrains Mono',monospace; }
         .stat-label { font-size:0.7rem; color:#8fa3b8; text-transform:uppercase; letter-spacing:0.1em; margin-top:4px; }
-        .cta-buttons { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-bottom:22px; }
+        .cta-buttons { display:flex; flex-wrap:wrap; gap:14px; justify-content:center; margin-bottom:22px; }
         .btn {
-            display:inline-flex; align-items:center; gap:8px; padding:12px 20px; border-radius:10px;
-            font-weight:700; text-decoration:none; border:1px solid transparent; cursor:pointer; font-size:0.92rem;
+            display:inline-flex; align-items:center; gap:8px; padding:14px 28px; border-radius:10px;
+            font-weight:700; text-decoration:none; border:1px solid transparent; cursor:pointer; font-size:1rem;
         }
-        .btn-primary { background:linear-gradient(90deg,#00d4ff,#0097b3); color:#030810; }
+        .btn-primary { background:linear-gradient(90deg,#00d4ff,#0097b3); color:#030810; box-shadow:0 4px 20px rgba(0,212,255,0.35); }
         .btn-emerald { background:rgba(0,255,136,0.12); border-color:#00ff88; color:#00ff88; }
-        .btn-secondary { background:rgba(255,149,0,0.12); border-color:#ff9500; color:#ff9500; }
-        .btn-map { background:rgba(0,212,255,0.1); border-color:#00d4ff; color:#00d4ff; }
         .timeline { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
         .timeline-step {
             font-size:11px; padding:6px 12px; border-radius:20px; background:rgba(255,255,255,0.05);
             border:1px solid rgba(255,255,255,0.1); color:#8fa3b8; letter-spacing:0.05em;
         }
-        /* SPLASH SCREEN */
+        .auth-note { margin-top:18px; color:#6a8ea8; font-size:0.85rem; }
         #splash-screen {
             position:fixed; inset:0; z-index:9999; background:#030810;
             display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -88,15 +85,13 @@
             opacity:0; padding:14px 28px; border:none; border-radius:12px; cursor:pointer;
             font-family:'Outfit',sans-serif; font-weight:800; font-size:1rem; letter-spacing:1px;
             color:#030810; background:linear-gradient(90deg,#00d4ff,#00ff88);
-            box-shadow:0 0 30px rgba(0,212,255,0.4); position:relative; overflow:hidden;
-            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow:0 0 30px rgba(0,212,255,0.4); transition: transform 0.2s, box-shadow 0.2s;
         }
         #splash-enter-btn:hover { transform:translateY(-2px); box-shadow:0 0 40px rgba(0,255,136,0.5); }
-        #splash-enter-btn:active { transform:translateY(-1px) scale(0.97); }
     </style>
 </head>
 <body>
-    <!-- SPLASH: 3D N Entry Animation -->
+    <!-- SPLASH: 3D N Entry Animation — public only -->
     <div id="splash-screen">
         <canvas id="splash-n-canvas"></canvas>
         <h1 id="splash-title">SmartRoute</h1>
@@ -112,19 +107,19 @@
                     <div class="logo-hint">⚡ Drag 3D "N" Letter</div>
                 </div>
                 <h1>SMARTROUTE</h1>
-                <p class="subtitle">AI-Powered Transport Accessibility & Regional Emergency Route Management for the North Eastern Region</p>
+                <p class="subtitle">AI-Powered Transport Accessibility &amp; Regional Emergency Route Management for the North Eastern Region</p>
                 <div class="stats">
                     <div class="stat-card"><div class="stat-value">1,248</div><div class="stat-label">Roads Monitored</div></div>
                     <div class="stat-card"><div class="stat-value" style="color:#00d4ff">126</div><div class="stat-label">Active Convoys</div></div>
                     <div class="stat-card"><div class="stat-value" style="color:#ff3b3b">18</div><div class="stat-label">Active Incidents</div></div>
                     <div class="stat-card"><div class="stat-value" style="color:#ff9500">8</div><div class="stat-label">North-East Regions</div></div>
                 </div>
+                <!-- ONLY Login + Sign Up before authentication -->
                 <div class="cta-buttons">
                     <a href="login.html" class="btn btn-primary">🔐 Login to Command</a>
                     <a href="signup.html" class="btn btn-emerald">✍️ Officer Sign Up</a>
-                    <a href="#" class="btn btn-secondary" onclick="return requireAuthNav('dashboard.html');">⊞ Live Dashboard</a>
-                    <a href="#" class="btn btn-map" onclick="return requireAuthNav('map.html');">🛰️ Live 3D Map</a>
                 </div>
+                <p class="auth-note">Dashboard, Map, Incidents and all modules open after Login or Sign Up.</p>
                 <div class="timeline">
                     <div class="timeline-step">1. GPS INGEST</div>
                     <div class="timeline-step">2. SENSOR DATA</div>
@@ -138,18 +133,7 @@
     </div>
 
     <script src="js/map-engine.js"></script>
-    <script src="js/charts.js"></script>
     <script src="js/index-landing.js"></script>
     <script src="js/auth-gate.js"></script>
-    <script>
-    function requireAuthNav(target) {
-      var logged = localStorage.getItem('sr_logged_in') === '1' || !!localStorage.getItem('sr_username');
-      if (logged) { window.location.href = target; return false; }
-      try { localStorage.setItem('sr_return_to', target); } catch(e) {}
-      alert('Please Login or Sign Up to access the Command Center.');
-      window.location.href = 'login.html';
-      return false;
-    }
-    </script>
 </body>
 </html>

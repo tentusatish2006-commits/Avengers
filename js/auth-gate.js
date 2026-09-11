@@ -1,33 +1,39 @@
-/* SmartRoute auth helpers — gate protected pages from homepage CTAs */
-function requireAuthNav(target) {
-  var logged = localStorage.getItem('sr_logged_in') === '1' || !!localStorage.getItem('sr_username');
-  if (logged) {
-    window.location.href = target;
+/* SmartRoute — all app pages require Login or Sign Up first */
+(function () {
+  var PUBLIC = ['index.html', 'login.html', 'signup.html', ''];
+
+  function pathName() {
+    return (window.location.pathname || '').split('/').pop() || '';
+  }
+
+  function isLoggedIn() {
+    try {
+      return localStorage.getItem('sr_logged_in') === '1' || !!localStorage.getItem('sr_username');
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function requireAuthNav(target) {
+    if (isLoggedIn()) {
+      window.location.href = target;
+      return false;
+    }
+    try { localStorage.setItem('sr_return_to', target); } catch (e) {}
+    alert('Please Login or Sign Up to access the Command Center.');
+    window.location.href = 'login.html';
     return false;
   }
-  try { localStorage.setItem('sr_return_to', target); } catch (e) {}
-  alert('Please Login or Sign Up to access the Command Center.');
-  window.location.href = 'login.html';
-  return false;
-}
 
-document.addEventListener('DOMContentLoaded', function () {
-  document.querySelectorAll('a[href="dashboard.html"]').forEach(function (a) {
-    if (a.classList.contains('btn') || a.closest('.cta-buttons')) {
-      a.setAttribute('href', '#');
-      a.addEventListener('click', function (e) {
-        e.preventDefault();
-        requireAuthNav('dashboard.html');
-      });
+  window.requireAuthNav = requireAuthNav;
+
+  // Block protected pages if not logged in
+  document.addEventListener('DOMContentLoaded', function () {
+    var path = pathName();
+    if (PUBLIC.indexOf(path) !== -1) return;
+    if (!isLoggedIn()) {
+      try { localStorage.setItem('sr_return_to', path); } catch (e) {}
+      window.location.replace('login.html');
     }
   });
-  document.querySelectorAll('a[href="map.html"]').forEach(function (a) {
-    if (a.classList.contains('btn') || a.closest('.cta-buttons')) {
-      a.setAttribute('href', '#');
-      a.addEventListener('click', function (e) {
-        e.preventDefault();
-        requireAuthNav('map.html');
-      });
-    }
-  });
-});
+})();
