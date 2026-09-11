@@ -1,16 +1,10 @@
-/* ============================================================
-   SMARTROUTE — SHARED COMPONENTS
-   Auth gate: all pages except index/login/signup require login
-   ============================================================ */
-
+/* SmartRoute shared UI + auth + i18n apply */
 const SR_PUBLIC_PAGES = ['index.html', 'login.html', 'signup.html', ''];
 
 function isLoggedIn() {
   try {
     return localStorage.getItem('sr_logged_in') === '1' || !!localStorage.getItem('sr_username');
-  } catch (e) {
-    return false;
-  }
+  } catch (e) { return false; }
 }
 
 function enforceAuthIfNeeded() {
@@ -23,54 +17,51 @@ function enforceAuthIfNeeded() {
     }
   } catch (e) {}
 }
-
-// Run auth check as soon as script loads (before DOM paint where possible)
 enforceAuthIfNeeded();
 
 const SMARTROUTE_NAV = [
-  { section: 'OPERATIONS', items: [
-    { id: 'dashboard', label: 'Dashboard', icon: '⊞', href: 'dashboard.html' },
-    { id: 'map', label: 'Live Map', icon: '🗺', href: 'map.html' },
-    { id: 'incidents', label: 'Incidents', icon: '⚠', href: 'incidents.html', badge: '18' },
-    { id: 'alerts', label: 'Alerts', icon: '🔔', href: 'alerts.html', badge: '7' },
-    { id: 'emergency', label: 'Emergency Response', icon: '🚨', href: 'emergency.html' },
+  { section: 'OPERATIONS', secKey: 'nav_sec_operations', items: [
+    { id: 'dashboard', label: 'Dashboard', i18n: 'nav_dashboard', icon: '⊞', href: 'dashboard.html' },
+    { id: 'map', label: 'Live Map', i18n: 'nav_map', icon: '🗺', href: 'map.html' },
+    { id: 'incidents', label: 'Incidents', i18n: 'nav_incidents', icon: '⚠', href: 'incidents.html', badge: '18' },
+    { id: 'alerts', label: 'Alerts', i18n: 'nav_alerts', icon: '🔔', href: 'alerts.html', badge: '7' },
+    { id: 'emergency', label: 'Emergency Response', i18n: 'nav_emergency', icon: '🚨', href: 'emergency.html' },
   ]},
-  { section: 'INTELLIGENCE', items: [
-    { id: 'route-prediction', label: 'AI Route Prediction', icon: '🤖', href: 'route-prediction.html' },
-    { id: 'alternate-routes', label: 'Alternate Routes', icon: '↔', href: 'alternate-routes.html' },
-    { id: 'ai-command', label: 'AI Command Center', icon: '⚡', href: 'ai-command.html' },
-    { id: 'photo-analysis', label: 'AI Photo Analysis', icon: '📷', href: 'photo-analysis.html' },
-    { id: 'weather', label: 'Weather & Risk', icon: '🌧', href: 'weather.html' },
+  { section: 'INTELLIGENCE', secKey: 'nav_sec_intelligence', items: [
+    { id: 'route-prediction', label: 'AI Route Prediction', i18n: 'nav_route_prediction', icon: '🤖', href: 'route-prediction.html' },
+    { id: 'alternate-routes', label: 'Alternate Routes', i18n: 'nav_alternate_routes', icon: '↔', href: 'alternate-routes.html' },
+    { id: 'ai-command', label: 'AI Command Center', i18n: 'nav_ai_command', icon: '⚡', href: 'ai-command.html' },
+    { id: 'photo-analysis', label: 'AI Photo Analysis', i18n: 'nav_photo_analysis', icon: '📷', href: 'photo-analysis.html' },
+    { id: 'weather', label: 'Weather & Risk', i18n: 'nav_weather', icon: '🌧', href: 'weather.html' },
   ]},
-  { section: 'TRANSPORT', items: [
-    { id: 'vehicle-tracking', label: 'Vehicle Tracking', icon: '🚛', href: 'vehicle-tracking.html' },
-    { id: 'deliveries', label: 'Deliveries', icon: '📦', href: 'deliveries.html' },
-    { id: 'corridors', label: 'Risk Corridors', icon: '🛣', href: 'corridors.html' },
+  { section: 'TRANSPORT', secKey: 'nav_sec_transport', items: [
+    { id: 'vehicle-tracking', label: 'Vehicle Tracking', i18n: 'nav_vehicle_tracking', icon: '🚛', href: 'vehicle-tracking.html' },
+    { id: 'deliveries', label: 'Deliveries', i18n: 'nav_deliveries', icon: '📦', href: 'deliveries.html' },
+    { id: 'corridors', label: 'Risk Corridors', i18n: 'nav_corridors', icon: '🛣', href: 'corridors.html' },
   ]},
-  { section: 'MONITORING', items: [
-    { id: 'districts', label: 'Districts', icon: '🗂', href: 'districts.html' },
-    { id: 'infrastructure', label: 'Infrastructure', icon: '🌉', href: 'infrastructure.html' },
-    { id: 'officers', label: 'Field Officers', icon: '👮', href: 'officers.html' },
-    { id: 'reports', label: 'Reports', icon: '📋', href: 'reports.html' },
+  { section: 'MONITORING', secKey: 'nav_sec_monitoring', items: [
+    { id: 'districts', label: 'Districts', i18n: 'nav_districts', icon: '🗂', href: 'districts.html' },
+    { id: 'infrastructure', label: 'Infrastructure', i18n: 'nav_infrastructure', icon: '🌉', href: 'infrastructure.html' },
+    { id: 'officers', label: 'Field Officers', i18n: 'nav_officers', icon: '👮', href: 'officers.html' },
+    { id: 'reports', label: 'Reports', i18n: 'nav_reports', icon: '📋', href: 'reports.html' },
   ]},
-  { section: 'ANALYTICS', items: [
-    { id: 'analytics', label: 'Analytics', icon: '📊', href: 'analytics.html' },
-    { id: 'simulation', label: 'Live Simulation', icon: '▶', href: 'simulation.html' },
+  { section: 'ANALYTICS', secKey: 'nav_sec_analytics', items: [
+    { id: 'analytics', label: 'Analytics', i18n: 'nav_analytics', icon: '📊', href: 'analytics.html' },
+    { id: 'simulation', label: 'Live Simulation', i18n: 'nav_simulation', icon: '▶', href: 'simulation.html' },
   ]},
-  { section: 'FIELD', items: [
-    { id: 'field-report', label: 'Field Report', icon: '📝', href: 'field-report.html' },
-    { id: 'officer-dashboard', label: 'Officer Dashboard', icon: '🎖', href: 'officer-dashboard.html' },
+  { section: 'FIELD', secKey: 'nav_sec_field', items: [
+    { id: 'field-report', label: 'Field Report', i18n: 'nav_field_report', icon: '📝', href: 'field-report.html' },
+    { id: 'officer-dashboard', label: 'Officer Dashboard', i18n: 'nav_officer_dashboard', icon: '🎖', href: 'officer-dashboard.html' },
   ]},
-  { section: 'SYSTEM', items: [
-    { id: 'language', label: 'Language & Region', icon: '🌐', href: 'language.html' },
-    { id: 'admin', label: 'Admin Panel', icon: '⚙', href: 'admin.html' },
-    { id: 'settings', label: 'Settings', icon: '🔧', href: 'settings.html' },
+  { section: 'SYSTEM', secKey: 'nav_sec_system', items: [
+    { id: 'language', label: 'Language & Region', i18n: 'nav_language', icon: '🌐', href: 'language.html' },
+    { id: 'admin', label: 'Admin Panel', i18n: 'nav_admin', icon: '⚙', href: 'admin.html' },
+    { id: 'settings', label: 'Settings', i18n: 'nav_settings', icon: '🔧', href: 'settings.html' },
   ]}
 ];
 
 function getPageId() {
-  const path = (window.location.pathname || '').split('/').pop() || 'dashboard.html';
-  return path.replace('.html', '');
+  return ((window.location.pathname || '').split('/').pop() || 'dashboard.html').replace('.html', '');
 }
 
 function buildSidebar() {
@@ -83,8 +74,8 @@ function buildSidebar() {
     <a href="dashboard.html" class="sidebar-logo">
       <div class="sidebar-logo-icon">SR</div>
       <div class="sidebar-logo-text">
-        <div class="sidebar-logo-title">SmartRoute</div>
-        <div class="sidebar-logo-sub">Emergency Mgmt</div>
+        <div class="sidebar-logo-title" data-i18n="app_name">SmartRoute</div>
+        <div class="sidebar-logo-sub" data-i18n="app_sub">Emergency Mgmt</div>
       </div>
     </a>
     <nav class="sidebar-section" id="sidebar-nav"></nav>
@@ -98,20 +89,21 @@ function buildSidebar() {
       </div>
       <a href="login.html" class="nav-item" id="sr-sign-out" style="color:var(--danger);font-size:var(--text-sm);">
         <span class="nav-icon">⏻</span>
-        <span class="nav-label">Sign Out</span>
+        <span class="nav-label" data-i18n="sign_out">Sign Out</span>
       </a>
     </div>`;
   const nav = sidebar.querySelector('#sidebar-nav');
   SMARTROUTE_NAV.forEach(section => {
     const label = document.createElement('div');
     label.className = 'sidebar-section-label';
+    label.setAttribute('data-i18n', section.secKey);
     label.textContent = section.section;
     nav.appendChild(label);
     section.items.forEach(item => {
       const a = document.createElement('a');
       a.href = item.href;
       a.className = 'nav-item' + (item.id === activeId ? ' active' : '');
-      a.innerHTML = `<span class="nav-icon">${item.icon}</span><span class="nav-label">${item.label}</span>${item.badge ? `<span class="nav-badge">${item.badge}</span>` : ''}`;
+      a.innerHTML = `<span class="nav-icon">${item.icon}</span><span class="nav-label" data-i18n="${item.i18n}">${item.label}</span>${item.badge ? `<span class="nav-badge">${item.badge}</span>` : ''}`;
       nav.appendChild(a);
     });
   });
@@ -139,12 +131,12 @@ function buildNavbar(title, subtitle) {
     <div class="navbar-left">
       <button class="collapse-btn" id="sidebar-toggle" title="Toggle Sidebar">☰</button>
       <div>
-        <div class="navbar-title">${title || 'SmartRoute'}</div>
+        <div class="navbar-title" data-i18n-title="1">${title || 'SmartRoute'}</div>
         <div class="page-subtitle" style="margin:0;font-size:12px;color:var(--text-muted)">${subtitle || ''}</div>
       </div>
     </div>
     <div class="navbar-right">
-      <span class="status-indicator"><span class="status-dot"></span> LIVE</span>
+      <span class="status-indicator"><span class="status-dot"></span> <span data-i18n="status_live">LIVE</span></span>
       <span class="navbar-clock" id="navbar-clock">--:--:--</span>
       <a href="alerts.html" class="navbar-alert-btn" title="Alerts">🔔</a>
       <a href="settings.html" class="navbar-alert-btn" title="Settings">⚙</a>
@@ -171,8 +163,25 @@ function initSidebarToggle() {
   });
 }
 
+function loadAndApplyI18n() {
+  function apply() {
+    if (window.SmartRouteI18n) {
+      const code = SmartRouteI18n.getLanguage();
+      SmartRouteI18n.applyLanguage(code);
+      document.documentElement.lang = code;
+    }
+  }
+  if (window.SmartRouteI18n) {
+    apply();
+  } else {
+    const s = document.createElement('script');
+    s.src = 'js/i18n.js';
+    s.onload = apply;
+    document.head.appendChild(s);
+  }
+}
+
 function initSharedComponents(config = {}) {
-  // Sidebar scroll fix CSS
   if (!document.getElementById('sr-sidebar-scroll-fix')) {
     const link = document.createElement('link');
     link.id = 'sr-sidebar-scroll-fix';
@@ -183,15 +192,16 @@ function initSharedComponents(config = {}) {
 
   enforceAuthIfNeeded();
   if (!isLoggedIn() && !SR_PUBLIC_PAGES.includes((window.location.pathname || '').split('/').pop() || '')) {
-    return; // stop building UI while redirecting
+    return;
   }
 
   const { title, subtitle } = config;
   const appShell = document.querySelector('.app-shell');
   if (!appShell) return;
 
-  const sidebar = buildSidebar();
-  appShell.insertBefore(sidebar, appShell.firstChild);
+  if (!document.getElementById('sidebar')) {
+    appShell.insertBefore(buildSidebar(), appShell.firstChild);
+  }
 
   let mainContent = appShell.querySelector('.main-content');
   if (!mainContent) {
@@ -205,7 +215,9 @@ function initSharedComponents(config = {}) {
   }
 
   if (localStorage.getItem('sr-sidebar-collapsed') === '1') mainContent.classList.add('sidebar-collapsed');
-  mainContent.insertBefore(buildNavbar(title, subtitle), mainContent.firstChild);
+  if (!mainContent.querySelector('.navbar')) {
+    mainContent.insertBefore(buildNavbar(title, subtitle), mainContent.firstChild);
+  }
 
   initClock();
   initSidebarToggle();
@@ -222,14 +234,8 @@ function initSharedComponents(config = {}) {
     window.location.href = 'login.html';
   });
 
-  if (!window.SmartRouteI18n) {
-    const s = document.createElement('script');
-    s.src = 'js/i18n.js';
-    s.onload = () => { if (window.SmartRouteI18n) window.SmartRouteI18n.applyLanguage(); };
-    document.head.appendChild(s);
-  } else if (window.SmartRouteI18n) {
-    window.SmartRouteI18n.applyLanguage();
-  }
+  // Apply selected language after sidebar is in the DOM
+  loadAndApplyI18n();
 }
 
 function showToast(msg, type = 'info', duration = 3500) {
@@ -255,8 +261,7 @@ function initCountUps() {
     const startTime = performance.now();
     function update(t) {
       const p = Math.min((t - startTime) / 1200, 1);
-      const ease = 1 - Math.pow(1 - p, 3);
-      el.textContent = Math.round(target * ease).toLocaleString();
+      el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3))).toLocaleString();
       if (p < 1) requestAnimationFrame(update);
     }
     requestAnimationFrame(update);
@@ -269,5 +274,13 @@ window.SmartRoute = {
   showToast,
   getPageId,
   enforceAuthIfNeeded,
-  isLoggedIn
+  isLoggedIn,
+  loadAndApplyI18n
 };
+
+// If language changes on another tab, re-apply
+window.addEventListener('storage', (e) => {
+  if (e.key === 'sr_language' && window.SmartRouteI18n) {
+    SmartRouteI18n.applyLanguage(e.newValue || 'en');
+  }
+});
