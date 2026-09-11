@@ -51,7 +51,7 @@
                 <div class="map-stage">
                     <div id="map-2d"></div>
                     <div id="map-3d"></div>
-                    <div class="map-hint" id="map-hint">2D: drag to pan · scroll to zoom · roads &amp; vehicles on NER corridors</div>
+                    <div class="map-hint" id="map-hint">2D: drag to pan · scroll to zoom · roads & vehicles on NER corridors</div>
                 </div>
             </main>
         </div>
@@ -59,6 +59,7 @@
 
     <script src="js/components.js"></script>
     <script src="js/map-engine.js"></script>
+    <script src="js/map-3d-engine.js"></script>
     <script>
         let scene3D = null;
         let currentMode = '2d';
@@ -71,7 +72,6 @@
                 });
             }
             init2D();
-            // Pre-init 3D so switch is fast
             setTimeout(init3D, 400);
         });
 
@@ -111,7 +111,6 @@
                 c2.style.display = 'none';
                 c3.style.display = 'block';
                 init3D();
-                // resize three renderer if needed
                 if (scene3D && scene3D.renderer && scene3D.camera) {
                     const w = c3.clientWidth, h = c3.clientHeight;
                     scene3D.renderer.setSize(w, h);
