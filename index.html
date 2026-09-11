@@ -7,112 +7,139 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
     <link rel="stylesheet" href="css/design-system.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/components.css">
     <style>
-        body, html { margin: 0; padding: 0; font-family: 'Outfit', sans-serif; background: #030810; color: #e8f4ff; }
-        .hero {
-            min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            text-align: center; padding: 60px 20px 40px; position: relative;
-            background: radial-gradient(ellipse at 50% 0%, rgba(0,80,120,0.35) 0%, transparent 55%), #030810;
+        body, html { margin:0; padding:0; width:100%; height:100%; overflow:hidden; font-family:'Outfit',sans-serif; background:#030810; color:#fff; }
+        #hero-map { position:absolute; inset:0; z-index:0; }
+        .hero-overlay {
+            position:absolute; inset:0; z-index:1;
+            background: radial-gradient(circle at center, rgba(3,8,16,0.5) 0%, rgba(3,8,16,0.88) 100%);
+            display:flex; align-items:center; justify-content:center; pointer-events:none;
         }
-        .hero h1 {
-            font-size: clamp(2.8rem, 8vw, 4.8rem); margin: 0; font-weight: 900; letter-spacing: 2px;
-            background: linear-gradient(90deg, #00d4ff, #00ff88, #00d4ff); background-size: 200% auto;
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: shimmer 4s linear infinite;
+        .hero-content { position:relative; z-index:2; width:92%; max-width:1200px; text-align:center; pointer-events:auto; }
+        .main-panel {
+            padding:36px 44px; border-radius:28px; display:flex; flex-direction:column; align-items:center;
+            animation: slideUpFade 1s cubic-bezier(0.16,1,0.3,1) forwards;
+            background: rgba(4,11,26,0.65); backdrop-filter: blur(28px);
+            border:1px solid rgba(100,200,255,0.22);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 40px rgba(0,212,255,0.15);
+        }
+        @keyframes slideUpFade { from { opacity:0; transform:translateY(30px);} to { opacity:1; transform:translateY(0);} }
+        .logo-container {
+            width:180px; height:180px; margin:-24px auto 14px; position:relative; z-index:20;
+            cursor:grab; border-radius:50%;
+            background: radial-gradient(circle, rgba(0,212,255,0.18) 0%, rgba(4,11,26,0) 70%);
+            box-shadow: 0 0 45px rgba(0,212,255,0.15);
+        }
+        .logo-container:active { cursor:grabbing; }
+        .logo-hint {
+            position:absolute; bottom:-8px; left:50%; transform:translateX(-50%);
+            font-size:10px; font-weight:700; letter-spacing:0.08em; color:#00d4ff;
+            background:rgba(3,8,16,0.9); padding:3px 10px; border-radius:12px;
+            border:1px solid rgba(0,212,255,0.4); white-space:nowrap; pointer-events:none;
+        }
+        .main-panel h1 {
+            margin:8px 0 6px; font-size:clamp(2.2rem,5vw,3.4rem); font-weight:900; letter-spacing:2px;
+            background: linear-gradient(90deg,#00d4ff,#00ff88,#00d4ff); background-size:200% auto;
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent; animation: shimmer 4s linear infinite;
         }
         @keyframes shimmer { to { background-position: 200% center; } }
-        .hero-sub { color: #8fa3b8; max-width: 680px; margin: 16px auto 36px; font-size: 1.05rem; line-height: 1.55; }
-        .stats { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; margin-bottom: 32px; }
+        .subtitle { color:#8fa3b8; font-size:0.95rem; margin:0 0 28px; max-width:640px; line-height:1.5; }
+        .stats { display:flex; flex-wrap:wrap; gap:14px; justify-content:center; margin-bottom:28px; }
         .stat-card {
-            background: rgba(8,18,38,0.9); border: 1px solid rgba(0,212,255,0.28); border-radius: 14px;
-            padding: 20px 28px; min-width: 150px; box-shadow: 0 0 24px rgba(0,212,255,0.08);
+            background:rgba(8,18,38,0.9); border:1px solid rgba(0,212,255,0.28); border-radius:14px;
+            padding:16px 24px; min-width:130px;
         }
-        .stat-value { font-size: 2.1rem; font-weight: 800; color: #00d4ff; font-family: 'JetBrains Mono', monospace; }
-        .stat-label { font-size: 0.72rem; color: #8fa3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; }
-        .cta-buttons { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 28px; }
+        .stat-value { font-size:1.8rem; font-weight:800; color:#00d4ff; font-family:'JetBrains Mono',monospace; }
+        .stat-label { font-size:0.7rem; color:#8fa3b8; text-transform:uppercase; letter-spacing:0.1em; margin-top:4px; }
+        .cta-buttons { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-bottom:22px; }
         .btn {
-            display: inline-flex; align-items: center; gap: 8px; padding: 13px 22px; border-radius: 10px;
-            font-weight: 700; text-decoration: none; border: 1px solid transparent; cursor: pointer; font-size: 0.95rem;
+            display:inline-flex; align-items:center; gap:8px; padding:12px 20px; border-radius:10px;
+            font-weight:700; text-decoration:none; border:1px solid transparent; cursor:pointer; font-size:0.92rem;
         }
-        .btn-primary { background: linear-gradient(90deg, #00d4ff, #0097b3); color: #030810; }
-        .btn-emerald { background: rgba(0,255,136,0.12); border-color: #00ff88; color: #00ff88; }
-        .btn-secondary { background: rgba(255,149,0,0.12); border-color: #ff9500; color: #ff9500; }
-        .btn-map { background: rgba(0,212,255,0.1); border-color: #00d4ff; color: #00d4ff; }
-        .timeline { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+        .btn-primary { background:linear-gradient(90deg,#00d4ff,#0097b3); color:#030810; }
+        .btn-emerald { background:rgba(0,255,136,0.12); border-color:#00ff88; color:#00ff88; }
+        .btn-secondary { background:rgba(255,149,0,0.12); border-color:#ff9500; color:#ff9500; }
+        .btn-map { background:rgba(0,212,255,0.1); border-color:#00d4ff; color:#00d4ff; }
+        .timeline { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
         .timeline-step {
-            font-size: 11px; padding: 6px 12px; border-radius: 20px; background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1); color: #8fa3b8; letter-spacing: 0.05em;
+            font-size:11px; padding:6px 12px; border-radius:20px; background:rgba(255,255,255,0.05);
+            border:1px solid rgba(255,255,255,0.1); color:#8fa3b8; letter-spacing:0.05em;
         }
-        .modules {
-            max-width: 1100px; margin: 0 auto; padding: 40px 20px 80px; display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;
+        /* SPLASH SCREEN */
+        #splash-screen {
+            position:fixed; inset:0; z-index:9999; background:#030810;
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
+            transition: opacity 0.7s ease;
         }
-        .module-card {
-            background: rgba(8,18,38,0.85); border: 1px solid rgba(100,200,255,0.15); border-radius: 14px;
-            padding: 20px; text-decoration: none; color: #e8f4ff; transition: border-color 0.2s, transform 0.2s;
+        #splash-n-canvas { width:min(55vw,420px); height:min(55vw,420px); cursor:grab; }
+        #splash-n-canvas:active { cursor:grabbing; }
+        #splash-title {
+            margin:18px 0 6px; font-size:clamp(1.8rem,4vw,2.8rem); font-weight:900; letter-spacing:3px;
+            background:linear-gradient(90deg,#00d4ff,#00ff88); -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+            opacity:0;
         }
-        .module-card:hover { border-color: #00d4ff; transform: translateY(-3px); }
-        .module-card h3 { margin: 0 0 8px; color: #00d4ff; font-size: 1rem; }
-        .module-card p { margin: 0; color: #8fa3b8; font-size: 0.85rem; line-height: 1.4; }
-        .section-title { text-align: center; color: #8fa3b8; font-size: 0.85rem; letter-spacing: 0.15em; text-transform: uppercase; margin: 0 0 20px; }
+        #splash-subtitle { color:#8fa3b8; font-size:0.95rem; margin:0 0 22px; opacity:0; letter-spacing:0.5px; }
+        #splash-enter-btn {
+            opacity:0; padding:14px 28px; border:none; border-radius:12px; cursor:pointer;
+            font-family:'Outfit',sans-serif; font-weight:800; font-size:1rem; letter-spacing:1px;
+            color:#030810; background:linear-gradient(90deg,#00d4ff,#00ff88);
+            box-shadow:0 0 30px rgba(0,212,255,0.4); position:relative; overflow:hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        #splash-enter-btn:hover { transform:translateY(-2px); box-shadow:0 0 40px rgba(0,255,136,0.5); }
+        #splash-enter-btn:active { transform:translateY(-1px) scale(0.97); }
     </style>
 </head>
 <body>
-    <div class="hero">
-        <h1>SMARTROUTE</h1>
-        <p class="hero-sub">AI-Powered Transport Accessibility &amp; Regional Emergency Route Management for the North Eastern Region (Assam, Meghalaya, Arunachal, Nagaland, Manipur, Mizoram, Tripura, Sikkim)</p>
-        <div class="stats">
-            <div class="stat-card"><div class="stat-value">1,248</div><div class="stat-label">Roads Monitored</div></div>
-            <div class="stat-card"><div class="stat-value" style="color:#00d4ff">126</div><div class="stat-label">Active Convoys</div></div>
-            <div class="stat-card"><div class="stat-value" style="color:#ff3b3b">18</div><div class="stat-label">Active Incidents</div></div>
-            <div class="stat-card"><div class="stat-value" style="color:#ff9500">8</div><div class="stat-label">North-East Regions</div></div>
-        </div>
-        <div class="cta-buttons">
-            <a href="login.html" class="btn btn-primary">🔐 Login to Command</a>
-            <a href="signup.html" class="btn btn-emerald">✍️ Officer Sign Up</a>
-            <a href="#" class="btn btn-secondary" onclick="return requireAuthNav('dashboard.html');">⊞ Live Dashboard</a>
-            <a href="#" class="btn btn-map" onclick="return requireAuthNav('map.html');">🛰️ Live 3D Map</a>
-        </div>
-        <div class="timeline">
-            <div class="timeline-step">1. GPS INGEST</div>
-            <div class="timeline-step">2. SENSOR DATA</div>
-            <div class="timeline-step">3. AI TERRAIN ENGINE</div>
-            <div class="timeline-step">4. RISK PREDICTION</div>
-            <div class="timeline-step">5. DYNAMIC ROUTE</div>
-            <div class="timeline-step">6. CRITICAL ALERT</div>
+    <!-- SPLASH: 3D N Entry Animation -->
+    <div id="splash-screen">
+        <canvas id="splash-n-canvas"></canvas>
+        <h1 id="splash-title">SmartRoute</h1>
+        <p id="splash-subtitle">North-Eastern Emergency Command · AI Logistics Intelligence</p>
+        <button id="splash-enter-btn" onclick="dismissSplash()">⚡ Enter Command Center</button>
+    </div>
+
+    <div id="hero-map"></div>
+    <div class="hero-overlay" id="parallax-container">
+        <div class="hero-content">
+            <div class="main-panel">
+                <div id="logo-canvas" class="logo-container" title="Click and drag to rotate 3D 'N' Emblem">
+                    <div class="logo-hint">⚡ Drag 3D "N" Letter</div>
+                </div>
+                <h1>SMARTROUTE</h1>
+                <p class="subtitle">AI-Powered Transport Accessibility & Regional Emergency Route Management for the North Eastern Region</p>
+                <div class="stats">
+                    <div class="stat-card"><div class="stat-value">1,248</div><div class="stat-label">Roads Monitored</div></div>
+                    <div class="stat-card"><div class="stat-value" style="color:#00d4ff">126</div><div class="stat-label">Active Convoys</div></div>
+                    <div class="stat-card"><div class="stat-value" style="color:#ff3b3b">18</div><div class="stat-label">Active Incidents</div></div>
+                    <div class="stat-card"><div class="stat-value" style="color:#ff9500">8</div><div class="stat-label">North-East Regions</div></div>
+                </div>
+                <div class="cta-buttons">
+                    <a href="login.html" class="btn btn-primary">🔐 Login to Command</a>
+                    <a href="signup.html" class="btn btn-emerald">✍️ Officer Sign Up</a>
+                    <a href="#" class="btn btn-secondary" onclick="return requireAuthNav('dashboard.html');">⊞ Live Dashboard</a>
+                    <a href="#" class="btn btn-map" onclick="return requireAuthNav('map.html');">🛰️ Live 3D Map</a>
+                </div>
+                <div class="timeline">
+                    <div class="timeline-step">1. GPS INGEST</div>
+                    <div class="timeline-step">2. SENSOR DATA</div>
+                    <div class="timeline-step">3. AI TERRAIN ENGINE</div>
+                    <div class="timeline-step">4. RISK PREDICTION</div>
+                    <div class="timeline-step">5. DYNAMIC ROUTE</div>
+                    <div class="timeline-step">6. CRITICAL ALERT</div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <p class="section-title">Command Modules — All Pages Available</p>
-    <div class="modules">
-        <a class="module-card" href="#" onclick="return requireAuthNav('dashboard.html');"><h3>⊞ Dashboard</h3><p>Operations overview &amp; live KPIs</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('map.html');"><h3>🗺 Live Map</h3><p>GIS routes, vehicles, incidents</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('incidents.html');"><h3>⚠ Incidents</h3><p>Active disruptions &amp; assignment</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('alerts.html');"><h3>🔔 Alerts</h3><p>Critical notifications feed</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('emergency.html');"><h3>🚨 Emergency</h3><p>Response teams &amp; redirect</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('route-prediction.html');"><h3>🤖 AI Route Prediction</h3><p>NER corridor forecasting</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('alternate-routes.html');"><h3>↔ Alternate Routes</h3><p>Safe detours GS-1 / NH-306 / AH-1</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('ai-command.html');"><h3>⚡ AI Command Center</h3><p>Decision support console</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('photo-analysis.html');"><h3>📷 AI Photo Analysis</h3><p>Field image assessment</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('weather.html');"><h3>🌧 Weather &amp; Risk</h3><p>NER meteorological risk</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('vehicle-tracking.html');"><h3>🚛 Vehicle Tracking</h3><p>GPS convoy monitoring</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('deliveries.html');"><h3>📦 Deliveries</h3><p>Relief logistics status</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('corridors.html');"><h3>🛣 Risk Corridors</h3><p>Highway risk scoring</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('districts.html');"><h3>🗂 Districts</h3><p>District-level accessibility</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('infrastructure.html');"><h3>🌉 Infrastructure</h3><p>Bridges &amp; road assets</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('officers.html');"><h3>👮 Field Officers</h3><p>Officer roster &amp; zones</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('reports.html');"><h3>📋 Reports</h3><p>Operational reports</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('analytics.html');"><h3>📊 Analytics</h3><p>Trends &amp; performance</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('simulation.html');"><h3>▶ Live Simulation</h3><p>Route &amp; vehicle simulation</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('field-report.html');"><h3>📝 Field Report</h3><p>Submit field observations</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('officer-dashboard.html');"><h3>🎖 Officer Dashboard</h3><p>Field officer home</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('language.html');"><h3>🌐 Language</h3><p>Regional language settings</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('admin.html');"><h3>⚙ Admin Panel</h3><p>System administration</p></a>
-        <a class="module-card" href="#" onclick="return requireAuthNav('settings.html');"><h3>🔧 Settings</h3><p>Profile, security, language</p></a>
-    </div>
-
+    <script src="js/map-engine.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/index-landing.js"></script>
     <script src="js/auth-gate.js"></script>
     <script>
     function requireAuthNav(target) {
