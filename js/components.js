@@ -1,7 +1,31 @@
 /* ============================================================
-   SMARTROUTE — SHARED COMPONENT INJECTOR
-   Sidebar + Navbar + Auth + Sidebar Scroll Fix
+   SMARTROUTE — SHARED COMPONENTS
+   Auth gate: all pages except index/login/signup require login
    ============================================================ */
+
+const SR_PUBLIC_PAGES = ['index.html', 'login.html', 'signup.html', ''];
+
+function isLoggedIn() {
+  try {
+    return localStorage.getItem('sr_logged_in') === '1' || !!localStorage.getItem('sr_username');
+  } catch (e) {
+    return false;
+  }
+}
+
+function enforceAuthIfNeeded() {
+  try {
+    const path = (window.location.pathname || '').split('/').pop() || '';
+    if (SR_PUBLIC_PAGES.includes(path)) return;
+    if (!isLoggedIn()) {
+      try { localStorage.setItem('sr_return_to', path); } catch (e) {}
+      window.location.replace('login.html');
+    }
+  } catch (e) {}
+}
+
+// Run auth check as soon as script loads (before DOM paint where possible)
+enforceAuthIfNeeded();
 
 const SMARTROUTE_NAV = [
   { section: 'OPERATIONS', items: [
@@ -56,7 +80,7 @@ function buildSidebar() {
   sidebar.className = 'sidebar' + (collapsed ? ' collapsed' : '');
   sidebar.id = 'sidebar';
   sidebar.innerHTML = `
-    <a href="index.html" class="sidebar-logo">
+    <a href="dashboard.html" class="sidebar-logo">
       <div class="sidebar-logo-icon">SR</div>
       <div class="sidebar-logo-text">
         <div class="sidebar-logo-title">SmartRoute</div>
@@ -74,22 +98,20 @@ function buildSidebar() {
       </div>
       <a href="login.html" class="nav-item" id="sr-sign-out" style="color:var(--danger);font-size:var(--text-sm);">
         <span class="nav-icon">⏻</span>
-        <span class="nav-label" data-i18n="sign_out">Sign Out</span>
+        <span class="nav-label">Sign Out</span>
       </a>
     </div>`;
   const nav = sidebar.querySelector('#sidebar-nav');
   SMARTROUTE_NAV.forEach(section => {
     const label = document.createElement('div');
     label.className = 'sidebar-section-label';
-    label.setAttribute('data-i18n', 'nav_sec_' + section.section.toLowerCase().replace(/\s+/g, '_'));
     label.textContent = section.section;
     nav.appendChild(label);
     section.items.forEach(item => {
       const a = document.createElement('a');
       a.href = item.href;
       a.className = 'nav-item' + (item.id === activeId ? ' active' : '');
-      a.setAttribute('data-nav-id', item.id);
-      a.innerHTML = `<span class="nav-icon">${item.icon}</span><span class="nav-label" data-i18n="nav_${item.id.replace(/-/g,'_')}">${item.label}</span>${item.badge ? `<span class="nav-badge">${item.badge}</span>` : ''}`;
+      a.innerHTML = `<span class="nav-icon">${item.icon}</span><span class="nav-label">${item.label}</span>${item.badge ? `<span class="nav-badge">${item.badge}</span>` : ''}`;
       nav.appendChild(a);
     });
   });
@@ -122,7 +144,7 @@ function buildNavbar(title, subtitle) {
       </div>
     </div>
     <div class="navbar-right">
-      <span class="status-indicator" id="backend-status-badge"><span class="status-dot"></span> LIVE</span>
+      <span class="status-indicator"><span class="status-dot"></span> LIVE</span>
       <span class="navbar-clock" id="navbar-clock">--:--:--</span>
       <a href="alerts.html" class="navbar-alert-btn" title="Alerts">🔔</a>
       <a href="settings.html" class="navbar-alert-btn" title="Settings">⚙</a>
@@ -149,21 +171,8 @@ function initSidebarToggle() {
   });
 }
 
-const SR_PUBLIC_PAGES = ['index.html', 'login.html', 'signup.html', 'language.html', ''];
-function enforceAuthIfNeeded() {
-  try {
-    const path = (window.location.pathname || '').split('/').pop() || '';
-    if (SR_PUBLIC_PAGES.includes(path)) return;
-    const logged = localStorage.getItem('sr_logged_in') === '1' || !!localStorage.getItem('sr_username');
-    if (!logged) {
-      try { localStorage.setItem('sr_return_to', path); } catch (e) {}
-      window.location.href = 'login.html';
-    }
-  } catch (e) {}
-}
-
 function initSharedComponents(config = {}) {
-  // Load sidebar scroll fix CSS
+  // Sidebar scroll fix CSS
   if (!document.getElementById('sr-sidebar-scroll-fix')) {
     const link = document.createElement('link');
     link.id = 'sr-sidebar-scroll-fix';
@@ -173,6 +182,10 @@ function initSharedComponents(config = {}) {
   }
 
   enforceAuthIfNeeded();
+  if (!isLoggedIn() && !SR_PUBLIC_PAGES.includes((window.location.pathname || '').split('/').pop() || '')) {
+    return; // stop building UI while redirecting
+  }
+
   const { title, subtitle } = config;
   const appShell = document.querySelector('.app-shell');
   if (!appShell) return;
@@ -198,12 +211,15 @@ function initSharedComponents(config = {}) {
   initSidebarToggle();
 
   const so = document.getElementById('sr-sign-out');
-  if (so) so.addEventListener('click', () => {
+  if (so) so.addEventListener('click', (e) => {
+    e.preventDefault();
     try {
       localStorage.removeItem('sr_logged_in');
       localStorage.removeItem('sr_username');
       localStorage.removeItem('sr_user_role');
+      localStorage.removeItem('sr_return_to');
     } catch (err) {}
+    window.location.href = 'login.html';
   });
 
   if (!window.SmartRouteI18n) {
@@ -211,7 +227,7 @@ function initSharedComponents(config = {}) {
     s.src = 'js/i18n.js';
     s.onload = () => { if (window.SmartRouteI18n) window.SmartRouteI18n.applyLanguage(); };
     document.head.appendChild(s);
-  } else {
+  } else if (window.SmartRouteI18n) {
     window.SmartRouteI18n.applyLanguage();
   }
 }
@@ -252,5 +268,6 @@ window.SmartRoute = {
   initCountUps,
   showToast,
   getPageId,
-  enforceAuthIfNeeded
+  enforceAuthIfNeeded,
+  isLoggedIn
 };
