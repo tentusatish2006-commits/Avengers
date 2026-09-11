@@ -16,117 +16,117 @@
         #hero-map { position:absolute; inset:0; z-index:0; }
         .hero-overlay {
             position:absolute; inset:0; z-index:1;
-            background: radial-gradient(circle at center, rgba(3,8,16,0.5) 0%, rgba(3,8,16,0.88) 100%);
+            background: radial-gradient(circle at center, rgba(3,8,16,0.45) 0%, rgba(3,8,16,0.9) 100%);
             display:flex; align-items:center; justify-content:center; pointer-events:none;
         }
-        .hero-content { position:relative; z-index:2; width:92%; max-width:1100px; text-align:center; pointer-events:auto; }
+        .hero-content { position:relative; z-index:2; width:92%; max-width:720px; text-align:center; pointer-events:auto; }
         .main-panel {
-            padding:36px 44px; border-radius:28px; display:flex; flex-direction:column; align-items:center;
-            animation: slideUpFade 1s cubic-bezier(0.16,1,0.3,1) forwards;
-            background: rgba(4,11,26,0.65); backdrop-filter: blur(28px);
+            padding:22px 28px 26px; border-radius:20px; display:flex; flex-direction:column; align-items:center;
+            animation: slideUpFade 0.8s cubic-bezier(0.16,1,0.3,1) forwards;
+            background: rgba(4,11,26,0.72); backdrop-filter: blur(22px);
             border:1px solid rgba(100,200,255,0.22);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 40px rgba(0,212,255,0.15);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.65), 0 0 28px rgba(0,212,255,0.12);
         }
-        @keyframes slideUpFade { from { opacity:0; transform:translateY(30px);} to { opacity:1; transform:translateY(0);} }
+        @keyframes slideUpFade { from { opacity:0; transform:translateY(20px);} to { opacity:1; transform:translateY(0);} }
+        /* Smaller 3D N on main panel */
         .logo-container {
-            width:180px; height:180px; margin:-24px auto 14px; position:relative; z-index:20;
+            width:96px; height:96px; margin:-8px auto 8px; position:relative; z-index:20;
             cursor:grab; border-radius:50%;
-            background: radial-gradient(circle, rgba(0,212,255,0.18) 0%, rgba(4,11,26,0) 70%);
-            box-shadow: 0 0 45px rgba(0,212,255,0.15);
+            background: radial-gradient(circle, rgba(0,212,255,0.16) 0%, rgba(4,11,26,0) 70%);
+            box-shadow: 0 0 28px rgba(0,212,255,0.12);
         }
         .logo-container:active { cursor:grabbing; }
         .logo-hint {
-            position:absolute; bottom:-8px; left:50%; transform:translateX(-50%);
-            font-size:10px; font-weight:700; letter-spacing:0.08em; color:#00d4ff;
-            background:rgba(3,8,16,0.9); padding:3px 10px; border-radius:12px;
-            border:1px solid rgba(0,212,255,0.4); white-space:nowrap; pointer-events:none;
+            position:absolute; bottom:-6px; left:50%; transform:translateX(-50%);
+            font-size:9px; font-weight:700; letter-spacing:0.06em; color:#00d4ff;
+            background:rgba(3,8,16,0.9); padding:2px 8px; border-radius:10px;
+            border:1px solid rgba(0,212,255,0.35); white-space:nowrap; pointer-events:none;
         }
         .main-panel h1 {
-            margin:8px 0 6px; font-size:clamp(2.2rem,5vw,3.4rem); font-weight:900; letter-spacing:2px;
+            margin:6px 0 4px; font-size:clamp(1.6rem,4vw,2.2rem); font-weight:900; letter-spacing:1.5px;
             background: linear-gradient(90deg,#00d4ff,#00ff88,#00d4ff); background-size:200% auto;
             -webkit-background-clip:text; -webkit-text-fill-color:transparent; animation: shimmer 4s linear infinite;
         }
         @keyframes shimmer { to { background-position: 200% center; } }
-        .subtitle { color:#8fa3b8; font-size:0.95rem; margin:0 0 28px; max-width:640px; line-height:1.5; }
-        .stats { display:flex; flex-wrap:wrap; gap:14px; justify-content:center; margin-bottom:28px; }
+        .subtitle { color:#8fa3b8; font-size:0.82rem; margin:0 0 16px; max-width:520px; line-height:1.45; }
+        .stats { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:16px; }
         .stat-card {
-            background:rgba(8,18,38,0.9); border:1px solid rgba(0,212,255,0.28); border-radius:14px;
-            padding:16px 24px; min-width:130px;
+            background:rgba(8,18,38,0.9); border:1px solid rgba(0,212,255,0.25); border-radius:12px;
+            padding:10px 16px; min-width:100px;
         }
-        .stat-value { font-size:1.8rem; font-weight:800; color:#00d4ff; font-family:'JetBrains Mono',monospace; }
-        .stat-label { font-size:0.7rem; color:#8fa3b8; text-transform:uppercase; letter-spacing:0.1em; margin-top:4px; }
-        .cta-buttons { display:flex; flex-wrap:wrap; gap:14px; justify-content:center; margin-bottom:22px; }
+        .stat-value { font-size:1.25rem; font-weight:800; color:#00d4ff; font-family:'JetBrains Mono',monospace; }
+        .stat-label { font-size:0.62rem; color:#8fa3b8; text-transform:uppercase; letter-spacing:0.08em; margin-top:2px; }
+        .cta-buttons { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:12px; }
         .btn {
-            display:inline-flex; align-items:center; gap:8px; padding:14px 28px; border-radius:10px;
-            font-weight:700; text-decoration:none; border:1px solid transparent; cursor:pointer; font-size:1rem;
+            display:inline-flex; align-items:center; gap:6px; padding:11px 20px; border-radius:9px;
+            font-weight:700; text-decoration:none; border:1px solid transparent; cursor:pointer; font-size:0.9rem;
         }
-        .btn-primary { background:linear-gradient(90deg,#00d4ff,#0097b3); color:#030810; box-shadow:0 4px 20px rgba(0,212,255,0.35); }
+        .btn-primary { background:linear-gradient(90deg,#00d4ff,#0097b3); color:#030810; box-shadow:0 3px 14px rgba(0,212,255,0.3); }
         .btn-emerald { background:rgba(0,255,136,0.12); border-color:#00ff88; color:#00ff88; }
-        .timeline { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+        .timeline { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
         .timeline-step {
-            font-size:11px; padding:6px 12px; border-radius:20px; background:rgba(255,255,255,0.05);
-            border:1px solid rgba(255,255,255,0.1); color:#8fa3b8; letter-spacing:0.05em;
+            font-size:10px; padding:4px 9px; border-radius:16px; background:rgba(255,255,255,0.05);
+            border:1px solid rgba(255,255,255,0.1); color:#8fa3b8; letter-spacing:0.04em;
         }
-        .auth-note { margin-top:18px; color:#6a8ea8; font-size:0.85rem; }
+        .auth-note { margin-top:12px; color:#6a8ea8; font-size:0.78rem; }
+        /* Smaller splash N */
         #splash-screen {
             position:fixed; inset:0; z-index:9999; background:#030810;
             display:flex; flex-direction:column; align-items:center; justify-content:center;
-            transition: opacity 0.7s ease;
+            transition: opacity 0.6s ease;
         }
-        #splash-n-canvas { width:min(55vw,420px); height:min(55vw,420px); cursor:grab; }
+        #splash-n-canvas { width:min(38vw,220px); height:min(38vw,220px); cursor:grab; }
         #splash-n-canvas:active { cursor:grabbing; }
         #splash-title {
-            margin:18px 0 6px; font-size:clamp(1.8rem,4vw,2.8rem); font-weight:900; letter-spacing:3px;
+            margin:12px 0 4px; font-size:clamp(1.4rem,3.5vw,2rem); font-weight:900; letter-spacing:2px;
             background:linear-gradient(90deg,#00d4ff,#00ff88); -webkit-background-clip:text; -webkit-text-fill-color:transparent;
             opacity:0;
         }
-        #splash-subtitle { color:#8fa3b8; font-size:0.95rem; margin:0 0 22px; opacity:0; letter-spacing:0.5px; }
+        #splash-subtitle { color:#8fa3b8; font-size:0.82rem; margin:0 0 16px; opacity:0; }
         #splash-enter-btn {
-            opacity:0; padding:14px 28px; border:none; border-radius:12px; cursor:pointer;
-            font-family:'Outfit',sans-serif; font-weight:800; font-size:1rem; letter-spacing:1px;
+            opacity:0; padding:11px 22px; border:none; border-radius:10px; cursor:pointer;
+            font-family:'Outfit',sans-serif; font-weight:800; font-size:0.9rem; letter-spacing:0.5px;
             color:#030810; background:linear-gradient(90deg,#00d4ff,#00ff88);
-            box-shadow:0 0 30px rgba(0,212,255,0.4); transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow:0 0 22px rgba(0,212,255,0.35); transition: transform 0.2s;
         }
-        #splash-enter-btn:hover { transform:translateY(-2px); box-shadow:0 0 40px rgba(0,255,136,0.5); }
+        #splash-enter-btn:hover { transform:translateY(-2px); }
     </style>
 </head>
 <body>
-    <!-- SPLASH: 3D N Entry Animation — public only -->
     <div id="splash-screen">
         <canvas id="splash-n-canvas"></canvas>
         <h1 id="splash-title">SmartRoute</h1>
-        <p id="splash-subtitle">North-Eastern Emergency Command · AI Logistics Intelligence</p>
+        <p id="splash-subtitle">North-Eastern Emergency Command · AI Logistics</p>
         <button id="splash-enter-btn" onclick="dismissSplash()">⚡ Enter Command Center</button>
     </div>
 
     <div id="hero-map"></div>
-    <div class="hero-overlay" id="parallax-container">
+    <div class="hero-overlay">
         <div class="hero-content">
             <div class="main-panel">
-                <div id="logo-canvas" class="logo-container" title="Click and drag to rotate 3D 'N' Emblem">
-                    <div class="logo-hint">⚡ Drag 3D "N" Letter</div>
+                <div id="logo-canvas" class="logo-container" title="Drag 3D N">
+                    <div class="logo-hint">⚡ Drag 3D "N"</div>
                 </div>
                 <h1>SMARTROUTE</h1>
-                <p class="subtitle">AI-Powered Transport Accessibility &amp; Regional Emergency Route Management for the North Eastern Region</p>
+                <p class="subtitle">AI-Powered Transport Accessibility for the North Eastern Region</p>
                 <div class="stats">
-                    <div class="stat-card"><div class="stat-value">1,248</div><div class="stat-label">Roads Monitored</div></div>
-                    <div class="stat-card"><div class="stat-value" style="color:#00d4ff">126</div><div class="stat-label">Active Convoys</div></div>
-                    <div class="stat-card"><div class="stat-value" style="color:#ff3b3b">18</div><div class="stat-label">Active Incidents</div></div>
-                    <div class="stat-card"><div class="stat-value" style="color:#ff9500">8</div><div class="stat-label">North-East Regions</div></div>
+                    <div class="stat-card"><div class="stat-value">1,248</div><div class="stat-label">Roads</div></div>
+                    <div class="stat-card"><div class="stat-value" style="color:#00d4ff">126</div><div class="stat-label">Convoys</div></div>
+                    <div class="stat-card"><div class="stat-value" style="color:#ff3b3b">18</div><div class="stat-label">Incidents</div></div>
+                    <div class="stat-card"><div class="stat-value" style="color:#ff9500">8</div><div class="stat-label">NER States</div></div>
                 </div>
-                <!-- ONLY Login + Sign Up before authentication -->
                 <div class="cta-buttons">
-                    <a href="login.html" class="btn btn-primary">🔐 Login to Command</a>
-                    <a href="signup.html" class="btn btn-emerald">✍️ Officer Sign Up</a>
+                    <a href="login.html" class="btn btn-primary">🔐 Login</a>
+                    <a href="signup.html" class="btn btn-emerald">✍️ Sign Up</a>
                 </div>
-                <p class="auth-note">Dashboard, Map, Incidents and all modules open after Login or Sign Up.</p>
+                <p class="auth-note">All modules open after Login or Sign Up.</p>
                 <div class="timeline">
-                    <div class="timeline-step">1. GPS INGEST</div>
-                    <div class="timeline-step">2. SENSOR DATA</div>
-                    <div class="timeline-step">3. AI TERRAIN ENGINE</div>
-                    <div class="timeline-step">4. RISK PREDICTION</div>
-                    <div class="timeline-step">5. DYNAMIC ROUTE</div>
-                    <div class="timeline-step">6. CRITICAL ALERT</div>
+                    <div class="timeline-step">GPS</div>
+                    <div class="timeline-step">SENSORS</div>
+                    <div class="timeline-step">AI TERRAIN</div>
+                    <div class="timeline-step">RISK</div>
+                    <div class="timeline-step">ROUTE</div>
+                    <div class="timeline-step">ALERT</div>
                 </div>
             </div>
         </div>
