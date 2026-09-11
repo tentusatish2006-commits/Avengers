@@ -1,6 +1,6 @@
-/* SmartRoute auth helpers */
+/* SmartRoute auth helpers — gate protected pages from homepage CTAs */
 function requireAuthNav(target) {
-  const logged = localStorage.getItem('sr_logged_in') === '1' || !!localStorage.getItem('sr_username');
+  var logged = localStorage.getItem('sr_logged_in') === '1' || !!localStorage.getItem('sr_username');
   if (logged) {
     window.location.href = target;
     return false;
@@ -11,7 +11,6 @@ function requireAuthNav(target) {
   return false;
 }
 
-// Patch homepage CTAs if present
 document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('a[href="dashboard.html"]').forEach(function (a) {
     if (a.classList.contains('btn') || a.closest('.cta-buttons')) {
