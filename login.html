@@ -274,10 +274,10 @@
             </div>
 
             <div class="form-group">
-                <input type="text" id="login-user" class="form-control" placeholder="Officer / Command ID" value="admin_cmd">
+                <input type="text" id="login-user" class="form-control" placeholder="Officer / Command ID" value="">
             </div>
             <div class="form-group">
-                <input type="password" id="login-pass" class="form-control" placeholder="Security Passcode" value="••••••••">
+                <input type="password" id="login-pass" class="form-control" placeholder="Security Passcode" value="">
             </div>
             
             <button class="btn-login" onclick="doLogin()">LOGIN TO COMMAND CENTER</button>
@@ -334,20 +334,33 @@
         }
 
         function doLogin() {
+            const userEl = document.getElementById('login-user');
+            const passEl = document.getElementById('login-pass');
+            const user = userEl ? userEl.value.trim() : '';
+            const pass = passEl ? passEl.value.trim() : '';
+
+            if (!user || !pass) {
+                if (window.SmartRoute && SmartRoute.showToast) {
+                    SmartRoute.showToast('Enter Officer / Command ID and Security Passcode to continue.', 'warn', 2800);
+                } else {
+                    alert('Please enter login ID and passcode.');
+                }
+                if (!user && userEl) userEl.focus();
+                else if (passEl) passEl.focus();
+                return;
+            }
+
             document.getElementById('loading').style.display = 'flex';
             const activeRole = document.querySelector('.role-card.active .role-title');
             const role = activeRole ? activeRole.innerText.trim() : 'COMMAND HQ';
-            const user = document.getElementById('login-user') ? document.getElementById('login-user').value.trim() : 'admin_cmd';
             localStorage.setItem('sr_user_role', role);
-            localStorage.setItem('sr_username', user || 'Officer In-Charge');
+            localStorage.setItem('sr_username', user);
+            localStorage.setItem('sr_logged_in', '1');
             setTimeout(() => {
                 window.location.href = 'dashboard.html';
             }, 700);
         }
 
-        /* ============================================================
-           INTERACTIVE 3D "N" EMBLEM (GLOWING & MOVABLE)
-           ============================================================ */
         function initInteractive3DNLogo() {
             const container = document.getElementById('logo-3d');
             const wrap = document.getElementById('logo-3d-wrap') || container;
@@ -367,7 +380,6 @@
             renderer.toneMappingExposure = 1.3;
             container.appendChild(renderer.domElement);
 
-            // Lighting
             const ambient = new THREE.AmbientLight(0x00d4ff, 0.9);
             scene.add(ambient);
 
@@ -382,7 +394,6 @@
             const rootGroup = new THREE.Group();
             scene.add(rootGroup);
 
-            // 1. Extruded 3D "N" Shape
             const shape = new THREE.Shape();
             shape.moveTo(-2.2, -3.2);
             shape.lineTo(-2.2, 3.2);
@@ -417,13 +428,11 @@
             const nMesh = new THREE.Mesh(nGeo, nMat);
             rootGroup.add(nMesh);
 
-            // Glowing cyan wireframe edges
             const edgeMat = new THREE.LineBasicMaterial({ color: 0x00d4ff, transparent: true, opacity: 0.5 });
             const edgeGeo = new THREE.EdgesGeometry(nGeo, 24);
             const edgeLines = new THREE.LineSegments(edgeGeo, edgeMat);
             nMesh.add(edgeLines);
 
-            // 2. Traveling Glowing Energy Line along the perimeter
             const perimeterPoints = [
                 new THREE.Vector3(-2.2, 3.2, 0.5),
                 new THREE.Vector3(-0.8, 3.2, 0.5),
@@ -443,151 +452,48 @@
             const energyTube = new THREE.Mesh(energyTubeGeo, energyTubeMat);
             nMesh.add(energyTube);
 
-            // Luminous traveling bead
             const beadGeo = new THREE.SphereGeometry(0.24, 16, 16);
             const beadMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
             const energyBead = new THREE.Mesh(beadGeo, beadMat);
             nMesh.add(energyBead);
 
-            const beadLight = new THREE.PointLight(0x00ffff, 2.0, 7);
-            energyBead.add(beadLight);
-
-            // Platform Rim Ring
-            const ringGeo = new THREE.RingGeometry(3.6, 3.9, 32);
-            ringGeo.rotateX(-Math.PI / 2);
-            const ringMat = new THREE.MeshBasicMaterial({ color: 0x00d4ff, side: THREE.DoubleSide });
-            const platformRim = new THREE.Mesh(ringGeo, ringMat);
-            platformRim.position.y = -3.4;
-            rootGroup.add(platformRim);
-
-            // Floating Reactive Spatial Particles
-            const particleCount = 45;
-            const particleGeo = new THREE.BufferGeometry();
-            const particlePos = new Float32Array(particleCount * 3);
-            for (let i = 0; i < particleCount * 3; i += 3) {
-                particlePos[i] = (Math.random() - 0.5) * 8;
-                particlePos[i+1] = (Math.random() - 0.5) * 7;
-                particlePos[i+2] = (Math.random() - 0.5) * 7;
-            }
-            particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
-            const particleMat = new THREE.PointsMaterial({
-                color: 0x00d4ff,
-                size: 0.18,
-                transparent: true,
-                opacity: 0.7,
-                blending: THREE.AdditiveBlending,
-            });
-            const particleField = new THREE.Points(particleGeo, particleMat);
-            rootGroup.add(particleField);
-
-            // Interactive Drag-to-Rotate Physics
             let isPointerDown = false;
-            let lastMouseX = 0;
-            let lastMouseY = 0;
-            let velocityX = 0;
-            let velocityY = 0;
+            let lastMouseX = 0, lastMouseY = 0;
+            let targetRotY = 0, targetRotX = 0;
             let rotVelocity = 0;
-            let targetRotY = 0.4;
-            let targetRotX = 0.15;
 
-            const targetDom = wrap || renderer.domElement;
-
-            targetDom.addEventListener('mousedown', (e) => {
+            wrap.addEventListener('mousedown', (e) => {
                 isPointerDown = true;
                 lastMouseX = e.clientX;
                 lastMouseY = e.clientY;
             });
-
             window.addEventListener('mousemove', (e) => {
                 if (!isPointerDown) return;
                 const dx = e.clientX - lastMouseX;
                 const dy = e.clientY - lastMouseY;
                 lastMouseX = e.clientX;
                 lastMouseY = e.clientY;
-
-                velocityX = dx * 0.015;
-                velocityY = dy * 0.012;
-                rotVelocity = Math.hypot(dx, dy) * 0.05;
-
-                targetRotY += velocityX;
-                targetRotX += velocityY;
+                targetRotY += dx * 0.012;
+                targetRotX += dy * 0.01;
                 targetRotX = THREE.MathUtils.clamp(targetRotX, -0.6, 0.6);
+                rotVelocity = Math.hypot(dx, dy) * 0.05;
             });
-
             window.addEventListener('mouseup', () => { isPointerDown = false; });
 
-            // Touch Drag Support
-            targetDom.addEventListener('touchstart', (e) => {
-                if (e.touches.length === 1) {
-                    isPointerDown = true;
-                    lastMouseX = e.touches[0].clientX;
-                    lastMouseY = e.touches[0].clientY;
-                }
-            });
-            window.addEventListener('touchmove', (e) => {
-                if (!isPointerDown || e.touches.length !== 1) return;
-                const dx = e.touches[0].clientX - lastMouseX;
-                const dy = e.touches[0].clientY - lastMouseY;
-                lastMouseX = e.touches[0].clientX;
-                lastMouseY = e.touches[0].clientY;
-
-                velocityX = dx * 0.015;
-                velocityY = dy * 0.012;
-                rotVelocity = Math.hypot(dx, dy) * 0.06;
-
-                targetRotY += velocityX;
-                targetRotX += velocityY;
-            });
-            window.addEventListener('touchend', () => { isPointerDown = false; });
-
-            // Animation Loop
             let clock = new THREE.Clock();
-            let pulseTimer = 0;
             let travelProgress = 0;
-
             function animate() {
                 requestAnimationFrame(animate);
                 const delta = clock.getDelta();
-
                 if (!isPointerDown) {
-                    targetRotY += 0.009; // Smooth continuous idle rotation
-                    rotVelocity *= 0.93;
+                    targetRotY += 0.008;
+                    rotVelocity *= 0.94;
                 }
-
                 rootGroup.rotation.y += (targetRotY - rootGroup.rotation.y) * 0.15;
                 rootGroup.rotation.x += (targetRotX - rootGroup.rotation.x) * 0.15;
-
-                // Travel energy bead along N perimeter
                 travelProgress = (travelProgress + delta * 0.35) % 1.0;
-                const beadPos = energyCurve.getPointAt(travelProgress);
-                energyBead.position.copy(beadPos);
-
-                // Periodic energy surge every 8-10 seconds
-                pulseTimer += delta;
-                let surgeIntensity = 0;
-                if (pulseTimer > 8.0) {
-                    surgeIntensity = Math.sin((pulseTimer - 8.0) * Math.PI / 1.5);
-                    if (pulseTimer > 9.5) pulseTimer = 0;
-                }
-
-                const baseGlow = 0.5;
-                const velocityGlow = Math.min(rotVelocity * 1.8, 2.5);
-                const currentGlow = baseGlow + velocityGlow + Math.max(0, surgeIntensity * 2.0);
-
-                nMat.emissiveIntensity = currentGlow;
-                energyTubeMat.opacity = Math.min(1.0, 0.65 + velocityGlow * 0.4 + surgeIntensity * 0.35);
-                beadLight.intensity = 1.8 + velocityGlow * 2.5 + surgeIntensity * 2.5;
-
-                // Reactive particles swirl
-                const pAttr = particleGeo.attributes.position;
-                const speedMult = 1 + rotVelocity * 2.0;
-                for (let i = 0; i < particleCount; i++) {
-                    const py = pAttr.getY(i) + delta * 0.4 * speedMult;
-                    pAttr.setY(i, py > 3.5 ? -3.5 : py);
-                }
-                pAttr.needsUpdate = true;
-                particleField.rotation.y += delta * 0.12 * speedMult;
-
+                energyBead.position.copy(energyCurve.getPointAt(travelProgress));
+                nMat.emissiveIntensity = 0.45 + Math.min(rotVelocity * 1.6, 2.5);
                 renderer.render(scene, camera);
             }
             animate();
