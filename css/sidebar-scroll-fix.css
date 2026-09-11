@@ -1,0 +1,53 @@
+/* ============================================================
+   SMARTROUTE — Sidebar Scroll Fix
+   Left nav was not scrollable because flex child lacked min-height:0
+   ============================================================ */
+
+.sidebar {
+  height: 100vh !important;
+  max-height: 100vh !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.sidebar-logo,
+.sidebar-brand,
+.sidebar-bottom,
+.sidebar-footer {
+  flex-shrink: 0 !important;
+}
+
+.sidebar-section,
+.sidebar-nav,
+#sidebar-nav,
+nav.sidebar-section {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 212, 255, 0.4) transparent;
+}
+
+.sidebar-section::-webkit-scrollbar,
+.sidebar-nav::-webkit-scrollbar,
+#sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-section::-webkit-scrollbar-thumb,
+.sidebar-nav::-webkit-scrollbar-thumb,
+#sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(0, 212, 255, 0.4);
+  border-radius: 6px;
+}
+
+.sidebar-section::-webkit-scrollbar-track,
+.sidebar-nav::-webkit-scrollbar-track,
+#sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
