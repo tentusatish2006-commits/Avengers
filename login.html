@@ -7,112 +7,186 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
     <link rel="stylesheet" href="css/design-system.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/components.css">
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: 'Outfit', sans-serif; background: #030810; }
-        #bg-map { position: absolute; inset: 0; z-index: 0; filter: brightness(0.4) contrast(1.2); }
-        .particles { position: absolute; inset: 0; z-index: 1; pointer-events: none; background-image: radial-gradient(circle, rgba(0,212,255,0.1) 1px, transparent 1px); background-size: 50px 50px; }
-        .login-wrapper { position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center; }
+        body, html { margin:0; padding:0; width:100%; height:100%; overflow:hidden; font-family:'Outfit',sans-serif; background:#030810; }
+        #bg-map { position:absolute; inset:0; z-index:0; filter:brightness(0.4) contrast(1.2); }
+        .login-wrapper { position:absolute; inset:0; z-index:2; display:flex; align-items:center; justify-content:center; }
         .login-card {
-            width: 450px; padding: 40px; border-radius: 20px; display: flex; flex-direction: column; align-items: center;
-            background: rgba(3, 8, 16, 0.72); backdrop-filter: blur(20px); border: 1px solid rgba(100, 200, 255, 0.2);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+            width:420px; max-width:94vw; padding:36px 32px; border-radius:18px;
+            background:rgba(3,8,16,0.82); backdrop-filter:blur(20px);
+            border:1px solid rgba(100,200,255,0.22); box-shadow:0 20px 50px rgba(0,0,0,0.65);
+            display:flex; flex-direction:column; align-items:center;
         }
-        h2 { margin: 0; font-size: 2.2rem; background: linear-gradient(90deg, #00d4ff, #00ff88); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 700; letter-spacing: 2px; }
-        .subtitle { color: #8fa3b0; font-size: 0.9rem; margin: 8px 0 28px; text-transform: uppercase; letter-spacing: 1px; }
-        .role-selector { display: flex; gap: 10px; width: 100%; margin-bottom: 25px; }
-        .role-card { flex: 1; background: rgba(255,255,255,0.03); border: 1px solid rgba(100,200,255,0.12); border-radius: 12px; padding: 14px 6px; text-align: center; cursor: pointer; transition: 0.25s; }
-        .role-card:hover, .role-card.active { border-color: #00d4ff; background: rgba(0,212,255,0.1); box-shadow: 0 0 16px rgba(0,212,255,0.25); }
-        .role-icon { font-size: 1.4rem; margin-bottom: 4px; }
-        .role-title { font-size: 0.78rem; font-weight: 700; color: #fff; }
-        .role-desc { font-size: 0.62rem; color: #8fa3b0; margin-top: 4px; }
-        .form-group { width: 100%; margin-bottom: 16px; }
-        .form-control { width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(100,200,255,0.2); padding: 14px; border-radius: 8px; color: #fff; font-family: Outfit, sans-serif; font-size: 1rem; box-sizing: border-box; outline: none; }
-        .form-control:focus { border-color: #00d4ff; box-shadow: 0 0 10px rgba(0,212,255,0.25); }
-        .btn-login { width: 100%; padding: 14px; background: linear-gradient(90deg, #00d4ff, #00aaff); border: none; border-radius: 8px; color: #030810; font-weight: 800; font-size: 1rem; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
-        .btn-login:hover { box-shadow: 0 6px 20px rgba(0,212,255,0.4); }
-        .loading-overlay { position: absolute; inset: 0; background: rgba(3,8,16,0.92); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; }
-        .spinner { width: 70px; height: 70px; border: 4px solid rgba(0,212,255,0.15); border-left-color: #00d4ff; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .links { margin-top: 20px; text-align: center; font-size: 0.9rem; color: #8fa3b0; }
-        .links a { color: #00d4ff; font-weight: 700; text-decoration: none; }
+        h2 { margin:0; font-size:1.9rem; font-weight:800; letter-spacing:2px;
+            background:linear-gradient(90deg,#00d4ff,#00ff88); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .subtitle { color:#8fa3b0; font-size:0.82rem; margin:8px 0 22px; letter-spacing:1px; text-transform:uppercase; }
+        .role-selector { display:flex; gap:8px; width:100%; margin-bottom:20px; }
+        .role-card { flex:1; background:rgba(255,255,255,0.03); border:1px solid rgba(100,200,255,0.12); border-radius:10px; padding:12px 6px; text-align:center; cursor:pointer; }
+        .role-card.active, .role-card:hover { border-color:#00d4ff; background:rgba(0,212,255,0.1); }
+        .role-icon { font-size:1.2rem; }
+        .role-title { font-size:0.72rem; font-weight:700; color:#fff; margin-top:4px; }
+        .form-group { width:100%; margin-bottom:14px; }
+        .form-label { display:block; font-size:0.72rem; font-weight:700; color:#8fa3b8; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:6px; }
+        .form-control {
+            width:100%; box-sizing:border-box; background:rgba(3,10,22,0.8); border:1px solid rgba(100,200,255,0.2);
+            padding:12px 14px; border-radius:8px; color:#fff; font-family:Outfit,sans-serif; font-size:0.95rem; outline:none;
+        }
+        .form-control:focus { border-color:#00d4ff; box-shadow:0 0 10px rgba(0,212,255,0.25); }
+        .btn-login {
+            width:100%; margin-top:8px; padding:13px; border:none; border-radius:8px; cursor:pointer;
+            font-weight:800; font-size:0.95rem; letter-spacing:1px; text-transform:uppercase;
+            background:linear-gradient(90deg,#00d4ff,#00ff88); color:#030810;
+        }
+        .btn-login:disabled { opacity:0.45; cursor:not-allowed; }
+        .error-msg { display:none; width:100%; margin-top:10px; padding:10px 12px; border-radius:8px;
+            background:rgba(255,59,59,0.12); border:1px solid rgba(255,59,59,0.4); color:#ff8a8a; font-size:0.85rem; }
+        .links { margin-top:18px; text-align:center; font-size:0.85rem; color:#8fa3b0; }
+        .links a { color:#00d4ff; text-decoration:none; font-weight:700; }
+        .loading-overlay {
+            position:fixed; inset:0; background:rgba(3,8,16,0.9); z-index:50; display:none;
+            align-items:center; justify-content:center; flex-direction:column; backdrop-filter:blur(8px);
+        }
+        .spinner { width:52px; height:52px; border:3px solid rgba(0,212,255,0.15); border-left-color:#00d4ff; border-radius:50%; animation:spin 0.9s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .loading-text { margin-top:14px; color:#00d4ff; font-weight:700; letter-spacing:1px; }
     </style>
 </head>
 <body>
     <div id="bg-map"></div>
-    <div class="particles"></div>
     <div class="login-wrapper">
         <div class="login-card">
             <h2>SMARTROUTE</h2>
-            <div class="subtitle">North-Eastern Emergency Command Center</div>
+            <div class="subtitle">Command Access · North-Eastern Region</div>
+
             <div class="role-selector">
                 <div class="role-card active" onclick="selectRole(this)">
                     <div class="role-icon">🔧</div>
                     <div class="role-title">ADMINISTRATOR</div>
-                    <div class="role-desc">HQ Command</div>
                 </div>
                 <div class="role-card" onclick="selectRole(this)">
                     <div class="role-icon">📍</div>
                     <div class="role-title">FIELD OFFICER</div>
-                    <div class="role-desc">Field Units</div>
                 </div>
                 <div class="role-card" onclick="selectRole(this)">
                     <div class="role-icon">🏛</div>
                     <div class="role-title">LOCAL AUTHORITY</div>
-                    <div class="role-desc">District Cell</div>
                 </div>
             </div>
-            <div class="form-group"><input type="text" id="login-user" class="form-control" placeholder="Officer / Command ID" value="" autocomplete="username"></div>
-            <div class="form-group"><input type="password" id="login-pass" class="form-control" placeholder="Security Passcode" value="" autocomplete="current-password"></div>
-            <button class="btn-login" onclick="doLogin()">LOGIN TO COMMAND CENTER</button>
-            <div class="links">New officer? <a href="signup.html">Register Account →</a></div>
-            <div class="links" style="margin-top:10px;"><a href="index.html" style="color:#6a8ea8;font-weight:500;">← Return to Main Gateway</a></div>
+
+            <form id="login-form" autocomplete="off" onsubmit="event.preventDefault(); doLogin();" style="width:100%">
+                <div class="form-group">
+                    <label class="form-label" for="login-user">Officer / Command ID</label>
+                    <input type="text" id="login-user" class="form-control" placeholder="Enter your ID" value="" autocomplete="off" required minlength="2">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="login-pass">Security Passcode</label>
+                    <input type="password" id="login-pass" class="form-control" placeholder="Enter passcode" value="" autocomplete="new-password" required minlength="3">
+                </div>
+                <div class="error-msg" id="login-error">Please enter both Officer ID and Security Passcode.</div>
+                <button type="submit" class="btn-login" id="btn-login">Access Command Center</button>
+            </form>
+
+            <div class="links">
+                New officer? <a href="signup.html">Sign Up</a><br>
+                <a href="index.html" style="color:#6a8ea8;font-weight:500">← Back to Gateway</a>
+            </div>
         </div>
     </div>
-    <div class="loading-overlay" id="loading"><div class="spinner"></div><div style="margin-top:18px;color:#00d4ff;letter-spacing:2px;">AUTHENTICATING...</div></div>
+
+    <div class="loading-overlay" id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">AUTHENTICATING...</div>
+    </div>
+
     <script src="js/map-engine.js"></script>
     <script>
+        // Always clear session when opening login — force real credentials
+        try {
+            localStorage.removeItem('sr_logged_in');
+            // keep username empty on form; do not auto-login from old session
+        } catch (e) {}
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Clear any autofilled values after a tick (browser password managers)
+            setTimeout(() => {
+                const u = document.getElementById('login-user');
+                const p = document.getElementById('login-pass');
+                if (u) u.value = '';
+                if (p) p.value = '';
+            }, 50);
+
+            if (window.MapEngine && MapEngine.initMap) {
+                try {
+                    MapEngine.initMap('bg-map', { layersControl: false });
+                    if (MapEngine.map) {
+                        MapEngine.map.setView([26.15, 92.80], 7);
+                        MapEngine.map.dragging.disable();
+                        MapEngine.map.scrollWheelZoom.disable();
+                    }
+                } catch (e) {}
+            } else if (typeof L !== 'undefined') {
+                const map = L.map('bg-map', { zoomControl: false, dragging: false, scrollWheelZoom: false }).setView([26.15, 92.80], 7);
+                L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}').addTo(map);
+            }
+        });
+
         function selectRole(el) {
             document.querySelectorAll('.role-card').forEach(c => c.classList.remove('active'));
             el.classList.add('active');
-            const role = el.querySelector('.role-title') ? el.querySelector('.role-title').innerText.trim() : 'ADMINISTRATOR';
-            localStorage.setItem('sr_user_role', role);
         }
+
+        function showError(msg) {
+            const box = document.getElementById('login-error');
+            if (!box) return;
+            box.textContent = msg || 'Please enter both Officer ID and Security Passcode.';
+            box.style.display = 'block';
+        }
+
         function doLogin() {
             const user = (document.getElementById('login-user').value || '').trim();
             const pass = (document.getElementById('login-pass').value || '').trim();
+            const err = document.getElementById('login-error');
+            if (err) err.style.display = 'none';
+
+            // STRICT: both fields required — never auto-login empty
             if (!user || !pass) {
-                alert('Please enter Officer / Command ID and Security Passcode.');
-                return;
+                showError('Please enter both Officer / Command ID and Security Passcode.');
+                return false;
             }
-            document.getElementById('loading').style.display = 'flex';
+            if (user.length < 2) {
+                showError('Officer ID must be at least 2 characters.');
+                return false;
+            }
+            if (pass.length < 3) {
+                showError('Passcode must be at least 3 characters.');
+                return false;
+            }
+
             const activeRole = document.querySelector('.role-card.active .role-title');
-            localStorage.setItem('sr_user_role', activeRole ? activeRole.innerText.trim() : 'COMMAND HQ');
-            localStorage.setItem('sr_username', user);
-            localStorage.setItem('sr_logged_in', '1');
+            const role = activeRole ? activeRole.innerText.trim() : 'ADMINISTRATOR';
+
+            document.getElementById('loading').style.display = 'flex';
+
+            // Only now mark as logged in
+            try {
+                localStorage.setItem('sr_username', user);
+                localStorage.setItem('sr_user_role', role);
+                localStorage.setItem('sr_logged_in', '1');
+            } catch (e) {}
+
             setTimeout(() => {
-                const ret = localStorage.getItem('sr_return_to') || 'dashboard.html';
-                try { localStorage.removeItem('sr_return_to'); } catch(e) {}
+                let ret = 'dashboard.html';
+                try {
+                    ret = localStorage.getItem('sr_return_to') || 'dashboard.html';
+                    localStorage.removeItem('sr_return_to');
+                } catch (e) {}
                 window.location.href = ret;
             }, 700);
+            return false;
         }
-        document.addEventListener('DOMContentLoaded', () => {
-            if (window.MapEngine) {
-                MapEngine.initMap('bg-map', { layersControl: false });
-                if (MapEngine.map) {
-                    MapEngine.map.setView([26.15, 92.80], 7);
-                    MapEngine.map.dragging.disable();
-                    MapEngine.map.scrollWheelZoom.disable();
-                }
-            } else if (typeof L !== 'undefined') {
-                const map = L.map('bg-map', { zoomControl: false, dragging: false, scrollWheelZoom: false }).setView([26.15, 92.80], 7);
-                L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18 }).addTo(map);
-            }
-            document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-        });
     </script>
 </body>
 </html>

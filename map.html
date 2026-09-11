@@ -3,114 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live GIS Map - SmartRoute</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+    <title>Live Map - SmartRoute</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
     <link rel="stylesheet" href="css/design-system.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/components.css">
     <style>
-        .map-wrapper { position: relative; width: 100%; height: calc(100vh - 64px); overflow: hidden; background: #030814; }
-        #map-2d, #map-3d { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        #map-3d { display: none; z-index: 2; }
-        #map-2d { z-index: 1; }
-        .mode-switcher-bar { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); z-index: 550; display: flex; background: rgba(5,12,28,0.92); border: 1px solid rgba(0,212,255,0.35); border-radius: 30px; padding: 4px; }
-        .mode-tab { padding: 8px 20px; border-radius: 24px; font-size: 12px; font-weight: 700; color: #8fa3b8; cursor: pointer; border: none; background: transparent; }
-        .mode-tab.active { background: linear-gradient(135deg, #00d4ff, #0097b3); color: #030810; }
-        .floating-panel { position: absolute; z-index: 500; background: rgba(8,18,38,0.88); border: 1px solid rgba(100,200,255,0.2); border-radius: 16px; padding: 18px; color: #fff; }
-        .layers-panel { top: 20px; left: 20px; width: 220px; }
-        .legend-panel { bottom: 24px; left: 20px; }
+        .map-page { display:flex; flex-direction:column; gap:12px; height:calc(100vh - 80px); }
+        .mode-tabs { display:flex; gap:8px; flex-wrap:wrap; }
+        .mode-tab {
+            padding:8px 14px; border-radius:8px; border:1px solid rgba(0,212,255,0.25);
+            background:rgba(8,18,38,0.8); color:#8fa3b8; cursor:pointer; font-weight:700; font-size:0.85rem;
+        }
+        .mode-tab.active { background:rgba(0,212,255,0.15); color:#00d4ff; border-color:#00d4ff; }
+        .map-stage {
+            flex:1; min-height:420px; border-radius:16px; overflow:hidden; position:relative;
+            border:1px solid rgba(0,212,255,0.2); background:#030814;
+        }
+        #map-2d, #map-3d { position:absolute; inset:0; width:100%; height:100%; }
+        #map-3d { display:none; }
+        .map-hint {
+            position:absolute; bottom:12px; left:12px; z-index:500;
+            background:rgba(5,12,28,0.9); border:1px solid rgba(0,212,255,0.3);
+            padding:8px 12px; border-radius:8px; font-size:0.75rem; color:#8fa3b8;
+        }
     </style>
 </head>
 <body>
     <div class="app-shell">
         <div class="main-content" id="main-content">
-            <main class="page-body" style="padding: 0;">
-                <div class="map-wrapper">
-                    <div class="mode-switcher-bar">
-                        <button class="mode-tab" id="tab-3d" onclick="switchViewMode('3d')">🌐 3D TERRAIN VIEW</button>
-                        <button class="mode-tab active" id="tab-2d" onclick="switchViewMode('2d')">🛰️ SATELLITE MAP</button>
+            <main class="page-body map-page">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Live Map</h1>
+                        <p class="page-subtitle">NER GIS routes · 2D satellite · 3D terrain</p>
                     </div>
-                    <div id="map-3d"></div>
+                </div>
+
+                <div class="mode-tabs">
+                    <button class="mode-tab active" id="tab-2d" onclick="switchViewMode('2d')">🗺 2D MAP VIEW</button>
+                    <button class="mode-tab" id="tab-3d" onclick="switchViewMode('3d')">🌐 3D TERRAIN VIEW</button>
+                </div>
+
+                <div class="map-stage">
                     <div id="map-2d"></div>
-                    <div class="floating-panel layers-panel">
-                        <div style="font-size:12px;color:#00d4ff;margin-bottom:10px;font-weight:700;">MAP LAYERS</div>
-                        <div style="font-size:13px;color:#b4d2f0;margin:6px 0;">● Safe / Partial / Blocked Roads</div>
-                        <div style="font-size:13px;color:#b4d2f0;margin:6px 0;">● Vehicles (GPS) — moving on routes</div>
-                        <div style="font-size:13px;color:#b4d2f0;margin:6px 0;">● Active Incidents</div>
-                    </div>
-                    <div class="floating-panel legend-panel">
-                        <div style="font-size:11px;color:#00d4ff;margin-bottom:8px;">CORRIDOR STATUS</div>
-                        <div style="font-size:12px;color:#8fa3b8;margin:4px 0;"><span style="color:#00ff88;">━━</span> Accessible</div>
-                        <div style="font-size:12px;color:#8fa3b8;margin:4px 0;"><span style="color:#ffcc00;">- -</span> Partial</div>
-                        <div style="font-size:12px;color:#8fa3b8;margin:4px 0;"><span style="color:#ff3b3b;">━━</span> Critical</div>
-                    </div>
+                    <div id="map-3d"></div>
+                    <div class="map-hint" id="map-hint">2D: drag to pan · scroll to zoom · roads &amp; vehicles on NER corridors</div>
                 </div>
             </main>
         </div>
     </div>
+
     <script src="js/components.js"></script>
     <script src="js/map-engine.js"></script>
-    <script src="js/map-routes.js"></script>
-    <script src="js/charts.js"></script>
     <script>
+        let scene3D = null;
         let currentMode = '2d';
-        let leafletMap = null;
-        let vehicleMarkers = {};
 
         document.addEventListener('DOMContentLoaded', () => {
             if (window.SmartRoute) {
                 SmartRoute.initSharedComponents({
-                    title: 'Live GIS Map',
-                    subtitle: 'NER Tactical Monitoring — Curved Routes & Live Vehicles'
+                    title: 'Live Map',
+                    subtitle: 'National Emergency 3D Terrain & Tactical Monitoring'
                 });
             }
-            init2DEngine();
-            switchViewMode('2d');
+            init2D();
+            // Pre-init 3D so switch is fast
+            setTimeout(init3D, 400);
         });
 
-        function init2DEngine() {
-            if (window.MapEngine) {
-                leafletMap = MapEngine.initMap('map-2d', { zoomControl: true, center: [25.80, 91.60], zoom: 7 });
-            } else {
-                leafletMap = L.map('map-2d').setView([25.80, 91.60], 7);
-                L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20 }).addTo(leafletMap);
-            }
-            if (window.MapEngine && leafletMap) {
-                MapEngine.addRoads(leafletMap);
-                MapEngine.drawAlternateRoutes(leafletMap);
-                MapEngine.addIncidents(leafletMap);
-                if (MapEngine.addFloodZone) MapEngine.addFloodZone(leafletMap, [26.15, 91.75], 0.12);
-                vehicleMarkers = MapEngine.addVehicles(leafletMap);
-                if (MapEngine.animateVehicles) MapEngine.animateVehicles(leafletMap, vehicleMarkers);
-                if (MapEngine.SimulationEngine && MapEngine.SimulationEngine.init) {
-                    MapEngine.SimulationEngine.init(leafletMap).then(() => {
-                        if (MapEngine.SimulationEngine.start) MapEngine.SimulationEngine.start();
-                    }).catch(() => {});
+        function init2D() {
+            if (!window.MapEngine || !MapEngine.initMap) {
+                if (typeof L !== 'undefined') {
+                    const map = L.map('map-2d').setView([25.8, 91.6], 7);
+                    L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18 }).addTo(map);
                 }
+                return;
+            }
+            MapEngine.initMap('map-2d');
+            if (MapEngine.addRoads) MapEngine.addRoads();
+            if (MapEngine.addIncidents) MapEngine.addIncidents();
+            if (MapEngine.addVehicles) MapEngine.addVehicles();
+            if (MapEngine.animateVehicles) MapEngine.animateVehicles();
+        }
+
+        function init3D() {
+            if (scene3D) return;
+            if (window.MapEngine && typeof MapEngine.create3DScene === 'function') {
+                scene3D = MapEngine.create3DScene('map-3d', { autoRotate: true });
+                if (window.SmartRoute) SmartRoute.showToast('3D Terrain engine ready', 'success', 2000);
             }
         }
 
         function switchViewMode(mode) {
             currentMode = mode;
-            const m2 = document.getElementById('map-2d');
-            const m3 = document.getElementById('map-3d');
+            const c2 = document.getElementById('map-2d');
+            const c3 = document.getElementById('map-3d');
             const t2 = document.getElementById('tab-2d');
             const t3 = document.getElementById('tab-3d');
-            if (mode === '2d') {
-                if (m2) m2.style.display = 'block';
-                if (m3) m3.style.display = 'none';
-                if (t2) t2.classList.add('active');
-                if (t3) t3.classList.remove('active');
-                if (leafletMap) setTimeout(() => leafletMap.invalidateSize(), 100);
+            const hint = document.getElementById('map-hint');
+            t2.classList.toggle('active', mode === '2d');
+            t3.classList.toggle('active', mode === '3d');
+            if (mode === '3d') {
+                c2.style.display = 'none';
+                c3.style.display = 'block';
+                init3D();
+                // resize three renderer if needed
+                if (scene3D && scene3D.renderer && scene3D.camera) {
+                    const w = c3.clientWidth, h = c3.clientHeight;
+                    scene3D.renderer.setSize(w, h);
+                    scene3D.camera.aspect = w / Math.max(h, 1);
+                    scene3D.camera.updateProjectionMatrix();
+                }
+                if (hint) hint.textContent = '3D: drag to orbit · scroll to zoom · terrain, roads & vehicles';
+                if (window.SmartRoute) SmartRoute.showToast('Switched to 3D Terrain View', 'info', 2000);
             } else {
-                if (m2) m2.style.display = 'none';
-                if (m3) m3.style.display = 'block';
-                if (t3) t3.classList.add('active');
-                if (t2) t2.classList.remove('active');
+                c3.style.display = 'none';
+                c2.style.display = 'block';
+                if (hint) hint.textContent = '2D: drag to pan · scroll to zoom · roads & vehicles on NER corridors';
+                if (window.MapEngine && MapEngine.map) MapEngine.map.invalidateSize();
+                if (window.SmartRoute) SmartRoute.showToast('Switched to 2D Map View', 'info', 2000);
             }
         }
     </script>
