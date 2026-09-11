@@ -1,101 +1,132 @@
 /* ============================================================
    SMARTROUTE — SHARED COMPONENT INJECTOR
-   Dynamically renders Sidebar + Navbar on every page
+   Sidebar + Navbar + Auth + Sidebar Scroll Fix
    ============================================================ */
 
 const SMARTROUTE_NAV = [
-  {
-    section: 'OPERATIONS',
-    items: [
-      { id: 'dashboard', label: 'Dashboard', icon: '⊞', href: 'dashboard.html' },
-      { id: 'map', label: 'Live Map', icon: '🗺', href: 'map.html' },
-      { id: 'incidents', label: 'Incidents', icon: '⚠', href: 'incidents.html', badge: '18' },
-      { id: 'alerts', label: 'Alerts', icon: '🔔', href: 'alerts.html', badge: '7' },
-      { id: 'emergency', label: 'Emergency Response', icon: '🚨', href: 'emergency.html' },
-    ]
-  },
-  {
-    section: 'INTELLIGENCE',
-    items: [
-      { id: 'route-prediction', label: 'AI Route Prediction', icon: '🤖', href: 'route-prediction.html' },
-      { id: 'alternate-routes', label: 'Alternate Routes', icon: '↔', href: 'alternate-routes.html' },
-      { id: 'ai-command', label: 'AI Command Center', icon: '⚡', href: 'ai-command.html' },
-      { id: 'photo-analysis', label: 'AI Photo Analysis', icon: '📷', href: 'photo-analysis.html' },
-      { id: 'weather', label: 'Weather & Risk', icon: '🌧', href: 'weather.html' },
-    ]
-  },
-  {
-    section: 'TRANSPORT',
-    items: [
-      { id: 'vehicle-tracking', label: 'Vehicle Tracking', icon: '🚛', href: 'vehicle-tracking.html' },
-      { id: 'deliveries', label: 'Deliveries', icon: '📦', href: 'deliveries.html' },
-      { id: 'corridors', label: 'Risk Corridors', icon: '🛣', href: 'corridors.html' },
-    ]
-  },
-  {
-    section: 'MONITORING',
-    items: [
-      { id: 'districts', label: 'Districts', icon: '🗂', href: 'districts.html' },
-      { id: 'infrastructure', label: 'Infrastructure', icon: '🌉', href: 'infrastructure.html' },
-      { id: 'officers', label: 'Field Officers', icon: '👮', href: 'officers.html' },
-      { id: 'reports', label: 'Reports', icon: '📋', href: 'reports.html' },
-    ]
-  },
-  {
-    section: 'ANALYTICS',
-    items: [
-      { id: 'analytics', label: 'Analytics', icon: '📊', href: 'analytics.html' },
-      { id: 'simulation', label: 'Live Simulation', icon: '▶', href: 'simulation.html' },
-    ]
-  },
-  {
-    section: 'FIELD',
-    items: [
-      { id: 'field-report', label: 'Field Report', icon: '📝', href: 'field-report.html' },
-      { id: 'officer-dashboard', label: 'Officer Dashboard', icon: '🎖', href: 'officer-dashboard.html' },
-    ]
-  },
-  {
-    section: 'SYSTEM',
-    items: [
-      { id: 'language', label: 'Language & Region', icon: '🌐', href: 'language.html' },
-      { id: 'admin', label: 'Admin Panel', icon: '⚙', href: 'admin.html' },
-      { id: 'settings', label: 'Settings', icon: '🔧', href: 'settings.html' },
-    ]
-  }
+  { section: 'OPERATIONS', items: [
+    { id: 'dashboard', label: 'Dashboard', icon: '⊞', href: 'dashboard.html' },
+    { id: 'map', label: 'Live Map', icon: '🗺', href: 'map.html' },
+    { id: 'incidents', label: 'Incidents', icon: '⚠', href: 'incidents.html', badge: '18' },
+    { id: 'alerts', label: 'Alerts', icon: '🔔', href: 'alerts.html', badge: '7' },
+    { id: 'emergency', label: 'Emergency Response', icon: '🚨', href: 'emergency.html' },
+  ]},
+  { section: 'INTELLIGENCE', items: [
+    { id: 'route-prediction', label: 'AI Route Prediction', icon: '🤖', href: 'route-prediction.html' },
+    { id: 'alternate-routes', label: 'Alternate Routes', icon: '↔', href: 'alternate-routes.html' },
+    { id: 'ai-command', label: 'AI Command Center', icon: '⚡', href: 'ai-command.html' },
+    { id: 'photo-analysis', label: 'AI Photo Analysis', icon: '📷', href: 'photo-analysis.html' },
+    { id: 'weather', label: 'Weather & Risk', icon: '🌧', href: 'weather.html' },
+  ]},
+  { section: 'TRANSPORT', items: [
+    { id: 'vehicle-tracking', label: 'Vehicle Tracking', icon: '🚛', href: 'vehicle-tracking.html' },
+    { id: 'deliveries', label: 'Deliveries', icon: '📦', href: 'deliveries.html' },
+    { id: 'corridors', label: 'Risk Corridors', icon: '🛣', href: 'corridors.html' },
+  ]},
+  { section: 'MONITORING', items: [
+    { id: 'districts', label: 'Districts', icon: '🗂', href: 'districts.html' },
+    { id: 'infrastructure', label: 'Infrastructure', icon: '🌉', href: 'infrastructure.html' },
+    { id: 'officers', label: 'Field Officers', icon: '👮', href: 'officers.html' },
+    { id: 'reports', label: 'Reports', icon: '📋', href: 'reports.html' },
+  ]},
+  { section: 'ANALYTICS', items: [
+    { id: 'analytics', label: 'Analytics', icon: '📊', href: 'analytics.html' },
+    { id: 'simulation', label: 'Live Simulation', icon: '▶', href: 'simulation.html' },
+  ]},
+  { section: 'FIELD', items: [
+    { id: 'field-report', label: 'Field Report', icon: '📝', href: 'field-report.html' },
+    { id: 'officer-dashboard', label: 'Officer Dashboard', icon: '🎖', href: 'officer-dashboard.html' },
+  ]},
+  { section: 'SYSTEM', items: [
+    { id: 'language', label: 'Language & Region', icon: '🌐', href: 'language.html' },
+    { id: 'admin', label: 'Admin Panel', icon: '⚙', href: 'admin.html' },
+    { id: 'settings', label: 'Settings', icon: '🔧', href: 'settings.html' },
+  ]}
 ];
 
 function getPageId() {
   const path = (window.location.pathname || '').split('/').pop() || 'dashboard.html';
   return path.replace('.html', '');
 }
-function getActivePageId() { return getPageId(); }
 
 function buildSidebar() {
-  const activeId = getActivePageId();
-  const aside = document.createElement('aside');
-  aside.className = 'sidebar';
-  aside.id = 'sidebar';
-  let html = `<div class="sidebar-brand"><div class="brand-mark">SR</div><div><div class="brand-title" data-i18n="app_title">SmartRoute</div><div class="brand-sub" data-i18n="app_sub">Emergency Mgmt</div></div></div><nav class="sidebar-nav" id="sidebar-nav">`;
+  const activeId = getPageId();
+  const collapsed = localStorage.getItem('sr-sidebar-collapsed') === '1';
+  const sidebar = document.createElement('aside');
+  sidebar.className = 'sidebar' + (collapsed ? ' collapsed' : '');
+  sidebar.id = 'sidebar';
+  sidebar.innerHTML = `
+    <a href="index.html" class="sidebar-logo">
+      <div class="sidebar-logo-icon">SR</div>
+      <div class="sidebar-logo-text">
+        <div class="sidebar-logo-title">SmartRoute</div>
+        <div class="sidebar-logo-sub">Emergency Mgmt</div>
+      </div>
+    </a>
+    <nav class="sidebar-section" id="sidebar-nav"></nav>
+    <div class="sidebar-bottom">
+      <div class="sidebar-user">
+        <div class="user-avatar" id="sidebar-user-avatar">NE</div>
+        <div>
+          <div class="user-name" id="sidebar-user-name">Admin Officer</div>
+          <div class="user-role" id="sidebar-user-role">Command HQ · NER</div>
+        </div>
+      </div>
+      <a href="login.html" class="nav-item" id="sr-sign-out" style="color:var(--danger);font-size:var(--text-sm);">
+        <span class="nav-icon">⏻</span>
+        <span class="nav-label" data-i18n="sign_out">Sign Out</span>
+      </a>
+    </div>`;
+  const nav = sidebar.querySelector('#sidebar-nav');
   SMARTROUTE_NAV.forEach(section => {
-    const secKey = 'nav_sec_' + section.section.toLowerCase().replace(/\s+/g, '_');
-    html += `<div class="sidebar-section-label" data-i18n="${secKey}">${section.section}</div>`;
+    const label = document.createElement('div');
+    label.className = 'sidebar-section-label';
+    label.setAttribute('data-i18n', 'nav_sec_' + section.section.toLowerCase().replace(/\s+/g, '_'));
+    label.textContent = section.section;
+    nav.appendChild(label);
     section.items.forEach(item => {
-      const itemKey = 'nav_' + item.id.replace(/-/g, '_');
-      const active = item.id === activeId ? ' active' : '';
-      const badge = item.badge ? `<span class="nav-badge">${item.badge}</span>` : '';
-      html += `<a href="${item.href}" class="nav-item${active}" data-nav-id="${item.id}"><span class="nav-icon">${item.icon}</span><span class="nav-label" data-i18n="${itemKey}">${item.label}</span>${badge}</a>`;
+      const a = document.createElement('a');
+      a.href = item.href;
+      a.className = 'nav-item' + (item.id === activeId ? ' active' : '');
+      a.setAttribute('data-nav-id', item.id);
+      a.innerHTML = `<span class="nav-icon">${item.icon}</span><span class="nav-label" data-i18n="nav_${item.id.replace(/-/g,'_')}">${item.label}</span>${item.badge ? `<span class="nav-badge">${item.badge}</span>` : ''}`;
+      nav.appendChild(a);
     });
   });
-  html += `</nav><div class="sidebar-footer"><a href="login.html" class="nav-item" id="sr-sign-out" style="color:var(--danger);font-size:var(--text-sm);"><span class="nav-icon">⏻</span><span class="nav-label" data-i18n="sign_out">Sign Out</span></a></div>`;
-  aside.innerHTML = html;
-  return aside;
+  try {
+    const user = localStorage.getItem('sr_username');
+    const role = localStorage.getItem('sr_user_role');
+    if (user) {
+      const nameEl = sidebar.querySelector('#sidebar-user-name');
+      const avEl = sidebar.querySelector('#sidebar-user-avatar');
+      if (nameEl) nameEl.textContent = user;
+      if (avEl) avEl.textContent = user.slice(0, 2).toUpperCase();
+    }
+    if (role) {
+      const roleEl = sidebar.querySelector('#sidebar-user-role');
+      if (roleEl) roleEl.textContent = role + ' · NER';
+    }
+  } catch (e) {}
+  return sidebar;
 }
 
 function buildNavbar(title, subtitle) {
   const nav = document.createElement('header');
-  nav.className = 'top-navbar';
-  nav.innerHTML = `<div class="navbar-left"><button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">☰</button><div><div class="navbar-title">${title || 'SmartRoute'}</div><div class="navbar-subtitle">${subtitle || ''}</div></div></div><div class="navbar-right"><span class="badge" id="backend-status-badge">○ STANDALONE</span><span class="badge badge-safe" data-i18n="live">● LIVE</span><div class="navbar-lang-wrap" id="navbar-lang-wrap"></div><span class="navbar-clock" id="navbar-clock">--:--:--</span><a href="alerts.html" class="nav-icon-btn" title="Alerts">🔔</a><a href="settings.html" class="nav-icon-btn" title="Settings">⚙</a></div>`;
+  nav.className = 'navbar';
+  nav.innerHTML = `
+    <div class="navbar-left">
+      <button class="collapse-btn" id="sidebar-toggle" title="Toggle Sidebar">☰</button>
+      <div>
+        <div class="navbar-title">${title || 'SmartRoute'}</div>
+        <div class="page-subtitle" style="margin:0;font-size:12px;color:var(--text-muted)">${subtitle || ''}</div>
+      </div>
+    </div>
+    <div class="navbar-right">
+      <span class="status-indicator" id="backend-status-badge"><span class="status-dot"></span> LIVE</span>
+      <span class="navbar-clock" id="navbar-clock">--:--:--</span>
+      <a href="alerts.html" class="navbar-alert-btn" title="Alerts">🔔</a>
+      <a href="settings.html" class="navbar-alert-btn" title="Settings">⚙</a>
+    </div>`;
   return nav;
 }
 
@@ -108,46 +139,14 @@ function initClock() {
 
 function initSidebarToggle() {
   const btn = document.getElementById('sidebar-toggle');
-  const main = document.getElementById('main-content');
-  if (!btn || !main) return;
+  const sidebar = document.getElementById('sidebar');
+  const mainContent = document.getElementById('main-content');
+  if (!btn || !sidebar) return;
   btn.addEventListener('click', () => {
-    main.classList.toggle('sidebar-collapsed');
-    localStorage.setItem('sr-sidebar-collapsed', main.classList.contains('sidebar-collapsed') ? '1' : '0');
+    const isCollapsed = sidebar.classList.toggle('collapsed');
+    mainContent && mainContent.classList.toggle('sidebar-collapsed', isCollapsed);
+    localStorage.setItem('sr-sidebar-collapsed', isCollapsed ? '1' : '0');
   });
-  if (localStorage.getItem('sr-sidebar-collapsed') === '1') main.classList.add('sidebar-collapsed');
-}
-
-function initNavbarLangDropdown() {
-  const wrap = document.getElementById('navbar-lang-wrap');
-  if (!wrap) return;
-  const btn = document.createElement('button');
-  btn.className = 'navbar-lang-btn'; btn.id = 'navbar-lang-btn'; btn.type = 'button';
-  btn.innerHTML = '<span class="lang-code">EN</span>';
-  const menu = document.createElement('div');
-  menu.className = 'navbar-lang-menu'; menu.style.display = 'none';
-  wrap.appendChild(btn); wrap.appendChild(menu);
-  function updateNavbarLang() {
-    if (!window.SmartRouteI18n) return;
-    const code = SmartRouteI18n.getLanguage();
-    const info = SmartRouteI18n.getLanguageInfo(code);
-    btn.innerHTML = `<span class="lang-code">${(info && info.code ? info.code : code).toUpperCase()}</span>`;
-    menu.innerHTML = '';
-    SmartRouteI18n.languages.forEach(l => {
-      const opt = document.createElement('div');
-      opt.className = 'lang-opt' + (l.code === code ? ' active' : '');
-      opt.textContent = `${l.flag || ''} ${l.name}`;
-      opt.addEventListener('click', () => {
-        SmartRouteI18n.setLanguage(l.code);
-        menu.style.display = 'none';
-        if (window.SmartRoute && SmartRoute.showToast) SmartRoute.showToast('🌐 Language: ' + l.name + ' (' + l.native + ')', 'success', 2500);
-      });
-      menu.appendChild(opt);
-    });
-  }
-  btn.addEventListener('click', (e) => { e.stopPropagation(); menu.style.display = menu.style.display === 'none' ? 'block' : 'none'; });
-  document.addEventListener('click', (e) => { if (!menu.contains(e.target) && e.target !== btn) menu.style.display = 'none'; });
-  window.addEventListener('smartroute:language-changed', updateNavbarLang);
-  if (window.SmartRouteI18n) updateNavbarLang(); else setTimeout(updateNavbarLang, 350);
 }
 
 const SR_PUBLIC_PAGES = ['index.html', 'login.html', 'signup.html', 'language.html', ''];
@@ -157,19 +156,30 @@ function enforceAuthIfNeeded() {
     if (SR_PUBLIC_PAGES.includes(path)) return;
     const logged = localStorage.getItem('sr_logged_in') === '1' || !!localStorage.getItem('sr_username');
     if (!logged) {
-      try { localStorage.setItem('sr_return_to', path); } catch(e) {}
+      try { localStorage.setItem('sr_return_to', path); } catch (e) {}
       window.location.href = 'login.html';
     }
   } catch (e) {}
 }
 
 function initSharedComponents(config = {}) {
+  // Load sidebar scroll fix CSS
+  if (!document.getElementById('sr-sidebar-scroll-fix')) {
+    const link = document.createElement('link');
+    link.id = 'sr-sidebar-scroll-fix';
+    link.rel = 'stylesheet';
+    link.href = 'css/sidebar-scroll-fix.css';
+    document.head.appendChild(link);
+  }
+
   enforceAuthIfNeeded();
   const { title, subtitle } = config;
   const appShell = document.querySelector('.app-shell');
   if (!appShell) return;
+
   const sidebar = buildSidebar();
   appShell.insertBefore(sidebar, appShell.firstChild);
+
   let mainContent = appShell.querySelector('.main-content');
   if (!mainContent) {
     mainContent = document.createElement('div');
@@ -177,31 +187,33 @@ function initSharedComponents(config = {}) {
     mainContent.id = 'main-content';
     while (appShell.children.length > 1) mainContent.appendChild(appShell.children[1]);
     appShell.appendChild(mainContent);
-  } else { mainContent.id = 'main-content'; }
+  } else {
+    mainContent.id = 'main-content';
+  }
+
   if (localStorage.getItem('sr-sidebar-collapsed') === '1') mainContent.classList.add('sidebar-collapsed');
   mainContent.insertBefore(buildNavbar(title, subtitle), mainContent.firstChild);
-  initClock(); initSidebarToggle(); initNavbarLangDropdown();
+
+  initClock();
+  initSidebarToggle();
+
   const so = document.getElementById('sr-sign-out');
   if (so) so.addEventListener('click', () => {
-    try { localStorage.removeItem('sr_logged_in'); localStorage.removeItem('sr_username'); localStorage.removeItem('sr_user_role'); } catch(err) {}
+    try {
+      localStorage.removeItem('sr_logged_in');
+      localStorage.removeItem('sr_username');
+      localStorage.removeItem('sr_user_role');
+    } catch (err) {}
   });
-  const body = mainContent.querySelector('.page-body');
-  if (body) {
-    body.style.opacity = '0'; body.style.transform = 'translateY(12px)';
-    requestAnimationFrame(() => {
-      body.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-      body.style.opacity = '1'; body.style.transform = 'translateY(0)';
-    });
-  }
+
   if (!window.SmartRouteI18n) {
     const s = document.createElement('script');
     s.src = 'js/i18n.js';
     s.onload = () => { if (window.SmartRouteI18n) window.SmartRouteI18n.applyLanguage(); };
     document.head.appendChild(s);
-  } else { window.SmartRouteI18n.applyLanguage(); }
-  if (!window.SmartRouteAPI) {
-    const a = document.createElement('script'); a.src = 'js/api.js'; document.head.appendChild(a);
-  } else if (window.SmartRouteAPI.checkHealth) window.SmartRouteAPI.checkHealth();
+  } else {
+    window.SmartRouteI18n.applyLanguage();
+  }
 }
 
 function showToast(msg, type = 'info', duration = 3500) {
@@ -214,15 +226,15 @@ function showToast(msg, type = 'info', duration = 3500) {
   }
   const colors = { info: '#00d4ff', success: '#00ff88', warn: '#ff9500', danger: '#ff3b3b' };
   const el = document.createElement('div');
-  el.style.cssText = 'background:rgba(8,18,38,0.95);border:1px solid ' + (colors[type]||colors.info) + ';color:#fff;padding:12px 16px;border-radius:10px;font-family:Outfit,sans-serif;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,0.4);max-width:320px;';
+  el.style.cssText = 'background:rgba(8,18,38,0.95);border:1px solid ' + (colors[type] || colors.info) + ';color:#fff;padding:12px 16px;border-radius:10px;font-family:Outfit,sans-serif;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,0.4);max-width:320px;';
   el.textContent = msg;
   host.appendChild(el);
   setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, duration);
 }
 
 function initCountUps() {
-  document.querySelectorAll('.count-up,[data-count]').forEach(el => {
-    const target = parseInt(el.getAttribute('data-count') || el.textContent.replace(/[^0-9]/g, ''), 10);
+  document.querySelectorAll('.count-up,[data-count],[data-val]').forEach(el => {
+    const target = parseInt(el.getAttribute('data-count') || el.getAttribute('data-val') || el.textContent.replace(/[^0-9]/g, ''), 10);
     if (isNaN(target)) return;
     const startTime = performance.now();
     function update(t) {
@@ -235,21 +247,9 @@ function initCountUps() {
   });
 }
 
-function animateCountUp(el, target, duration = 1500, prefix = '', suffix = '') {
-  const startTime = performance.now();
-  function update(currentTime) {
-    const progress = Math.min((currentTime - startTime) / duration, 1);
-    const ease = 1 - Math.pow(1 - progress, 3);
-    el.textContent = prefix + Math.round(target * ease).toLocaleString() + suffix;
-    if (progress < 1) requestAnimationFrame(update);
-  }
-  requestAnimationFrame(update);
-}
-
 window.SmartRoute = {
   initSharedComponents,
   initCountUps,
-  animateCountUp,
   showToast,
   getPageId,
   enforceAuthIfNeeded
