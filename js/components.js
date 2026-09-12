@@ -3,7 +3,7 @@ const SR_PUBLIC_PAGES = ['index.html', 'login.html', 'signup.html', ''];
 
 function isLoggedIn() {
   try {
-    return localStorage.getItem('sr_logged_in') === '1' || !!localStorage.getItem('sr_username');
+    return localStorage.getItem('sr_logged_in') === '1';
   } catch (e) { return false; }
 }
 
@@ -75,7 +75,7 @@ function buildSidebar() {
       <div class="sidebar-logo-icon">SR</div>
       <div class="sidebar-logo-text">
         <div class="sidebar-logo-title" data-i18n="app_name">SmartRoute</div>
-        <div class="sidebar-logo-sub" data-i18n="app_sub">Emergency Mgmt</div>
+        <div class="sidebar-logo-sub">Emergency Mgmt</div>
       </div>
     </a>
     <nav class="sidebar-section" id="sidebar-nav"></nav>
@@ -87,7 +87,7 @@ function buildSidebar() {
           <div class="user-role" id="sidebar-user-role">Command HQ · NER</div>
         </div>
       </div>
-      <a href="login.html" class="nav-item" id="sr-sign-out" style="color:var(--danger);font-size:var(--text-sm);">
+      <a href="login.html" class="nav-item" id="sr-sign-out">
         <span class="nav-icon">⏻</span>
         <span class="nav-label" data-i18n="sign_out">Sign Out</span>
       </a>
@@ -129,17 +129,17 @@ function buildNavbar(title, subtitle) {
   nav.className = 'navbar';
   nav.innerHTML = `
     <div class="navbar-left">
-      <button class="collapse-btn" id="sidebar-toggle" title="Toggle Sidebar">☰</button>
+      <button class="collapse-btn" id="sidebar-toggle">☰</button>
       <div>
         <div class="navbar-title">${title || 'SmartRoute'}</div>
         <div class="page-subtitle" style="margin:0;font-size:12px;color:var(--text-muted)">${subtitle || ''}</div>
       </div>
     </div>
     <div class="navbar-right">
-      <span class="status-indicator"><span class="status-dot"></span> <span data-i18n="status_live">LIVE</span></span>
+      <span class="status-indicator"><span class="status-dot"></span> LIVE</span>
       <span class="navbar-clock" id="navbar-clock">--:--:--</span>
-      <a href="alerts.html" class="navbar-alert-btn" title="Alerts">🔔</a>
-      <a href="settings.html" class="navbar-alert-btn" title="Settings">⚙</a>
+      <a href="alerts.html" class="navbar-alert-btn">🔔</a>
+      <a href="settings.html" class="navbar-alert-btn">⚙</a>
     </div>`;
   return nav;
 }
@@ -166,7 +166,8 @@ function initSidebarToggle() {
 function loadAndApplyI18n() {
   function apply() {
     if (window.SmartRouteI18n) {
-      const code = SmartRouteI18n.getLanguage();
+      const code = localStorage.getItem('sr_language') || SmartRouteI18n.getLanguage() || 'en';
+      if (SmartRouteI18n.setLanguage) SmartRouteI18n.setLanguage(code);
       SmartRouteI18n.applyLanguage(code);
       document.documentElement.lang = code;
     }
@@ -233,7 +234,9 @@ function initSharedComponents(config = {}) {
     window.location.href = 'login.html';
   });
 
-  loadAndApplyI18n();
+  // Apply saved language after sidebar exists
+  setTimeout(loadAndApplyI18n, 50);
+  setTimeout(loadAndApplyI18n, 400);
 }
 
 function showToast(msg, type = 'info', duration = 3500) {
@@ -276,26 +279,20 @@ window.SmartRoute = {
   loadAndApplyI18n
 };
 
-window.addEventListener('storage', (e) => {
-  if (e.key === 'sr_language' && window.SmartRouteI18n) {
-    SmartRouteI18n.applyLanguage(e.newValue || 'en');
-  }
-});
-
-// Auto-load signup registry on signup page
+// Page helpers
 (function(){
   var path = (window.location.pathname || '').split('/').pop() || '';
+  function load(src, cb) {
+    var s = document.createElement('script');
+    s.src = src;
+    s.onload = cb || function(){};
+    document.head.appendChild(s);
+  }
   if (path === 'signup.html') {
-    function load(src, cb) {
-      var s = document.createElement('script');
-      s.src = src;
-      s.onload = cb || function(){};
-      document.head.appendChild(s);
-    }
-    if (!window.SmartRouteAuth) {
-      load('js/auth-users.js', function(){ load('js/signup-register.js'); });
-    } else {
-      load('js/signup-register.js');
-    }
+    if (!window.SmartRouteAuth) load('js/auth-users.js', function(){ load('js/signup-register.js'); });
+    else load('js/signup-register.js');
+  }
+  if (path === 'language.html' || path === 'settings.html') {
+    load('js/language-apply.js');
   }
 })();
