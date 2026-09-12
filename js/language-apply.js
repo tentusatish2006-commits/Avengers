@@ -1,4 +1,4 @@
-/* Language page: pending select → Apply switches entire site from English */
+/* Language page — Apply Telugu/Hindi/etc. site-wide */
 (function () {
   'use strict';
 
@@ -14,11 +14,7 @@
   }
 
   function getApplied() {
-    try {
-      return localStorage.getItem('sr_language') || 'en';
-    } catch (e) {
-      return 'en';
-    }
+    try { return localStorage.getItem('sr_language') || 'en'; } catch (e) { return 'en'; }
   }
 
   function updateActiveBar(code, isPending) {
@@ -29,55 +25,48 @@
     if (flag) flag.textContent = i.flag || '🌐';
     if (title) {
       title.textContent = (i.name || code) + (i.native ? ' (' + i.native + ')' : '') +
-        (isPending ? ' — select Apply' : '');
+        (isPending ? ' — Apply pending' : '');
     }
     if (native) {
       native.textContent = (i.region || '') + (i.native ? ' • ' + i.native : '') +
-        (isPending ? ' (not applied yet)' : ' • ACTIVE');
+        (isPending ? ' (click Apply)' : ' • ACTIVE');
     }
   }
 
   function forceApply(code) {
-    code = code || 'en';
-    try {
-      localStorage.setItem('sr_language', code);
-    } catch (e) {}
+    code = (code || 'en').toLowerCase().trim();
+    pendingCode = code;
 
+    try { localStorage.setItem('sr_language', code); } catch (e) {}
     document.documentElement.lang = code;
 
     if (window.SmartRouteI18n) {
       SmartRouteI18n._currentLang = code;
       try {
         if (SmartRouteI18n.setLanguage) SmartRouteI18n.setLanguage(code);
-      } catch (e1) {}
-      try {
-        if (SmartRouteI18n.applyLanguage) SmartRouteI18n.applyLanguage(code);
-      } catch (e2) {}
-      try {
-        if (SmartRouteI18n.applyDeep) SmartRouteI18n.applyDeep(code);
-      } catch (e3) {}
+      } catch (e1) {
+        try { SmartRouteI18n.applyLanguage(code); } catch (e2) {}
+      }
     }
 
-    // Force sidebar labels from keys (always works regardless of current English text)
+    // Strong force path (Telugu etc.)
+    if (window.SmartRouteForceI18n && SmartRouteForceI18n.apply) {
+      SmartRouteForceI18n.apply(code);
+    }
     if (window.SmartRoute && SmartRoute.refreshLanguage) {
       SmartRoute.refreshLanguage(code);
-    } else {
-      document.querySelectorAll('[data-i18n]').forEach(function (el) {
-        if (!window.SmartRouteI18n) return;
-        var key = el.getAttribute('data-i18n');
-        var tr = SmartRouteI18n.t(key, code);
-        if (tr && tr !== key) el.textContent = tr;
-      });
+    }
+    if (window.SmartRouteI18n && SmartRouteI18n.applyDeep) {
+      SmartRouteI18n.applyDeep(code);
     }
 
-    // Re-apply twice so late-rendered sidebar is covered
-    setTimeout(function () {
-      if (window.SmartRouteI18n && SmartRouteI18n.applyDeep) SmartRouteI18n.applyDeep(code);
-      if (window.SmartRoute && SmartRoute.refreshLanguage) SmartRoute.refreshLanguage(code);
-    }, 150);
-    setTimeout(function () {
-      if (window.SmartRouteI18n && SmartRouteI18n.applyDeep) SmartRouteI18n.applyDeep(code);
-    }, 400);
+    // Repeat after sidebar paints
+    [100, 300, 700, 1200].forEach(function (ms) {
+      setTimeout(function () {
+        if (window.SmartRouteForceI18n) SmartRouteForceI18n.apply(code);
+        if (window.SmartRoute && SmartRoute.refreshLanguage) SmartRoute.refreshLanguage(code);
+      }, ms);
+    });
 
     updateActiveBar(code, false);
 
@@ -89,9 +78,11 @@
       r.checked = (r.value === code);
     });
 
+    var i = info(code);
     if (window.SmartRoute && SmartRoute.showToast) {
-      var i = info(code);
-      SmartRoute.showToast('Language changed to ' + i.name + ' (' + i.native + ')', 'success', 3500);
+      SmartRoute.showToast('Language: ' + i.name + ' (' + i.native + ') — saved for all pages', 'success', 4000);
+    } else {
+      alert('Language applied: ' + i.name + ' (' + i.native + ')');
     }
   }
 
@@ -111,7 +102,7 @@
     pendingCode = applied;
     updateActiveBar(applied, false);
 
-    // Block the page's old auto-apply on select
+    // Override auto-apply on radio
     window.applySelectedLanguage = function (code) {
       selectPending(code);
     };
@@ -127,7 +118,10 @@
     var applyBtn = $('btn-lang-apply');
     if (applyBtn) {
       applyBtn.onclick = function (e) {
-        if (e) e.preventDefault();
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
         var code = pendingCode || getApplied();
         if (dropdown && dropdown.value) code = dropdown.value;
         var radio = document.querySelector('input[name="lang_radio"]:checked');
@@ -141,7 +135,6 @@
     if (resetBtn) {
       resetBtn.onclick = function (e) {
         if (e) e.preventDefault();
-        pendingCode = 'en';
         forceApply('en');
         return false;
       };
@@ -153,8 +146,10 @@
       }
     }, true);
 
-    // Apply stored language on this page load
-    forceApply(applied);
+    // Apply stored language when opening this page
+    if (applied && applied !== 'en') {
+      forceApply(applied);
+    }
     return true;
   }
 
@@ -162,7 +157,7 @@
     var tries = 0;
     var t = setInterval(function () {
       tries++;
-      if (wire() || tries > 80) clearInterval(t);
+      if (wire() || tries > 100) clearInterval(t);
     }, 80);
   }
 
