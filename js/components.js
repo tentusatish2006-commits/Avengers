@@ -131,7 +131,7 @@ function buildNavbar(title, subtitle) {
     <div class="navbar-left">
       <button class="collapse-btn" id="sidebar-toggle" title="Toggle Sidebar">☰</button>
       <div>
-        <div class="navbar-title" data-i18n-title="1">${title || 'SmartRoute'}</div>
+        <div class="navbar-title">${title || 'SmartRoute'}</div>
         <div class="page-subtitle" style="margin:0;font-size:12px;color:var(--text-muted)">${subtitle || ''}</div>
       </div>
     </div>
@@ -171,9 +171,8 @@ function loadAndApplyI18n() {
       document.documentElement.lang = code;
     }
   }
-  if (window.SmartRouteI18n) {
-    apply();
-  } else {
+  if (window.SmartRouteI18n) apply();
+  else {
     const s = document.createElement('script');
     s.src = 'js/i18n.js';
     s.onload = apply;
@@ -234,7 +233,6 @@ function initSharedComponents(config = {}) {
     window.location.href = 'login.html';
   });
 
-  // Apply selected language after sidebar is in the DOM
   loadAndApplyI18n();
 }
 
@@ -278,9 +276,26 @@ window.SmartRoute = {
   loadAndApplyI18n
 };
 
-// If language changes on another tab, re-apply
 window.addEventListener('storage', (e) => {
   if (e.key === 'sr_language' && window.SmartRouteI18n) {
     SmartRouteI18n.applyLanguage(e.newValue || 'en');
   }
 });
+
+// Auto-load signup registry on signup page
+(function(){
+  var path = (window.location.pathname || '').split('/').pop() || '';
+  if (path === 'signup.html') {
+    function load(src, cb) {
+      var s = document.createElement('script');
+      s.src = src;
+      s.onload = cb || function(){};
+      document.head.appendChild(s);
+    }
+    if (!window.SmartRouteAuth) {
+      load('js/auth-users.js', function(){ load('js/signup-register.js'); });
+    } else {
+      load('js/signup-register.js');
+    }
+  }
+})();
