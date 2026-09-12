@@ -1,6 +1,6 @@
 /* ============================================================
    SMARTROUTE — MAP ENGINE (NER)
-   Curved multi-point roads, alternate routes, vehicle animation
+   Curved multi-point roads, safest & alternate routes, vehicles
    ============================================================ */
 
 const MAP_CONFIG = {
@@ -40,66 +40,52 @@ const ROAD_DATA = [
     cause: null }
 ];
 
+const ALT_ROUTE_DATA = [
+  { id: 'SAFE-GS1', name: 'Safest — GS-1 Guwahati → Shillong Expressway', color: '#00ff88', weight: 6, kind: 'safest',
+    coords: [[26.14,91.73],[26.10,91.75],[26.05,91.78],[26.00,91.82],[25.95,91.85],[25.90,91.88],[25.85,91.89],[25.80,91.90],[25.72,91.90],[25.65,91.90],[25.57,91.89]] },
+  { id: 'SAFE-NH27', name: 'Safest — NH-27 East-West (Siliguri → Guwahati)', color: '#00ff88', weight: 5, kind: 'safest',
+    coords: [[26.72,88.42],[26.65,88.80],[26.58,89.20],[26.52,89.60],[26.48,90.00],[26.45,90.40],[26.44,90.90],[26.44,91.30],[26.30,91.55],[26.14,91.73]] },
+  { id: 'ALT-NH306', name: 'Alternate — NH-306 Silchar → Aizawl detour', color: '#00d4ff', weight: 4, kind: 'alternate',
+    coords: [[24.82,92.79],[24.70,92.77],[24.55,92.75],[24.40,92.72],[24.28,92.70],[24.15,92.68],[24.00,92.70],[23.90,92.71],[23.80,92.71],[23.73,92.71]] },
+  { id: 'ALT-AH1', name: 'Alternate — AH-1 Guwahati → Imphal via Dimapur', color: '#ff9500', weight: 4, kind: 'alternate',
+    coords: [[26.14,91.73],[26.18,92.00],[26.25,92.30],[26.32,92.55],[26.35,92.68],[26.20,93.10],[26.00,93.40],[25.90,93.72],[25.75,93.95],[25.67,94.10],[25.40,94.05],[25.10,94.00],[24.81,93.93]] },
+  { id: 'ALT-NH8', name: 'Alternate — NH-8 Tripura lifeline (Silchar → Agartala)', color: '#00d4ff', weight: 4, kind: 'alternate',
+    coords: [[24.82,92.79],[24.70,92.55],[24.55,92.30],[24.40,92.10],[24.20,91.90],[24.00,91.60],[23.90,91.40],[23.83,91.28],[23.60,91.35],[23.40,91.40],[23.20,91.45],[23.10,91.50]] }
+];
+
 const INCIDENT_DATA = [
-  { id: 'INC-NE01', type: 'landslide', lat: 27.58, lng: 91.86, title: 'Landslide — Tawang Sector KM 62', severity: 'critical', time: '07:45', road: 'NH-13' },
-  { id: 'INC-NE02', type: 'flood', lat: 26.15, lng: 91.75, title: 'Brahmaputra Flood Surge — Guwahati', severity: 'high', time: '08:20', road: 'AH-1' },
-  { id: 'INC-NE03', type: 'landslide', lat: 25.67, lng: 94.10, title: 'Mountain Slope Slide — Kohima Pass', severity: 'critical', time: '09:10', road: 'NH-2' },
-  { id: 'INC-NE04', type: 'flood', lat: 27.33, lng: 88.61, title: 'Teesta Flash Flood — Gangtok', severity: 'high', time: '06:30', road: 'NH-10' },
-  { id: 'INC-NE05', type: 'damage', lat: 25.57, lng: 91.89, title: 'Waterlogging — Shillong', severity: 'medium', time: '10:15', road: 'GS-1' },
-  { id: 'INC-NE06', type: 'damage', lat: 23.73, lng: 92.71, title: 'Culvert Settlement — Aizawl', severity: 'medium', time: '11:00', road: 'NH-306' }
+  { id: 'INC-01', title: 'Landslide NH-13', lat: 27.26, lng: 92.41, severity: 'critical' },
+  { id: 'INC-02', title: 'Mudflow NH-2', lat: 25.00, lng: 93.95, severity: 'high' },
+  { id: 'INC-03', title: 'Teesta Erosion NH-10', lat: 27.12, lng: 88.50, severity: 'critical' },
+  { id: 'INC-04', title: 'Waterlogging NH-306', lat: 24.22, lng: 92.68, severity: 'medium' }
 ];
 
 const VEHICLE_DATA = [
-  { id: 'VH-NE01', type: '🚑', name: 'MED-Convoy-NE1', cargo: 'Medicines & Blood', lat: 26.14, lng: 91.73, status: 'on-route', speed: 52, dest: 'Imphal Hospital', eta: '14:30', roadId: 'AH-1' },
-  { id: 'VH-NE02', type: '🚚', name: 'FOOD-Truck-NE2', cargo: 'Relief Grain', lat: 26.72, lng: 88.42, status: 'delayed', speed: 36, dest: 'Gangtok Hub', eta: '17:15', roadId: 'NH-10' },
-  { id: 'VH-NE03', type: '🚒', name: 'RESP-NDRF-NE3', cargo: 'NDRF Gear', lat: 25.57, lng: 91.89, status: 'on-route', speed: 58, dest: 'Cherrapunji', eta: '13:50', roadId: 'GS-1' },
-  { id: 'VH-NE04', type: '🚛', name: 'CON-Rescue-NE4', cargo: 'Bailey Girders', lat: 24.82, lng: 92.79, status: 'on-route', speed: 48, dest: 'Agartala', eta: '18:00', roadId: 'NH-8' },
-  { id: 'VH-NE05', type: '🚜', name: 'ENG-Dozer-NE5', cargo: 'Road Clearer', lat: 25.67, lng: 94.10, status: 'blocked', speed: 0, dest: 'Kohima Pass', eta: 'DELAYED', roadId: 'NH-2' },
-  { id: 'VH-NE06', type: '🚛', name: 'FUEL-Tanker-NE6', cargo: 'Generator Fuel', lat: 23.83, lng: 91.28, status: 'on-route', speed: 50, dest: 'Silchar', eta: '16:00', roadId: 'NH-8' }
-];
-
-const ALT_ROUTE_DATA = [
-  { id: 'ALT-A', name: 'Route A — GS-1 Guwahati–Shillong', color: '#00ff88', weight: 5,
-    coords: [[26.14,91.73],[26.08,91.76],[26.00,91.82],[25.92,91.87],[25.80,91.90],[25.70,91.90],[25.57,91.89]] },
-  { id: 'ALT-B', name: 'Route B — NH-306 Silchar–Aizawl', color: '#ff9500', weight: 4,
-    coords: [[24.82,92.79],[24.60,92.76],[24.40,92.72],[24.20,92.68],[24.00,92.70],[23.85,92.71],[23.73,92.71]] },
-  { id: 'ALT-C', name: 'Route C — AH-1 Guwahati–Imphal', color: '#ff3b3b', weight: 4,
-    coords: [[26.14,91.73],[26.20,92.20],[26.30,92.60],[26.00,93.20],[25.90,93.72],[25.67,94.10],[25.20,94.00],[24.81,93.93]] }
+  { id: 'V-01', name: 'Convoy Alpha', routeId: 'GS-1', progress: 0.2, color: '#00ff88' },
+  { id: 'V-02', name: 'Relief Truck 12', routeId: 'NH-27', progress: 0.45, color: '#00d4ff' },
+  { id: 'V-03', name: 'Medical Unit', routeId: 'NH-8', progress: 0.6, color: '#ffcc00' },
+  { id: 'V-04', name: 'BRO Patrol', routeId: 'AH-1', progress: 0.3, color: '#ff9500' }
 ];
 
 const ROAD_STYLE = {
-  accessible: { color: '#00ff88', weight: 4, opacity: 0.9, dashArray: null },
-  partial:    { color: '#ffcc00', weight: 4, opacity: 0.9, dashArray: '10,5' },
-  high:       { color: '#ff9500', weight: 4, opacity: 0.9, dashArray: null },
-  blocked:    { color: '#ff3b3b', weight: 5, opacity: 1,   dashArray: '8,4' },
+  accessible: { color: '#00ff88', weight: 5, opacity: 0.85 },
+  partial: { color: '#ff9500', weight: 4, opacity: 0.85 },
+  blocked: { color: '#ff3b3b', weight: 5, opacity: 0.9 },
+  delayed: { color: '#b050ff', weight: 4, opacity: 0.8 }
 };
 
-function makeVehicleIcon(vehicle) {
-  const color = vehicle.status === 'on-route' ? '#00ff88' : vehicle.status === 'delayed' ? '#ff9500' : vehicle.status === 'blocked' ? '#ff3b3b' : '#00d4ff';
-  return L.divIcon({
-    className: '',
-    html: `<div style="width:32px;height:32px;border-radius:6px;background:rgba(0,0,0,0.75);border:2px solid ${color};display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 12px ${color}88;">${vehicle.type}</div>`,
-    iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -18]
-  });
-}
-
-function makeIncidentIcon(incident) {
-  const color = incident.severity === 'critical' ? '#ff3b3b' : incident.severity === 'high' ? '#ff9500' : '#00d4ff';
-  const emoji = incident.type === 'flood' ? '🌊' : incident.type === 'landslide' ? '⛰' : '🚧';
-  return L.divIcon({
-    className: '',
-    html: `<div style="width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.6);border:2px solid ${color};display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 14px ${color}66;">${emoji}</div>`,
-    iconSize: [36, 36], iconAnchor: [18, 18]
-  });
-}
-
-function initMap(containerId, options = {}) {
-  const el = typeof containerId === 'string' ? document.getElementById(containerId) : containerId;
+function initMap(containerId, options) {
+  options = options || {};
+  const el = document.getElementById(containerId);
   if (!el || typeof L === 'undefined') return null;
-  const center = options.center || MAP_CONFIG.center;
-  const zoom = options.zoom != null ? options.zoom : MAP_CONFIG.zoom;
-  const map = L.map(el, { zoomControl: options.zoomControl !== false, attributionControl: true }).setView(center, zoom);
-  L.tileLayer(MAP_CONFIG.tileUrl, { maxZoom: MAP_CONFIG.maxZoom, attribution: MAP_CONFIG.tileAttr }).addTo(map);
+  const map = L.map(containerId, {
+    zoomControl: options.zoomControl !== false,
+    attributionControl: true
+  }).setView(MAP_CONFIG.center, MAP_CONFIG.zoom);
+  L.tileLayer(MAP_CONFIG.tileUrl, {
+    maxZoom: MAP_CONFIG.maxZoom,
+    attribution: MAP_CONFIG.tileAttr
+  }).addTo(map);
   MapEngine.map = map;
   return map;
 }
@@ -112,7 +98,7 @@ function addRoads(map, roads, onClick) {
     if (!road.coords || road.coords.length < 2) return;
     const style = ROAD_STYLE[road.status] || ROAD_STYLE.partial;
     const line = L.polyline(road.coords, { ...style, lineCap: 'round', lineJoin: 'round' }).addTo(map);
-    line.bindPopup(`<b>${road.name}</b><br>Status: ${road.status}${road.cause ? '<br>' + road.cause : ''}`);
+    line.bindPopup('<b>' + road.name + '</b><br>Status: ' + road.status + (road.cause ? '<br>' + road.cause : ''));
     if (onClick) line.on('click', () => onClick(road));
     layers[road.id] = line;
   });
@@ -125,8 +111,11 @@ function addIncidents(map, incidents, onClick) {
   if (!map) return {};
   const markers = {};
   (incidents || INCIDENT_DATA).forEach(inc => {
-    const m = L.marker([inc.lat, inc.lng], { icon: makeIncidentIcon(inc) }).addTo(map);
-    m.bindPopup(`<b>${inc.title}</b><br>${inc.road || ''} · ${inc.time || ''}`);
+    const color = inc.severity === 'critical' ? '#ff3b3b' : (inc.severity === 'high' ? '#ff9500' : '#00d4ff');
+    const m = L.circleMarker([inc.lat, inc.lng], {
+      radius: 8, color: color, fillColor: color, fillOpacity: 0.85, weight: 2
+    }).addTo(map);
+    m.bindPopup('<b>' + inc.title + '</b><br>Severity: ' + inc.severity);
     if (onClick) m.on('click', () => onClick(inc));
     markers[inc.id] = m;
   });
@@ -134,89 +123,64 @@ function addIncidents(map, incidents, onClick) {
   return markers;
 }
 
-function addVehicles(map, vehicles, onClick) {
+function addVehicles(map) {
   map = map || MapEngine.map;
   if (!map) return {};
   const markers = {};
-  (vehicles || VEHICLE_DATA).forEach(v => {
-    const m = L.marker([v.lat, v.lng], { icon: makeVehicleIcon(v) }).addTo(map);
-    m.bindPopup(`<b>${v.name}</b><br>${v.cargo}<br>${v.status} · ${v.speed} km/h · ETA ${v.eta}`);
-    if (onClick) m.on('click', () => onClick(v));
-    markers[v.id] = m;
+  const roadIndex = {};
+  ROAD_DATA.forEach(r => { roadIndex[r.id] = r; });
+  VEHICLE_DATA.forEach(v => {
+    const road = roadIndex[v.routeId];
+    if (!road || !road.coords || road.coords.length < 2) return;
+    const idx = Math.min(road.coords.length - 1, Math.floor(v.progress * (road.coords.length - 1)));
+    const pt = road.coords[idx];
+    const icon = L.divIcon({
+      className: '',
+      html: '<div style="width:14px;height:14px;border-radius:4px;background:' + v.color + ';border:2px solid #fff;box-shadow:0 0 8px ' + v.color + ';"></div>',
+      iconSize: [14, 14], iconAnchor: [7, 7]
+    });
+    const m = L.marker(pt, { icon: icon }).addTo(map);
+    m.bindPopup('<b>' + v.name + '</b><br>Route: ' + v.routeId);
+    markers[v.id] = { marker: m, vehicle: v, road: road };
   });
   MapEngine.vehicleMarkers = markers;
   return markers;
 }
 
-function _calcDistKm(from, to) {
-  const R = 6371;
-  const dLat = (to[0] - from[0]) * Math.PI / 180;
-  const dLng = (to[1] - from[1]) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(from[0] * Math.PI / 180) * Math.cos(to[0] * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function animateVehicles(map, vehicleMarkers) {
-  map = map || MapEngine.map;
-  vehicleMarkers = vehicleMarkers || MapEngine.vehicleMarkers;
-  if (!map || !vehicleMarkers) return;
-  const animStates = {};
-  Object.entries(vehicleMarkers).forEach(([id, marker], idx) => {
-    const vData = VEHICLE_DATA.find(v => v.id === id) || { id, speed: 45 };
-    if (vData.status === 'blocked') return;
-    let assignedRoad = ROAD_DATA.find(r => r.id === vData.roadId);
-    if (!assignedRoad || !assignedRoad.coords || assignedRoad.coords.length < 2) assignedRoad = ROAD_DATA[idx % ROAD_DATA.length];
-    if (!assignedRoad) return;
-    const coords = assignedRoad.coords;
-    const curPos = marker.getLatLng();
-    let bestIdx = 0, minD = Infinity;
-    coords.forEach((pt, pIdx) => {
-      const d = Math.hypot(pt[0] - curPos.lat, pt[1] - curPos.lng);
-      if (d < minD) { minD = d; bestIdx = pIdx; }
-    });
-    animStates[id] = { coords, index: bestIdx, progress: 0, direction: 1, speed: vData.speed || 45 };
+function animateVehicles() {
+  const markers = MapEngine.vehicleMarkers || {};
+  Object.keys(markers).forEach(id => {
+    const entry = markers[id];
+    if (!entry || !entry.road) return;
+    setInterval(() => {
+      entry.vehicle.progress = (entry.vehicle.progress + 0.005) % 1;
+      const coords = entry.road.coords;
+      const f = entry.vehicle.progress * (coords.length - 1);
+      const i = Math.floor(f);
+      const t = f - i;
+      const a = coords[i];
+      const b = coords[Math.min(i + 1, coords.length - 1)];
+      const lat = a[0] + (b[0] - a[0]) * t;
+      const lng = a[1] + (b[1] - a[1]) * t;
+      entry.marker.setLatLng([lat, lng]);
+    }, 400);
   });
-  let lastTime = performance.now();
-  function step(now) {
-    const dt = Math.min((now - lastTime) / 1000, 0.08);
-    lastTime = now;
-    Object.entries(vehicleMarkers).forEach(([id, marker]) => {
-      const state = animStates[id];
-      if (!state) return;
-      const coords = state.coords;
-      const nextIdx = state.index + state.direction;
-      if (nextIdx < 0 || nextIdx >= coords.length) { state.direction *= -1; state.progress = 0; return; }
-      const from = coords[state.index], to = coords[nextIdx];
-      const segKm = _calcDistKm(from, to);
-      const fracPerSec = segKm > 0.0001 ? (state.speed / 3600) / segKm : 1;
-      state.progress += fracPerSec * dt * 3.5;
-      while (state.progress >= 1.0) {
-        state.progress -= 1.0;
-        state.index += state.direction;
-        if (state.index + state.direction < 0 || state.index + state.direction >= coords.length) {
-          state.direction *= -1; state.progress = 0; break;
-        }
-      }
-      const pFrom = coords[state.index];
-      const pTo = coords[Math.min(Math.max(0, state.index + state.direction), coords.length - 1)];
-      const lat = pFrom[0] + (pTo[0] - pFrom[0]) * state.progress;
-      const lng = pFrom[1] + (pTo[1] - pFrom[1]) * state.progress;
-      marker.setLatLng([lat, lng]);
-    });
-    requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
 }
 
 function drawAlternateRoutes(map) {
   map = map || MapEngine.map;
   if (!map) return [];
   return ALT_ROUTE_DATA.map(route => {
+    const isSafe = route.kind === 'safest' || (route.color === '#00ff88');
     const line = L.polyline(route.coords, {
-      color: route.color, weight: route.weight || 4, opacity: 0.85,
-      dashArray: route.id === 'ALT-A' ? null : '8,6', lineCap: 'round', lineJoin: 'round'
+      color: route.color,
+      weight: route.weight || (isSafe ? 6 : 4),
+      opacity: 0.9,
+      dashArray: isSafe ? null : '10,7',
+      lineCap: 'round',
+      lineJoin: 'round'
     }).addTo(map);
-    line.bindPopup(`<b>${route.name}</b>`);
+    line.bindPopup('<b>' + route.name + '</b><br>' + (isSafe ? 'Safest corridor — preferred for relief convoys' : 'Alternate detour — use when primary is disrupted'));
     return line;
   });
 }
