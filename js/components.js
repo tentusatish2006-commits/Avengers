@@ -1,4 +1,4 @@
-/* SmartRoute shared UI + auth + i18n apply */
+/* SmartRoute shared UI + auth + i18n */
 const SR_PUBLIC_PAGES = ['index.html', 'login.html', 'signup.html', ''];
 
 function isLoggedIn() {
@@ -60,6 +60,19 @@ const SMARTROUTE_NAV = [
   ]}
 ];
 
+function currentLang() {
+  try { return localStorage.getItem('sr_language') || 'en'; } catch (e) { return 'en'; }
+}
+
+function tr(key, fallback) {
+  var code = currentLang();
+  if (window.SmartRouteI18n && SmartRouteI18n.t) {
+    var v = SmartRouteI18n.t(key, code);
+    if (v && v !== key) return v;
+  }
+  return fallback || key;
+}
+
 function getPageId() {
   return ((window.location.pathname || '').split('/').pop() || 'dashboard.html').replace('.html', '');
 }
@@ -70,22 +83,47 @@ function buildSidebar() {
   const sidebar = document.createElement('aside');
   sidebar.className = 'sidebar' + (collapsed ? ' collapsed' : '');
   sidebar.id = 'sidebar';
-  sidebar.innerHTML = '<a href="dashboard.html" class="sidebar-logo"><div class="sidebar-logo-icon">SR</div><div class="sidebar-logo-text"><div class="sidebar-logo-title" data-i18n="app_name">SmartRoute</div><div class="sidebar-logo-sub">Emergency Mgmt</div></div></a><nav class="sidebar-section" id="sidebar-nav"></nav><div class="sidebar-bottom"><div class="sidebar-user"><div class="user-avatar" id="sidebar-user-avatar">NE</div><div><div class="user-name" id="sidebar-user-name">Admin Officer</div><div class="user-role" id="sidebar-user-role">Command HQ · NER</div></div></div><a href="login.html" class="nav-item" id="sr-sign-out"><span class="nav-icon">⏻</span><span class="nav-label" data-i18n="sign_out">Sign Out</span></a></div>';
+  sidebar.innerHTML =
+    '<a href="dashboard.html" class="sidebar-logo">' +
+      '<div class="sidebar-logo-icon">SR</div>' +
+      '<div class="sidebar-logo-text">' +
+        '<div class="sidebar-logo-title" data-i18n="app_title">' + tr('app_title', 'SmartRoute') + '</div>' +
+        '<div class="sidebar-logo-sub">' + tr('app_sub', 'Emergency Mgmt') + '</div>' +
+      '</div></a>' +
+    '<nav class="sidebar-section" id="sidebar-nav"></nav>' +
+    '<div class="sidebar-bottom">' +
+      '<div class="sidebar-user">' +
+        '<div class="user-avatar" id="sidebar-user-avatar">NE</div>' +
+        '<div>' +
+          '<div class="user-name" id="sidebar-user-name">Admin Officer</div>' +
+          '<div class="user-role" id="sidebar-user-role">Command HQ · NER</div>' +
+        '</div></div>' +
+      '<a href="login.html" class="nav-item" id="sr-sign-out">' +
+        '<span class="nav-icon">⏻</span>' +
+        '<span class="nav-label" data-i18n="sign_out">' + tr('sign_out', 'Sign Out') + '</span>' +
+      '</a></div>';
+
   const nav = sidebar.querySelector('#sidebar-nav');
-  SMARTROUTE_NAV.forEach(section => {
+  SMARTROUTE_NAV.forEach(function (section) {
     const label = document.createElement('div');
     label.className = 'sidebar-section-label';
     label.setAttribute('data-i18n', section.secKey);
-    label.textContent = section.section;
+    // CRITICAL: translate at build time (not only English)
+    label.textContent = tr(section.secKey, section.section);
     nav.appendChild(label);
-    section.items.forEach(item => {
+
+    section.items.forEach(function (item) {
       const a = document.createElement('a');
       a.href = item.href;
       a.className = 'nav-item' + (item.id === activeId ? ' active' : '');
-      a.innerHTML = '<span class="nav-icon">' + item.icon + '</span><span class="nav-label" data-i18n="' + item.i18n + '">' + item.label + '</span>' + (item.badge ? '<span class="nav-badge">' + item.badge + '</span>' : '');
+      a.innerHTML =
+        '<span class="nav-icon">' + item.icon + '</span>' +
+        '<span class="nav-label" data-i18n="' + item.i18n + '">' + tr(item.i18n, item.label) + '</span>' +
+        (item.badge ? '<span class="nav-badge">' + item.badge + '</span>' : '');
       nav.appendChild(a);
     });
   });
+
   try {
     const user = localStorage.getItem('sr_username');
     const role = localStorage.getItem('sr_user_role');
@@ -106,15 +144,27 @@ function buildSidebar() {
 function buildNavbar(title, subtitle) {
   const nav = document.createElement('header');
   nav.className = 'navbar';
-  nav.innerHTML = '<div class="navbar-left"><button class="collapse-btn" id="sidebar-toggle">☰</button><div><div class="navbar-title">' + (title || 'SmartRoute') + '</div><div class="page-subtitle" style="margin:0;font-size:12px;color:var(--text-muted)">' + (subtitle || '') + '</div></div></div><div class="navbar-right"><span class="status-indicator"><span class="status-dot"></span> LIVE</span><span class="navbar-clock" id="navbar-clock">--:--:--</span><a href="alerts.html" class="navbar-alert-btn">🔔</a><a href="settings.html" class="navbar-alert-btn">⚙</a></div>';
+  nav.innerHTML =
+    '<div class="navbar-left">' +
+      '<button class="collapse-btn" id="sidebar-toggle">☰</button>' +
+      '<div><div class="navbar-title">' + (title || 'SmartRoute') + '</div>' +
+      '<div class="page-subtitle" style="margin:0;font-size:12px;color:var(--text-muted)">' + (subtitle || '') + '</div></div></div>' +
+    '<div class="navbar-right">' +
+      '<span class="status-indicator"><span class="status-dot"></span> LIVE</span>' +
+      '<span class="navbar-clock" id="navbar-clock">--:--:--</span>' +
+      '<a href="alerts.html" class="navbar-alert-btn">🔔</a>' +
+      '<a href="settings.html" class="navbar-alert-btn">⚙</a></div>';
   return nav;
 }
 
 function initClock() {
   const el = document.getElementById('navbar-clock');
   if (!el) return;
-  const tick = () => { el.textContent = new Date().toLocaleTimeString('en-IN', { hour12: false }); };
-  tick(); setInterval(tick, 1000);
+  const tick = function () {
+    el.textContent = new Date().toLocaleTimeString('en-IN', { hour12: false });
+  };
+  tick();
+  setInterval(tick, 1000);
 }
 
 function initSidebarToggle() {
@@ -122,7 +172,7 @@ function initSidebarToggle() {
   const sidebar = document.getElementById('sidebar');
   const mainContent = document.getElementById('main-content');
   if (!btn || !sidebar) return;
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', function () {
     const isCollapsed = sidebar.classList.toggle('collapsed');
     if (mainContent) mainContent.classList.toggle('sidebar-collapsed', isCollapsed);
     localStorage.setItem('sr-sidebar-collapsed', isCollapsed ? '1' : '0');
@@ -130,82 +180,59 @@ function initSidebarToggle() {
 }
 
 function ensureI18nLoaded(cb) {
-  function afterCore() {
-    if (window.__srI18nEnhanceLoaded) {
-      if (cb) cb();
-      return;
-    }
-    var e = document.createElement('script');
-    e.src = 'js/i18n-enhance.js';
-    e.onload = function () {
-      window.__srI18nEnhanceLoaded = true;
-      var f = document.createElement('script');
-      f.src = 'js/force-i18n.js';
-      f.onload = function () { if (cb) cb(); };
-      f.onerror = function () { if (cb) cb(); };
-      document.head.appendChild(f);
-    };
-    e.onerror = function () { if (cb) cb(); };
-    document.head.appendChild(e);
+  function loadScript(src, next) {
+    var s = document.createElement('script');
+    s.src = src;
+    s.onload = function () { if (next) next(); };
+    s.onerror = function () { if (next) next(); };
+    document.head.appendChild(s);
+  }
+  function afterI18n() {
+    loadScript('js/i18n-enhance.js', function () {
+      loadScript('js/force-i18n.js', function () {
+        loadScript('js/i18n-runtime.js', function () {
+          if (cb) cb();
+        });
+      });
+    });
   }
   if (window.SmartRouteI18n) {
-    afterCore();
+    afterI18n();
     return;
   }
-  if (window.__srI18nLoading) {
-    setTimeout(function () { ensureI18nLoaded(cb); }, 100);
-    return;
-  }
-  window.__srI18nLoading = true;
-  var s = document.createElement('script');
-  s.src = 'js/i18n.js';
-  s.onload = function () {
-    window.__srI18nLoading = false;
-    afterCore();
-  };
-  s.onerror = function () { window.__srI18nLoading = false; if (cb) cb(); };
-  document.head.appendChild(s);
+  loadScript('js/i18n.js', afterI18n);
 }
 
 function loadAndApplyI18n() {
   ensureI18nLoaded(function () {
-    if (!window.SmartRouteI18n) return;
-    var code = 'en';
-    try { code = localStorage.getItem('sr_language') || SmartRouteI18n.getLanguage() || 'en'; } catch (e) {}
-    SmartRouteI18n._currentLang = code;
-    if (SmartRouteI18n.applyLanguage) SmartRouteI18n.applyLanguage(code);
-    if (SmartRouteI18n.applyDeep) SmartRouteI18n.applyDeep(code);
+    var code = currentLang();
+    if (window.SmartRouteI18n) {
+      SmartRouteI18n._currentLang = code;
+      try {
+        if (SmartRouteI18n.applyLanguage) SmartRouteI18n.applyLanguage(code);
+      } catch (e) {}
+    }
+    if (window.SmartRouteI18nRuntime) SmartRouteI18nRuntime.applyAll(code);
     if (window.SmartRouteForceI18n) SmartRouteForceI18n.apply(code);
     document.documentElement.lang = code;
   });
 }
 
 function refreshLanguage(code) {
-  try { code = code || localStorage.getItem('sr_language') || 'en'; } catch (e) { code = 'en'; }
-  document.documentElement.lang = code;
-  if (window.SmartRouteI18n) {
-    SmartRouteI18n._currentLang = code;
+  code = code || currentLang();
+  try { localStorage.setItem('sr_language', code); } catch (e) {}
+  if (window.SmartRouteI18nRuntime) {
+    SmartRouteI18nRuntime.setLang(code);
+  } else {
+    loadAndApplyI18n();
+  }
+  // Rebuild sidebar text without full page reload
+  var nav = document.getElementById('sidebar-nav');
+  if (nav && window.SmartRouteI18n) {
     document.querySelectorAll('[data-i18n]').forEach(function (el) {
       var key = el.getAttribute('data-i18n');
-      var tr = SmartRouteI18n.t(key, code);
-      if (tr && tr !== key) el.textContent = tr;
-    });
-    if (SmartRouteI18n.applyDeep) SmartRouteI18n.applyDeep(code);
-    else if (SmartRouteI18n.applyLanguage) SmartRouteI18n.applyLanguage(code);
-  }
-  if (window.SmartRouteForceI18n) SmartRouteForceI18n.apply(code);
-  if (typeof SMARTROUTE_NAV !== 'undefined' && window.SmartRouteI18n) {
-    SMARTROUTE_NAV.forEach(function (section) {
-      document.querySelectorAll('[data-i18n="' + section.secKey + '"]').forEach(function (el) {
-        var tr = SmartRouteI18n.t(section.secKey, code);
-        if (tr && tr !== section.secKey) el.textContent = tr;
-      });
-      section.items.forEach(function (item) {
-        document.querySelectorAll('[data-i18n="' + item.i18n + '"]').forEach(function (el) {
-          var tr = SmartRouteI18n.t(item.i18n, code);
-          if (tr && tr !== item.i18n) el.textContent = tr;
-        });
-      });
+      var v = SmartRouteI18n.t(key, code);
+      if (v && v !== key) el.textContent = v;
     });
   }
 }
@@ -213,7 +240,7 @@ function refreshLanguage(code) {
 function initSharedComponents(config) {
   config = config || {};
   if (!document.getElementById('sr-sidebar-scroll-fix')) {
-    const link = document.createElement('link');
+    var link = document.createElement('link');
     link.id = 'sr-sidebar-scroll-fix';
     link.rel = 'stylesheet';
     link.href = 'css/sidebar-scroll-fix.css';
@@ -225,76 +252,79 @@ function initSharedComponents(config) {
     return;
   }
 
-  const title = config.title;
-  const subtitle = config.subtitle;
-  const appShell = document.querySelector('.app-shell');
+  var appShell = document.querySelector('.app-shell');
   if (!appShell) return;
 
-  if (!document.getElementById('sidebar')) {
-    appShell.insertBefore(buildSidebar(), appShell.firstChild);
-  }
+  // Ensure i18n available before building sidebar so labels are translated
+  ensureI18nLoaded(function () {
+    if (!document.getElementById('sidebar')) {
+      appShell.insertBefore(buildSidebar(), appShell.firstChild);
+    }
 
-  let mainContent = appShell.querySelector('.main-content');
-  if (!mainContent) {
-    mainContent = document.createElement('div');
-    mainContent.className = 'main-content';
-    mainContent.id = 'main-content';
-    while (appShell.children.length > 1) mainContent.appendChild(appShell.children[1]);
-    appShell.appendChild(mainContent);
-  } else {
-    mainContent.id = 'main-content';
-  }
+    var mainContent = appShell.querySelector('.main-content');
+    if (!mainContent) {
+      mainContent = document.createElement('div');
+      mainContent.className = 'main-content';
+      mainContent.id = 'main-content';
+      while (appShell.children.length > 1) mainContent.appendChild(appShell.children[1]);
+      appShell.appendChild(mainContent);
+    } else {
+      mainContent.id = 'main-content';
+    }
 
-  if (localStorage.getItem('sr-sidebar-collapsed') === '1') mainContent.classList.add('sidebar-collapsed');
-  if (!mainContent.querySelector('.navbar')) {
-    mainContent.insertBefore(buildNavbar(title, subtitle), mainContent.firstChild);
-  }
+    if (localStorage.getItem('sr-sidebar-collapsed') === '1') {
+      mainContent.classList.add('sidebar-collapsed');
+    }
+    if (!mainContent.querySelector('.navbar')) {
+      mainContent.insertBefore(buildNavbar(config.title, config.subtitle), mainContent.firstChild);
+    }
 
-  initClock();
-  initSidebarToggle();
+    initClock();
+    initSidebarToggle();
 
-  const so = document.getElementById('sr-sign-out');
-  if (so) so.addEventListener('click', function (e) {
-    e.preventDefault();
-    try {
-      localStorage.removeItem('sr_logged_in');
-      localStorage.removeItem('sr_username');
-      localStorage.removeItem('sr_user_role');
-      localStorage.removeItem('sr_return_to');
-    } catch (err) {}
-    window.location.href = 'login.html';
+    var so = document.getElementById('sr-sign-out');
+    if (so) {
+      so.addEventListener('click', function (e) {
+        e.preventDefault();
+        try {
+          localStorage.removeItem('sr_logged_in');
+          localStorage.removeItem('sr_username');
+          localStorage.removeItem('sr_user_role');
+        } catch (err) {}
+        window.location.href = 'login.html';
+      });
+    }
+
+    loadAndApplyI18n();
+    setTimeout(loadAndApplyI18n, 400);
   });
-
-  setTimeout(loadAndApplyI18n, 50);
-  setTimeout(loadAndApplyI18n, 500);
-  setTimeout(loadAndApplyI18n, 1000);
 }
 
 function showToast(msg, type, duration) {
   type = type || 'info';
   duration = duration || 3500;
-  let host = document.getElementById('sr-toast-host');
+  var host = document.getElementById('sr-toast-host');
   if (!host) {
     host = document.createElement('div');
     host.id = 'sr-toast-host';
     host.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:8px;';
     document.body.appendChild(host);
   }
-  const colors = { info: '#00d4ff', success: '#00ff88', warn: '#ff9500', danger: '#ff3b3b' };
-  const el = document.createElement('div');
-  el.style.cssText = 'background:rgba(8,18,38,0.95);border:1px solid ' + (colors[type] || colors.info) + ';color:#fff;padding:12px 16px;border-radius:10px;font-family:Outfit,sans-serif;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,0.4);max-width:320px;';
+  var colors = { info: '#00d4ff', success: '#00ff88', warn: '#ff9500', danger: '#ff3b3b' };
+  var el = document.createElement('div');
+  el.style.cssText = 'background:rgba(8,18,38,0.95);border:1px solid ' + (colors[type] || colors.info) + ';color:#fff;padding:12px 16px;border-radius:10px;font-family:Outfit,sans-serif;font-size:13px;max-width:320px;';
   el.textContent = msg;
   host.appendChild(el);
-  setTimeout(function () { el.style.opacity = '0'; setTimeout(function () { el.remove(); }, 300); }, duration);
+  setTimeout(function () { el.remove(); }, duration);
 }
 
 function initCountUps() {
   document.querySelectorAll('.count-up,[data-count],[data-val]').forEach(function (el) {
-    const target = parseInt(el.getAttribute('data-count') || el.getAttribute('data-val') || el.textContent.replace(/[^0-9]/g, ''), 10);
+    var target = parseInt(el.getAttribute('data-count') || el.getAttribute('data-val') || el.textContent.replace(/[^0-9]/g, ''), 10);
     if (isNaN(target)) return;
-    const startTime = performance.now();
+    var start = performance.now();
     function update(t) {
-      const p = Math.min((t - startTime) / 1200, 1);
+      var p = Math.min((t - start) / 1200, 1);
       el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3))).toLocaleString();
       if (p < 1) requestAnimationFrame(update);
     }
@@ -315,18 +345,15 @@ window.SmartRoute = {
 
 (function () {
   var path = (window.location.pathname || '').split('/').pop() || '';
-  function load(src, cb) {
-    var s = document.createElement('script');
-    s.src = src;
-    s.onload = cb || function () {};
-    document.head.appendChild(s);
-  }
   if (path === 'signup.html') {
-    if (!window.SmartRouteAuth) load('js/auth-users.js', function () { load('js/signup-register.js'); });
-    else load('js/signup-register.js');
-  }
-  if (path === 'language.html' || path === 'settings.html') {
-    load('js/force-i18n.js', function () { load('js/language-apply.js'); });
+    var s = document.createElement('script');
+    s.src = 'js/auth-users.js';
+    s.onload = function () {
+      var s2 = document.createElement('script');
+      s2.src = 'js/signup-register.js';
+      document.head.appendChild(s2);
+    };
+    document.head.appendChild(s);
   }
 })();
 
