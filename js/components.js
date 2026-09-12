@@ -70,28 +70,7 @@ function buildSidebar() {
   const sidebar = document.createElement('aside');
   sidebar.className = 'sidebar' + (collapsed ? ' collapsed' : '');
   sidebar.id = 'sidebar';
-  sidebar.innerHTML = `
-    <a href="dashboard.html" class="sidebar-logo">
-      <div class="sidebar-logo-icon">SR</div>
-      <div class="sidebar-logo-text">
-        <div class="sidebar-logo-title" data-i18n="app_name">SmartRoute</div>
-        <div class="sidebar-logo-sub">Emergency Mgmt</div>
-      </div>
-    </a>
-    <nav class="sidebar-section" id="sidebar-nav"></nav>
-    <div class="sidebar-bottom">
-      <div class="sidebar-user">
-        <div class="user-avatar" id="sidebar-user-avatar">NE</div>
-        <div>
-          <div class="user-name" id="sidebar-user-name">Admin Officer</div>
-          <div class="user-role" id="sidebar-user-role">Command HQ · NER</div>
-        </div>
-      </div>
-      <a href="login.html" class="nav-item" id="sr-sign-out">
-        <span class="nav-icon">⏻</span>
-        <span class="nav-label" data-i18n="sign_out">Sign Out</span>
-      </a>
-    </div>`;
+  sidebar.innerHTML = '\n    <a href="dashboard.html" class="sidebar-logo">\n      <div class="sidebar-logo-icon">SR</div>\n      <div class="sidebar-logo-text">\n        <div class="sidebar-logo-title" data-i18n="app_name">SmartRoute</div>\n        <div class="sidebar-logo-sub">Emergency Mgmt</div>\n      </div>\n    </a>\n    <nav class="sidebar-section" id="sidebar-nav"></nav>\n    <div class="sidebar-bottom">\n      <div class="sidebar-user">\n        <div class="user-avatar" id="sidebar-user-avatar">NE</div>\n        <div>\n          <div class="user-name" id="sidebar-user-name">Admin Officer</div>\n          <div class="user-role" id="sidebar-user-role">Command HQ · NER</div>\n        </div>\n      </div>\n      <a href="login.html" class="nav-item" id="sr-sign-out">\n        <span class="nav-icon">⏻</span>\n        <span class="nav-label" data-i18n="sign_out">Sign Out</span>\n      </a>\n    </div>';
   const nav = sidebar.querySelector('#sidebar-nav');
   SMARTROUTE_NAV.forEach(section => {
     const label = document.createElement('div');
@@ -103,7 +82,7 @@ function buildSidebar() {
       const a = document.createElement('a');
       a.href = item.href;
       a.className = 'nav-item' + (item.id === activeId ? ' active' : '');
-      a.innerHTML = `<span class="nav-icon">${item.icon}</span><span class="nav-label" data-i18n="${item.i18n}">${item.label}</span>${item.badge ? `<span class="nav-badge">${item.badge}</span>` : ''}`;
+      a.innerHTML = '<span class="nav-icon">' + item.icon + '</span><span class="nav-label" data-i18n="' + item.i18n + '">' + item.label + '</span>' + (item.badge ? '<span class="nav-badge">' + item.badge + '</span>' : '');
       nav.appendChild(a);
     });
   });
@@ -127,20 +106,7 @@ function buildSidebar() {
 function buildNavbar(title, subtitle) {
   const nav = document.createElement('header');
   nav.className = 'navbar';
-  nav.innerHTML = `
-    <div class="navbar-left">
-      <button class="collapse-btn" id="sidebar-toggle">☰</button>
-      <div>
-        <div class="navbar-title">${title || 'SmartRoute'}</div>
-        <div class="page-subtitle" style="margin:0;font-size:12px;color:var(--text-muted)">${subtitle || ''}</div>
-      </div>
-    </div>
-    <div class="navbar-right">
-      <span class="status-indicator"><span class="status-dot"></span> LIVE</span>
-      <span class="navbar-clock" id="navbar-clock">--:--:--</span>
-      <a href="alerts.html" class="navbar-alert-btn">🔔</a>
-      <a href="settings.html" class="navbar-alert-btn">⚙</a>
-    </div>`;
+  nav.innerHTML = '<div class="navbar-left"><button class="collapse-btn" id="sidebar-toggle">☰</button><div><div class="navbar-title">' + (title || 'SmartRoute') + '</div><div class="page-subtitle" style="margin:0;font-size:12px;color:var(--text-muted)">' + (subtitle || '') + '</div></div></div><div class="navbar-right"><span class="status-indicator"><span class="status-dot"></span> LIVE</span><span class="navbar-clock" id="navbar-clock">--:--:--</span><a href="alerts.html" class="navbar-alert-btn">🔔</a><a href="settings.html" class="navbar-alert-btn">⚙</a></div>';
   return nav;
 }
 
@@ -158,30 +124,59 @@ function initSidebarToggle() {
   if (!btn || !sidebar) return;
   btn.addEventListener('click', () => {
     const isCollapsed = sidebar.classList.toggle('collapsed');
-    mainContent && mainContent.classList.toggle('sidebar-collapsed', isCollapsed);
+    if (mainContent) mainContent.classList.toggle('sidebar-collapsed', isCollapsed);
     localStorage.setItem('sr-sidebar-collapsed', isCollapsed ? '1' : '0');
   });
 }
 
-function loadAndApplyI18n() {
-  function apply() {
-    if (window.SmartRouteI18n) {
-      const code = localStorage.getItem('sr_language') || SmartRouteI18n.getLanguage() || 'en';
-      if (SmartRouteI18n.setLanguage) SmartRouteI18n.setLanguage(code);
-      SmartRouteI18n.applyLanguage(code);
-      document.documentElement.lang = code;
+function ensureI18nLoaded(cb) {
+  function afterCore() {
+    if (window.__srI18nEnhanceLoaded) {
+      if (cb) cb();
+      return;
     }
+    var e = document.createElement('script');
+    e.src = 'js/i18n-enhance.js';
+    e.onload = function () {
+      window.__srI18nEnhanceLoaded = true;
+      if (cb) cb();
+    };
+    e.onerror = function () { if (cb) cb(); };
+    document.head.appendChild(e);
   }
-  if (window.SmartRouteI18n) apply();
-  else {
-    const s = document.createElement('script');
-    s.src = 'js/i18n.js';
-    s.onload = apply;
-    document.head.appendChild(s);
+  if (window.SmartRouteI18n) {
+    afterCore();
+    return;
   }
+  if (window.__srI18nLoading) {
+    setTimeout(function () { ensureI18nLoaded(cb); }, 100);
+    return;
+  }
+  window.__srI18nLoading = true;
+  var s = document.createElement('script');
+  s.src = 'js/i18n.js';
+  s.onload = function () {
+    window.__srI18nLoading = false;
+    afterCore();
+  };
+  s.onerror = function () { window.__srI18nLoading = false; if (cb) cb(); };
+  document.head.appendChild(s);
 }
 
-function initSharedComponents(config = {}) {
+function loadAndApplyI18n() {
+  ensureI18nLoaded(function () {
+    if (!window.SmartRouteI18n) return;
+    var code = 'en';
+    try { code = localStorage.getItem('sr_language') || SmartRouteI18n.getLanguage() || 'en'; } catch (e) {}
+    SmartRouteI18n._currentLang = code;
+    if (SmartRouteI18n.applyLanguage) SmartRouteI18n.applyLanguage(code);
+    if (SmartRouteI18n.applyDeep) SmartRouteI18n.applyDeep(code);
+    document.documentElement.lang = code;
+  });
+}
+
+function initSharedComponents(config) {
+  config = config || {};
   if (!document.getElementById('sr-sidebar-scroll-fix')) {
     const link = document.createElement('link');
     link.id = 'sr-sidebar-scroll-fix';
@@ -195,7 +190,8 @@ function initSharedComponents(config = {}) {
     return;
   }
 
-  const { title, subtitle } = config;
+  const title = config.title;
+  const subtitle = config.subtitle;
   const appShell = document.querySelector('.app-shell');
   if (!appShell) return;
 
@@ -223,7 +219,7 @@ function initSharedComponents(config = {}) {
   initSidebarToggle();
 
   const so = document.getElementById('sr-sign-out');
-  if (so) so.addEventListener('click', (e) => {
+  if (so) so.addEventListener('click', function (e) {
     e.preventDefault();
     try {
       localStorage.removeItem('sr_logged_in');
@@ -234,12 +230,13 @@ function initSharedComponents(config = {}) {
     window.location.href = 'login.html';
   });
 
-  // Apply saved language after sidebar exists
   setTimeout(loadAndApplyI18n, 50);
-  setTimeout(loadAndApplyI18n, 400);
+  setTimeout(loadAndApplyI18n, 500);
 }
 
-function showToast(msg, type = 'info', duration = 3500) {
+function showToast(msg, type, duration) {
+  type = type || 'info';
+  duration = duration || 3500;
   let host = document.getElementById('sr-toast-host');
   if (!host) {
     host = document.createElement('div');
@@ -252,11 +249,11 @@ function showToast(msg, type = 'info', duration = 3500) {
   el.style.cssText = 'background:rgba(8,18,38,0.95);border:1px solid ' + (colors[type] || colors.info) + ';color:#fff;padding:12px 16px;border-radius:10px;font-family:Outfit,sans-serif;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,0.4);max-width:320px;';
   el.textContent = msg;
   host.appendChild(el);
-  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, duration);
+  setTimeout(function () { el.style.opacity = '0'; setTimeout(function () { el.remove(); }, 300); }, duration);
 }
 
 function initCountUps() {
-  document.querySelectorAll('.count-up,[data-count],[data-val]').forEach(el => {
+  document.querySelectorAll('.count-up,[data-count],[data-val]').forEach(function (el) {
     const target = parseInt(el.getAttribute('data-count') || el.getAttribute('data-val') || el.textContent.replace(/[^0-9]/g, ''), 10);
     if (isNaN(target)) return;
     const startTime = performance.now();
@@ -270,29 +267,32 @@ function initCountUps() {
 }
 
 window.SmartRoute = {
-  initSharedComponents,
-  initCountUps,
-  showToast,
-  getPageId,
-  enforceAuthIfNeeded,
-  isLoggedIn,
-  loadAndApplyI18n
+  initSharedComponents: initSharedComponents,
+  initCountUps: initCountUps,
+  showToast: showToast,
+  getPageId: getPageId,
+  enforceAuthIfNeeded: enforceAuthIfNeeded,
+  isLoggedIn: isLoggedIn,
+  loadAndApplyI18n: loadAndApplyI18n
 };
 
-// Page helpers
-(function(){
+(function () {
   var path = (window.location.pathname || '').split('/').pop() || '';
   function load(src, cb) {
     var s = document.createElement('script');
     s.src = src;
-    s.onload = cb || function(){};
+    s.onload = cb || function () {};
     document.head.appendChild(s);
   }
   if (path === 'signup.html') {
-    if (!window.SmartRouteAuth) load('js/auth-users.js', function(){ load('js/signup-register.js'); });
+    if (!window.SmartRouteAuth) load('js/auth-users.js', function () { load('js/signup-register.js'); });
     else load('js/signup-register.js');
   }
   if (path === 'language.html' || path === 'settings.html') {
     load('js/language-apply.js');
   }
 })();
+
+ensureI18nLoaded(function () {
+  loadAndApplyI18n();
+});
