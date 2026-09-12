@@ -46,14 +46,12 @@
             background: #061018; border: 1px solid rgba(0,212,255,0.3); color: #fff;
             font-size: 1rem; font-family: inherit; outline: none;
         }
-        select#lang-select:focus { border-color: #00d4ff; }
         .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
         .btn-apply {
             padding: 12px 22px; border: none; border-radius: 10px; cursor: pointer;
             font-weight: 800; font-size: 0.95rem; font-family: inherit;
             background: linear-gradient(135deg, #00ff88, #00b894); color: #030810;
         }
-        .btn-apply:hover { filter: brightness(1.08); }
         .btn-reset {
             padding: 12px 18px; border-radius: 10px; cursor: pointer; font-weight: 700;
             font-family: inherit; background: rgba(255,255,255,0.06);
@@ -66,9 +64,8 @@
         .lang-chip {
             padding: 12px; border-radius: 10px; cursor: pointer; text-align: center;
             background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-            transition: 0.15s;
         }
-        .lang-chip:hover, .lang-chip.selected {
+        .lang-chip.selected, .lang-chip:hover {
             border-color: #00d4ff; background: rgba(0,212,255,0.12);
         }
         .lang-chip .f { font-size: 1.5rem; }
@@ -89,14 +86,14 @@
             <main class="page-body lang-page">
                 <div class="page-header" style="margin-bottom:16px;">
                     <h1 class="page-title" data-i18n="nav_language">Language & Region</h1>
-                    <p class="page-subtitle">Select language → Apply → whole site updates</p>
+                    <p class="page-subtitle">Select → Apply → site language updates</p>
                 </div>
 
                 <div class="lang-card">
                     <h2>Interface Language</h2>
-                    <p>Choose Telugu, Hindi, Assamese, or any supported language, then click Apply.</p>
+                    <p>Pick a language, then click <strong>APPLY LANGUAGE</strong>. Selecting alone does not change the site.</p>
 
-                    <div class="active-bar" id="active-bar">
+                    <div class="active-bar">
                         <div class="flag" id="active-flag">🇬🇧</div>
                         <div class="meta">
                             <div class="name" id="active-name">English (English)</div>
@@ -129,11 +126,9 @@
                         <button type="button" class="btn-reset" id="btn-reset">Reset to English</button>
                     </div>
 
-                    <div class="hint">
-                        Selecting a language only updates the bar above. The whole website changes only after you click <strong>APPLY LANGUAGE</strong>.
-                    </div>
+                    <div class="hint">After Apply, open Dashboard or Live Map — the left menu must show the new language.</div>
 
-                    <div class="preview" id="preview">
+                    <div class="preview">
                         <strong>Preview:</strong> <span id="preview-text">Dashboard · Live Map · Incidents · Alerts</span>
                     </div>
                 </div>
@@ -149,6 +144,7 @@
     <script src="js/i18n.js"></script>
     <script src="js/i18n-enhance.js"></script>
     <script src="js/force-i18n.js"></script>
+    <script src="js/i18n-runtime.js"></script>
     <script src="js/components.js"></script>
     <script>
     (function () {
@@ -189,11 +185,9 @@
             badge.textContent = isPending ? 'PENDING' : 'ACTIVE';
             badge.className = 'badge' + (isPending ? ' pending' : '');
 
-            // Preview sample labels in selected language
             var keys = ['nav_dashboard', 'nav_map', 'nav_incidents', 'nav_alerts'];
             var parts = keys.map(function (k) {
-                if (window.SmartRouteI18n) return SmartRouteI18n.t(k, code);
-                return k;
+                return window.SmartRouteI18n ? SmartRouteI18n.t(k, code) : k;
             });
             document.getElementById('preview-text').textContent = parts.join(' · ');
         }
@@ -219,23 +213,22 @@
             code = (code || 'en').toLowerCase();
             pending = code;
 
-            // 1. Persist
+            // Persist FIRST so every later sidebar build reads the right language
             try { localStorage.setItem('sr_language', code); } catch (e) {}
             document.documentElement.lang = code;
 
-            // 2. Core i18n
             if (window.SmartRouteI18n) {
                 SmartRouteI18n._currentLang = code;
                 try {
                     if (SmartRouteI18n.setLanguage) SmartRouteI18n.setLanguage(code);
                     else if (SmartRouteI18n.applyLanguage) SmartRouteI18n.applyLanguage(code);
                 } catch (e) {}
-                try {
-                    if (SmartRouteI18n.applyDeep) SmartRouteI18n.applyDeep(code);
-                } catch (e2) {}
             }
 
-            // 3. Force helpers
+            // Runtime: force all data-i18n + nav labels
+            if (window.SmartRouteI18nRuntime) {
+                SmartRouteI18nRuntime.setLang(code);
+            }
             if (window.SmartRouteForceI18n) {
                 try { SmartRouteForceI18n.apply(code); } catch (e) {}
             }
@@ -243,8 +236,8 @@
                 try { SmartRoute.refreshLanguage(code); } catch (e) {}
             }
 
-            // 4. Direct sidebar rewrite using dictionary
-            function rewriteNav() {
+            // Direct DOM pass (most reliable)
+            function rewrite() {
                 if (!window.SmartRouteI18n) return;
                 document.querySelectorAll('[data-i18n]').forEach(function (el) {
                     var key = el.getAttribute('data-i18n');
@@ -252,33 +245,20 @@
                     if (tr && tr !== key) el.textContent = tr;
                 });
                 var map = {
-                    'dashboard.html': 'nav_dashboard',
-                    'map.html': 'nav_map',
-                    'incidents.html': 'nav_incidents',
-                    'alerts.html': 'nav_alerts',
-                    'emergency.html': 'nav_emergency',
-                    'route-prediction.html': 'nav_route_prediction',
-                    'alternate-routes.html': 'nav_alternate_routes',
-                    'ai-command.html': 'nav_ai_command',
-                    'photo-analysis.html': 'nav_photo_analysis',
-                    'weather.html': 'nav_weather',
-                    'vehicle-tracking.html': 'nav_vehicle_tracking',
-                    'deliveries.html': 'nav_deliveries',
-                    'corridors.html': 'nav_corridors',
-                    'districts.html': 'nav_districts',
-                    'infrastructure.html': 'nav_infrastructure',
-                    'officers.html': 'nav_officers',
-                    'reports.html': 'nav_reports',
-                    'analytics.html': 'nav_analytics',
-                    'simulation.html': 'nav_simulation',
-                    'field-report.html': 'nav_field_report',
-                    'officer-dashboard.html': 'nav_officer_dashboard',
-                    'language.html': 'nav_language',
-                    'admin.html': 'nav_admin',
-                    'settings.html': 'nav_settings',
-                    'login.html': 'sign_out'
+                    'dashboard.html': 'nav_dashboard', 'map.html': 'nav_map',
+                    'incidents.html': 'nav_incidents', 'alerts.html': 'nav_alerts',
+                    'emergency.html': 'nav_emergency', 'route-prediction.html': 'nav_route_prediction',
+                    'alternate-routes.html': 'nav_alternate_routes', 'ai-command.html': 'nav_ai_command',
+                    'photo-analysis.html': 'nav_photo_analysis', 'weather.html': 'nav_weather',
+                    'vehicle-tracking.html': 'nav_vehicle_tracking', 'deliveries.html': 'nav_deliveries',
+                    'corridors.html': 'nav_corridors', 'districts.html': 'nav_districts',
+                    'infrastructure.html': 'nav_infrastructure', 'officers.html': 'nav_officers',
+                    'reports.html': 'nav_reports', 'analytics.html': 'nav_analytics',
+                    'simulation.html': 'nav_simulation', 'field-report.html': 'nav_field_report',
+                    'officer-dashboard.html': 'nav_officer_dashboard', 'language.html': 'nav_language',
+                    'admin.html': 'nav_admin', 'settings.html': 'nav_settings', 'login.html': 'sign_out'
                 };
-                document.querySelectorAll('.nav-item').forEach(function (a) {
+                document.querySelectorAll('a.nav-item').forEach(function (a) {
                     var href = (a.getAttribute('href') || '').split('/').pop();
                     var key = map[href];
                     if (!key) return;
@@ -288,18 +268,23 @@
                     if (tr && tr !== key) lab.textContent = tr;
                 });
             }
-            rewriteNav();
-            setTimeout(rewriteNav, 200);
-            setTimeout(rewriteNav, 600);
-            setTimeout(rewriteNav, 1200);
+            rewrite();
+            [100, 300, 700, 1500].forEach(function (ms) {
+                setTimeout(rewrite, ms);
+            });
 
             setBar(code, false);
             paintGrid();
 
             var i = info(code);
             if (window.SmartRoute && SmartRoute.showToast) {
-                SmartRoute.showToast('✓ ' + i.name + ' (' + i.native + ') applied to website', 'success', 4000);
+                SmartRoute.showToast('Language set to ' + i.name + ' (' + i.native + ')', 'success', 4000);
             }
+
+            // Debug proof in console
+            console.log('[SmartRoute i18n] applied', code,
+                'localStorage=', localStorage.getItem('sr_language'),
+                'sample=', window.SmartRouteI18n ? SmartRouteI18n.t('nav_dashboard', code) : '?');
         }
 
         document.addEventListener('DOMContentLoaded', function () {
@@ -316,9 +301,8 @@
             setBar(saved, false);
             paintGrid();
 
-            // Re-apply saved language to this page
-            if (saved && saved !== 'en') {
-                setTimeout(function () { applyLanguage(saved); }, 400);
+            if (saved !== 'en') {
+                setTimeout(function () { applyLanguage(saved); }, 500);
             }
 
             document.getElementById('lang-select').addEventListener('change', function () {
@@ -328,8 +312,7 @@
             });
 
             document.getElementById('btn-apply').addEventListener('click', function () {
-                var code = document.getElementById('lang-select').value || pending || 'en';
-                applyLanguage(code);
+                applyLanguage(document.getElementById('lang-select').value || pending);
             });
 
             document.getElementById('btn-reset').addEventListener('click', function () {
