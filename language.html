@@ -4,413 +4,339 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Language & Region - SmartRoute</title>
-    
-    <!-- CDNs & Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+Telugu:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/design-system.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/components.css">
-    
     <style>
+        .lang-page { max-width: 900px; margin: 0 auto; padding: 8px 4px 40px; font-family: 'Outfit', 'Noto Sans Telugu', sans-serif; }
         .lang-card {
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            background: rgba(8,18,38,0.9);
+            border: 1px solid rgba(0,212,255,0.25);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 16px;
         }
-        .lang-card:hover {
-            transform: translateY(-2px);
-            border-color: rgba(0, 212, 255, 0.5) !important;
-            background: rgba(0, 212, 255, 0.08) !important;
+        .lang-card h2 { margin: 0 0 6px; color: #00d4ff; font-size: 1.25rem; }
+        .lang-card p { margin: 0 0 16px; color: #8fa3b8; font-size: 0.9rem; }
+        .active-bar {
+            display: flex; align-items: center; gap: 14px;
+            padding: 14px 16px; border-radius: 12px;
+            background: rgba(0,212,255,0.1);
+            border: 1px solid rgba(0,212,255,0.35);
+            margin-bottom: 18px;
         }
-        .btn-filter.active {
-            border-color: #00d4ff !important;
-            background: rgba(0, 212, 255, 0.2) !important;
-            color: #00d4ff !important;
+        .active-bar .flag { font-size: 2rem; }
+        .active-bar .meta { flex: 1; }
+        .active-bar .name { font-weight: 700; color: #fff; font-size: 1.05rem; }
+        .active-bar .sub { color: #8fa3b8; font-size: 0.85rem; margin-top: 2px; }
+        .active-bar .badge {
+            background: rgba(0,255,136,0.15); color: #00ff88;
+            border: 1px solid rgba(0,255,136,0.4);
+            padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
         }
-        .lang-radio-item:hover {
-            background: rgba(0, 212, 255, 0.08) !important;
-            border-color: rgba(0, 212, 255, 0.4) !important;
+        .active-bar .badge.pending {
+            background: rgba(255,149,0,0.15); color: #ff9500;
+            border-color: rgba(255,149,0,0.4);
         }
+        label.field { display: block; font-size: 0.75rem; font-weight: 700; color: #8fa3b8;
+            text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+        select#lang-select {
+            width: 100%; max-width: 420px; padding: 12px 14px; border-radius: 10px;
+            background: #061018; border: 1px solid rgba(0,212,255,0.3); color: #fff;
+            font-size: 1rem; font-family: inherit; outline: none;
+        }
+        select#lang-select:focus { border-color: #00d4ff; }
+        .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+        .btn-apply {
+            padding: 12px 22px; border: none; border-radius: 10px; cursor: pointer;
+            font-weight: 800; font-size: 0.95rem; font-family: inherit;
+            background: linear-gradient(135deg, #00ff88, #00b894); color: #030810;
+        }
+        .btn-apply:hover { filter: brightness(1.08); }
+        .btn-reset {
+            padding: 12px 18px; border-radius: 10px; cursor: pointer; font-weight: 700;
+            font-family: inherit; background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.15); color: #c8d8e8;
+        }
+        .lang-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 10px; margin-top: 16px;
+        }
+        .lang-chip {
+            padding: 12px; border-radius: 10px; cursor: pointer; text-align: center;
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+            transition: 0.15s;
+        }
+        .lang-chip:hover, .lang-chip.selected {
+            border-color: #00d4ff; background: rgba(0,212,255,0.12);
+        }
+        .lang-chip .f { font-size: 1.5rem; }
+        .lang-chip .n { font-weight: 700; color: #fff; margin-top: 4px; font-size: 0.9rem; }
+        .lang-chip .nat { color: #00d4ff; font-size: 0.85rem; }
+        .hint { margin-top: 14px; color: #6a8ea8; font-size: 0.8rem; line-height: 1.45; }
+        .preview {
+            margin-top: 16px; padding: 14px; border-radius: 10px;
+            background: rgba(0,0,0,0.25); border: 1px dashed rgba(0,212,255,0.25);
+            color: #e8f4ff; font-size: 1.05rem; line-height: 1.6;
+        }
+        .preview strong { color: #00d4ff; }
     </style>
 </head>
 <body>
     <div class="app-shell">
         <div class="main-content" id="main-content">
-            <main class="page-body" style="padding: 25px; max-width: 1400px; margin: 0 auto;">
-                
-                <!-- Breadcrumbs & Header -->
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
-                    <div>
-                        <div style="font-size: 0.85rem; color: #8fa3b8; margin-bottom: 4px;">
-                            <a href="dashboard.html" style="color:#00d4ff; text-decoration:none;">SmartRoute</a> / 
-                            <a href="settings.html" style="color:#8fa3b8; text-decoration:none;">System</a> / 
-                            <span style="color:#fff;" data-i18n="lang_title">Language & Region</span>
+            <main class="page-body lang-page">
+                <div class="page-header" style="margin-bottom:16px;">
+                    <h1 class="page-title" data-i18n="nav_language">Language & Region</h1>
+                    <p class="page-subtitle">Select language → Apply → whole site updates</p>
+                </div>
+
+                <div class="lang-card">
+                    <h2>Interface Language</h2>
+                    <p>Choose Telugu, Hindi, Assamese, or any supported language, then click Apply.</p>
+
+                    <div class="active-bar" id="active-bar">
+                        <div class="flag" id="active-flag">🇬🇧</div>
+                        <div class="meta">
+                            <div class="name" id="active-name">English (English)</div>
+                            <div class="sub" id="active-sub">Global • Currently active</div>
                         </div>
-                        <h1 data-i18n="lang_title" style="margin: 0; font-size: 1.8rem; color: #fff; font-weight: 700;">Language & Regional Preferences</h1>
-                        <p data-i18n="lang_subtitle" style="margin: 4px 0 0 0; color: #8fa3b8; font-size: 0.95rem;">
-                            Select interface language for command center, telemetry, and field reports.
-                        </p>
+                        <div class="badge" id="active-badge">ACTIVE</div>
                     </div>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <a href="settings.html#language" class="btn-primary" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.2); color:#fff; text-decoration:none; padding: 8px 16px; border-radius: 8px; font-size: 0.85rem;">
-                            ⚙ SETTINGS PANEL
-                        </a>
-                        <button type="button" id="btn-lang-apply" class="btn-primary" style="background: linear-gradient(135deg, #00ff88, #00b894); color: #000; border: none; padding: 8px 20px; border-radius: 8px; font-weight: 700; cursor: pointer;">
-                            ✓ APPLY LANGUAGE
-                        </button>
+
+                    <label class="field" for="lang-select">Interface Language (Dropdown)</label>
+                    <select id="lang-select">
+                        <option value="en">🇬🇧 English</option>
+                        <option value="hi">🇮🇳 Hindi — हिन्दी</option>
+                        <option value="as">🇮🇳 Assamese — অসমীয়া</option>
+                        <option value="bn">🇮🇳 Bengali — বাংলা</option>
+                        <option value="te">🇮🇳 Telugu — తెలుగు</option>
+                        <option value="ta">🇮🇳 Tamil — தமிழ்</option>
+                        <option value="mr">🇮🇳 Marathi — मराठी</option>
+                        <option value="gu">🇮🇳 Gujarati — ગુજરાતી</option>
+                        <option value="kn">🇮🇳 Kannada — ಕನ್ನಡ</option>
+                        <option value="ml">🇮🇳 Malayalam — മലയാളം</option>
+                        <option value="pa">🇮🇳 Punjabi — ਪੰਜਾਬੀ</option>
+                        <option value="or">🇮🇳 Odia — ଓଡ଼ିଆ</option>
+                        <option value="ne">🇳🇵 Nepali — नेपाली</option>
+                        <option value="es">🇪🇸 Spanish — Español</option>
+                        <option value="fr">🇫🇷 French — Français</option>
+                    </select>
+
+                    <div class="actions">
+                        <button type="button" class="btn-apply" id="btn-apply">✓ APPLY LANGUAGE</button>
+                        <button type="button" class="btn-reset" id="btn-reset">Reset to English</button>
+                    </div>
+
+                    <div class="hint">
+                        Selecting a language only updates the bar above. The whole website changes only after you click <strong>APPLY LANGUAGE</strong>.
+                    </div>
+
+                    <div class="preview" id="preview">
+                        <strong>Preview:</strong> <span id="preview-text">Dashboard · Live Map · Incidents · Alerts</span>
                     </div>
                 </div>
 
-                <!-- Active Language Banner -->
-                <div class="glass-card" style="padding: 20px 24px; border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.35); background: rgba(0, 25, 45, 0.55); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 25px;">
-                    <div style="display: flex; align-items: center; gap: 16px;">
-                        <div id="lang-active-flag" style="font-size: 42px; line-height: 1;">🇬🇧</div>
-                        <div>
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <h2 id="lang-active-title" style="margin: 0; font-size: 1.4rem; color: #fff;">English</h2>
-                                <span class="badge" data-i18n="lang_active_badge" style="background: rgba(0,255,136,0.15); color: #00ff88; border: 1px solid #00ff88; font-size: 11px; padding: 3px 9px;">CURRENTLY ACTIVE</span>
-                            </div>
-                            <p id="lang-active-native" style="margin: 3px 0 0 0; color: #00d4ff; font-size: 0.9rem;">Global English • Command HQ Default</p>
-                        </div>
-                    </div>
-                    <div style="color: #8fa3b8; font-size: 0.9rem; text-align: right; max-width: 320px;" data-i18n="lang_applied_msg">
-                        Language applied across all modules, navigation, and reports.
-                    </div>
+                <div class="lang-card">
+                    <h2>Quick select</h2>
+                    <div class="lang-grid" id="lang-grid"></div>
                 </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 25px;">
-                    
-                    <!-- OPTION 1: Dropdown Selector with Pre-rendered HTML Options -->
-                    <div class="glass-card" style="padding: 22px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
-                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                            <span style="font-size: 20px;">📋</span>
-                            <h3 data-i18n="lang_interface" style="margin: 0; color: #00d4ff; font-size: 1.1rem;">Option 1: Dropdown Selector</h3>
-                        </div>
-                        <p data-i18n="lang_interface_desc" style="color: #8fa3b8; font-size: 0.85rem; margin: 0 0 16px 0;">
-                            Choose primary script and regional dialect from the dropdown options
-                        </p>
-                        
-                        <div style="position: relative;">
-                            <select id="lang-select-dropdown" class="form-control" style="width: 100%; padding: 12px 16px; font-size: 1rem; border-color: #00d4ff; background: rgba(4, 15, 30, 0.95); color: #fff; cursor: pointer; border-radius: 8px;">
-                                <option value="en">🇬🇧 English — English (Global)</option>
-                                <option value="hi">🇮🇳 Hindi — हिन्दी (National)</option>
-                                <option value="as">🇮🇳 Assamese — অসমীয়া (Assam / North-East)</option>
-                                <option value="bn">🇮🇳 Bengali — বাংলা (Bengal / North-East)</option>
-                                <option value="te">🇮🇳 Telugu — తెలుగు (Andhra / Telangana)</option>
-                                <option value="ta">🇮🇳 Tamil — தமிழ் (Tamil Nadu)</option>
-                                <option value="mr">🇮🇳 Marathi — मराठी (Maharashtra)</option>
-                                <option value="gu">🇮🇳 Gujarati — ગુજરાતી (Gujarat)</option>
-                                <option value="kn">🇮🇳 Kannada — ಕನ್ನಡ (Karnataka)</option>
-                                <option value="ml">🇮🇳 Malayalam — മലയാളം (Kerala)</option>
-                                <option value="pa">🇮🇳 Punjabi — ਪੰਜਾਬੀ (Punjab)</option>
-                                <option value="or">🇮🇳 Odia — ଓଡ଼ିଆ (Odisha)</option>
-                                <option value="ne">🇳🇵 Nepali — नेपाली (Sikkim / North-East)</option>
-                                <option value="es">🇪🇸 Spanish — Español (International)</option>
-                                <option value="fr">🇫🇷 French — Français (International)</option>
-                            </select>
-                        </div>
-
-                        <div style="margin-top: 15px; font-size: 0.8rem; color: #8fa3b8; display: flex; justify-content: space-between;">
-                            <span>15 Languages Supported</span>
-                            <span style="color: #00ff88;">✓ Immediate Synchronization</span>
-                        </div>
-                    </div>
-
-                    <!-- OPTION 2: Live Translation Telemetry Preview -->
-                    <div class="glass-card" style="padding: 22px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <span style="font-size: 20px;">⚡</span>
-                                <h3 style="margin: 0; color: #00ff88; font-size: 1.1rem;">Live Translation Preview</h3>
-                            </div>
-                            <span class="badge" style="background: rgba(0,212,255,0.1); color: #00d4ff; border: 1px solid #00d4ff; font-size: 10px;">REAL-TIME FEEDBACK</span>
-                        </div>
-                        <p style="color: #8fa3b8; font-size: 0.85rem; margin: 0 0 16px 0;">
-                            Live preview of how core navigation and command modules translate in this dialect:
-                        </p>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <div style="padding: 10px 14px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                                <div style="font-size: 0.75rem; color: #8fa3b8;">Dashboard Nav</div>
-                                <div id="preview-nav-dashboard" style="font-weight: 700; color: #fff; font-size: 0.95rem;" data-i18n="nav_dashboard">Dashboard</div>
-                            </div>
-                            <div style="padding: 10px 14px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                                <div style="font-size: 0.75rem; color: #8fa3b8;">Live Incidents</div>
-                                <div id="preview-nav-incidents" style="font-weight: 700; color: #fff; font-size: 0.95rem;" data-i18n="nav_incidents">Incidents</div>
-                            </div>
-                            <div style="padding: 10px 14px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                                <div style="font-size: 0.75rem; color: #8fa3b8;">AI Route Prediction</div>
-                                <div id="preview-nav-prediction" style="font-weight: 700; color: #fff; font-size: 0.95rem;" data-i18n="nav_route_prediction">AI Route Prediction</div>
-                            </div>
-                            <div style="padding: 10px 14px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                                <div style="font-size: 0.75rem; color: #8fa3b8;">Emergency Response</div>
-                                <div id="preview-nav-emergency" style="font-weight: 700; color: #fff; font-size: 0.95rem;" data-i18n="nav_emergency">Emergency Response</div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- Filter & Search Bar -->
-                <div class="glass-card" style="padding: 16px 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.08);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
-                        <div style="flex: 1; min-width: 280px; position: relative;">
-                            <input type="text" id="lang-search-input" class="form-control" placeholder="🔍 Search by language name, native script, or region..." style="width: 100%; padding: 10px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(0,212,255,0.3); color: #fff; font-size: 0.95rem; border-radius: 8px;">
-                        </div>
-                        <div id="lang-region-filters" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            <button type="button" class="btn-filter active" data-filter="all" style="padding: 8px 14px; font-size: 0.85rem; border-radius: 8px; border: 1px solid #00d4ff; background: rgba(0,212,255,0.2); color: #00d4ff; cursor: pointer;">All Languages (15)</button>
-                            <button type="button" class="btn-filter" data-filter="ne" style="padding: 8px 14px; font-size: 0.85rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: #8fa3b8; cursor: pointer;">North-East (Assamese, Bengali, Nepali)</button>
-                            <button type="button" class="btn-filter" data-filter="national" style="padding: 8px 14px; font-size: 0.85rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: #8fa3b8; cursor: pointer;">Pan-India (Hindi, Marathi, Telugu, Tamil...)</button>
-                            <button type="button" class="btn-filter" data-filter="international" style="padding: 8px 14px; font-size: 0.85rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: #8fa3b8; cursor: pointer;">International</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- OPTION 3: Select by Radio Option List -->
-                <div style="margin-bottom: 30px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                        <h3 style="margin: 0; color: #00d4ff; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.5px;">Option 2: Select by Radio Button</h3>
-                        <span style="font-size: 0.8rem; color: #8fa3b8;">Choose one option to switch</span>
-                    </div>
-                    <div id="lang-radio-list" class="glass-card" style="padding: 15px; border-radius: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; border: 1px solid rgba(255,255,255,0.08);">
-                        <!-- Populated dynamically via JS -->
-                    </div>
-                </div>
-
-                <!-- OPTION 4: Select by Visual Card Tiles -->
-                <div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-                        <div>
-                            <h3 data-i18n="lang_quick_select" style="margin: 0; color: #fff; font-size: 1.1rem;">Option 3: Quick Select Visual Cards</h3>
-                            <p style="margin: 3px 0 0 0; color: #8fa3b8; font-size: 0.85rem;">Click any interactive card to instantly activate the dialect across all pages</p>
-                        </div>
-                        <button type="button" id="btn-reset-lang" style="background: transparent; border: 1px solid rgba(255,255,255,0.15); color: #8fa3b8; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">
-                            Reset to English (Default)
-                        </button>
-                    </div>
-                    <div id="lang-grid-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px;">
-                        <!-- Cards populated dynamically via JS -->
-                    </div>
-                </div>
-
             </main>
         </div>
     </div>
 
-    <!-- Scripts -->
     <script src="js/i18n.js"></script>
+    <script src="js/i18n-enhance.js"></script>
+    <script src="js/force-i18n.js"></script>
     <script src="js/components.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+    (function () {
+        var LANGS = [
+            { code: 'en', name: 'English', native: 'English', flag: '🇬🇧', region: 'Global' },
+            { code: 'hi', name: 'Hindi', native: 'हिन्दी', flag: '🇮🇳', region: 'National' },
+            { code: 'as', name: 'Assamese', native: 'অসমীয়া', flag: '🇮🇳', region: 'North-East' },
+            { code: 'bn', name: 'Bengali', native: 'বাংলা', flag: '🇮🇳', region: 'North-East' },
+            { code: 'te', name: 'Telugu', native: 'తెలుగు', flag: '🇮🇳', region: 'Andhra / Telangana' },
+            { code: 'ta', name: 'Tamil', native: 'தமிழ்', flag: '🇮🇳', region: 'Tamil Nadu' },
+            { code: 'mr', name: 'Marathi', native: 'मराठी', flag: '🇮🇳', region: 'Maharashtra' },
+            { code: 'gu', name: 'Gujarati', native: 'ગુજરાતી', flag: '🇮🇳', region: 'Gujarat' },
+            { code: 'kn', name: 'Kannada', native: 'ಕನ್ನಡ', flag: '🇮🇳', region: 'Karnataka' },
+            { code: 'ml', name: 'Malayalam', native: 'മലയാളം', flag: '🇮🇳', region: 'Kerala' },
+            { code: 'pa', name: 'Punjabi', native: 'ਪੰਜਾਬੀ', flag: '🇮🇳', region: 'Punjab' },
+            { code: 'or', name: 'Odia', native: 'ଓଡ଼ିଆ', flag: '🇮🇳', region: 'Odisha' },
+            { code: 'ne', name: 'Nepali', native: 'नेपाली', flag: '🇳🇵', region: 'Sikkim / North-East' },
+            { code: 'es', name: 'Spanish', native: 'Español', flag: '🇪🇸', region: 'International' },
+            { code: 'fr', name: 'French', native: 'Français', flag: '🇫🇷', region: 'International' }
+        ];
+
+        var pending = 'en';
+
+        function info(code) {
+            return LANGS.find(function (l) { return l.code === code; }) || LANGS[0];
+        }
+
+        function getSaved() {
+            try { return localStorage.getItem('sr_language') || 'en'; } catch (e) { return 'en'; }
+        }
+
+        function setBar(code, isPending) {
+            var i = info(code);
+            document.getElementById('active-flag').textContent = i.flag;
+            document.getElementById('active-name').textContent = i.name + ' (' + i.native + ')';
+            document.getElementById('active-sub').textContent = i.region + (isPending ? ' • Not applied yet' : ' • Currently active');
+            var badge = document.getElementById('active-badge');
+            badge.textContent = isPending ? 'PENDING' : 'ACTIVE';
+            badge.className = 'badge' + (isPending ? ' pending' : '');
+
+            // Preview sample labels in selected language
+            var keys = ['nav_dashboard', 'nav_map', 'nav_incidents', 'nav_alerts'];
+            var parts = keys.map(function (k) {
+                if (window.SmartRouteI18n) return SmartRouteI18n.t(k, code);
+                return k;
+            });
+            document.getElementById('preview-text').textContent = parts.join(' · ');
+        }
+
+        function paintGrid() {
+            var grid = document.getElementById('lang-grid');
+            grid.innerHTML = '';
+            LANGS.forEach(function (l) {
+                var d = document.createElement('div');
+                d.className = 'lang-chip' + (l.code === pending ? ' selected' : '');
+                d.innerHTML = '<div class="f">' + l.flag + '</div><div class="n">' + l.name + '</div><div class="nat">' + l.native + '</div>';
+                d.onclick = function () {
+                    pending = l.code;
+                    document.getElementById('lang-select').value = l.code;
+                    setBar(l.code, l.code !== getSaved());
+                    paintGrid();
+                };
+                grid.appendChild(d);
+            });
+        }
+
+        function applyLanguage(code) {
+            code = (code || 'en').toLowerCase();
+            pending = code;
+
+            // 1. Persist
+            try { localStorage.setItem('sr_language', code); } catch (e) {}
+            document.documentElement.lang = code;
+
+            // 2. Core i18n
+            if (window.SmartRouteI18n) {
+                SmartRouteI18n._currentLang = code;
+                try {
+                    if (SmartRouteI18n.setLanguage) SmartRouteI18n.setLanguage(code);
+                    else if (SmartRouteI18n.applyLanguage) SmartRouteI18n.applyLanguage(code);
+                } catch (e) {}
+                try {
+                    if (SmartRouteI18n.applyDeep) SmartRouteI18n.applyDeep(code);
+                } catch (e2) {}
+            }
+
+            // 3. Force helpers
+            if (window.SmartRouteForceI18n) {
+                try { SmartRouteForceI18n.apply(code); } catch (e) {}
+            }
+            if (window.SmartRoute && SmartRoute.refreshLanguage) {
+                try { SmartRoute.refreshLanguage(code); } catch (e) {}
+            }
+
+            // 4. Direct sidebar rewrite using dictionary
+            function rewriteNav() {
+                if (!window.SmartRouteI18n) return;
+                document.querySelectorAll('[data-i18n]').forEach(function (el) {
+                    var key = el.getAttribute('data-i18n');
+                    var tr = SmartRouteI18n.t(key, code);
+                    if (tr && tr !== key) el.textContent = tr;
+                });
+                var map = {
+                    'dashboard.html': 'nav_dashboard',
+                    'map.html': 'nav_map',
+                    'incidents.html': 'nav_incidents',
+                    'alerts.html': 'nav_alerts',
+                    'emergency.html': 'nav_emergency',
+                    'route-prediction.html': 'nav_route_prediction',
+                    'alternate-routes.html': 'nav_alternate_routes',
+                    'ai-command.html': 'nav_ai_command',
+                    'photo-analysis.html': 'nav_photo_analysis',
+                    'weather.html': 'nav_weather',
+                    'vehicle-tracking.html': 'nav_vehicle_tracking',
+                    'deliveries.html': 'nav_deliveries',
+                    'corridors.html': 'nav_corridors',
+                    'districts.html': 'nav_districts',
+                    'infrastructure.html': 'nav_infrastructure',
+                    'officers.html': 'nav_officers',
+                    'reports.html': 'nav_reports',
+                    'analytics.html': 'nav_analytics',
+                    'simulation.html': 'nav_simulation',
+                    'field-report.html': 'nav_field_report',
+                    'officer-dashboard.html': 'nav_officer_dashboard',
+                    'language.html': 'nav_language',
+                    'admin.html': 'nav_admin',
+                    'settings.html': 'nav_settings',
+                    'login.html': 'sign_out'
+                };
+                document.querySelectorAll('.nav-item').forEach(function (a) {
+                    var href = (a.getAttribute('href') || '').split('/').pop();
+                    var key = map[href];
+                    if (!key) return;
+                    var lab = a.querySelector('.nav-label');
+                    if (!lab) return;
+                    var tr = SmartRouteI18n.t(key, code);
+                    if (tr && tr !== key) lab.textContent = tr;
+                });
+            }
+            rewriteNav();
+            setTimeout(rewriteNav, 200);
+            setTimeout(rewriteNav, 600);
+            setTimeout(rewriteNav, 1200);
+
+            setBar(code, false);
+            paintGrid();
+
+            var i = info(code);
+            if (window.SmartRoute && SmartRoute.showToast) {
+                SmartRoute.showToast('✓ ' + i.name + ' (' + i.native + ') applied to website', 'success', 4000);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
             if (window.SmartRoute) {
                 SmartRoute.initSharedComponents({
                     title: 'Language & Region',
-                    subtitle: 'Interface Dialects, Scripts & Regional Settings'
+                    subtitle: 'Apply language across the platform'
                 });
             }
 
-            const langDropdown = document.getElementById('lang-select-dropdown');
-            const langGrid = document.getElementById('lang-grid-container');
-            const langRadioList = document.getElementById('lang-radio-list');
-            const langSearchInput = document.getElementById('lang-search-input');
-            const activeFlag = document.getElementById('lang-active-flag');
-            const activeTitle = document.getElementById('lang-active-title');
-            const activeNative = document.getElementById('lang-active-native');
-            const btnLangApply = document.getElementById('btn-lang-apply');
-            const btnResetLang = document.getElementById('btn-reset-lang');
+            var saved = getSaved();
+            pending = saved;
+            document.getElementById('lang-select').value = saved;
+            setBar(saved, false);
+            paintGrid();
 
-            let currentCategoryFilter = 'all';
-            let currentSearchTerm = '';
-
-            function matchesCategory(lang, cat) {
-                if (cat === 'all') return true;
-                if (cat === 'ne') return ['as', 'bn', 'ne'].includes(lang.code);
-                if (cat === 'national') return ['hi', 'te', 'ta', 'mr', 'gu', 'kn', 'ml', 'pa', 'or'].includes(lang.code);
-                if (cat === 'international') return ['en', 'es', 'fr'].includes(lang.code);
-                return true;
+            // Re-apply saved language to this page
+            if (saved && saved !== 'en') {
+                setTimeout(function () { applyLanguage(saved); }, 400);
             }
 
-            function matchesSearch(lang, term) {
-                if (!term) return true;
-                const t = term.toLowerCase().trim();
-                return lang.name.toLowerCase().includes(t) || 
-                       lang.native.toLowerCase().includes(t) || 
-                       lang.code.toLowerCase().includes(t) || 
-                       lang.region.toLowerCase().includes(t);
-            }
-
-            function renderLanguageOptions() {
-                if (!window.SmartRouteI18n) return;
-                const currentCode = SmartRouteI18n.getLanguage();
-                const currentInfo = SmartRouteI18n.getLanguageInfo(currentCode);
-
-                // Update active banner
-                if (activeFlag) activeFlag.textContent = currentInfo.flag;
-                if (activeTitle) activeTitle.textContent = `${currentInfo.name} (${currentInfo.native})`;
-                if (activeNative) activeNative.textContent = `${currentInfo.region} • Primary Script: ${currentInfo.native}`;
-
-                // Sync Dropdown
-                if (langDropdown) {
-                    langDropdown.value = currentCode;
-                }
-
-                // Filtered list
-                const filtered = SmartRouteI18n.languages.filter(l => 
-                    matchesCategory(l, currentCategoryFilter) && matchesSearch(l, currentSearchTerm)
-                );
-
-                // 1. Render Radio Options List
-                if (langRadioList) {
-                    langRadioList.innerHTML = '';
-                    if (filtered.length === 0) {
-                        langRadioList.innerHTML = `<div style="grid-column:1/-1; padding:15px; color:#8fa3b8; text-align:center;">No matching languages found for "${currentSearchTerm}"</div>`;
-                    } else {
-                        filtered.forEach(l => {
-                            const isSelected = l.code === currentCode;
-                            const lbl = document.createElement('label');
-                            lbl.className = 'lang-radio-item';
-                            lbl.style.cssText = `
-                                display: flex;
-                                align-items: center;
-                                gap: 10px;
-                                padding: 10px 14px;
-                                border-radius: 8px;
-                                background: ${isSelected ? 'rgba(0,212,255,0.15)' : 'rgba(255,255,255,0.02)'};
-                                border: 1px solid ${isSelected ? '#00d4ff' : 'rgba(255,255,255,0.06)'};
-                                cursor: pointer;
-                                transition: all 0.15s ease;
-                            `;
-                            lbl.innerHTML = `
-                                <input type="radio" name="lang_radio" value="${l.code}" ${isSelected ? 'checked' : ''} style="accent-color:#00d4ff; width:16px; height:16px; cursor:pointer;">
-                                <span style="font-size:22px;">${l.flag}</span>
-                                <div style="flex:1; min-width:0;">
-                                    <div style="font-weight:600; font-size:0.9rem; color:#fff;">${l.name}</div>
-                                    <div style="font-size:0.8rem; color:#00d4ff;">${l.native}</div>
-                                </div>
-                                <span style="font-size:0.75rem; color:#8fa3b8; font-family:'JetBrains Mono',monospace;">${l.region}</span>
-                            `;
-                            lbl.querySelector('input').addEventListener('change', () => {
-                                applySelectedLanguage(l.code);
-                            });
-                            langRadioList.appendChild(lbl);
-                        });
-                    }
-                }
-
-                // 2. Render Cards Grid
-                if (langGrid) {
-                    langGrid.innerHTML = '';
-                    if (filtered.length === 0) {
-                        langGrid.innerHTML = `<div style="grid-column:1/-1; padding:25px; color:#8fa3b8; text-align:center;">No visual cards found matching criteria.</div>`;
-                    } else {
-                        filtered.forEach(l => {
-                            const isSelected = l.code === currentCode;
-                            const card = document.createElement('div');
-                            card.className = 'glass-card lang-card' + (isSelected ? ' selected' : '');
-                            card.style.cssText = `
-                                padding: 16px 18px;
-                                border-radius: 12px;
-                                cursor: pointer;
-                                transition: all 0.2s ease;
-                                border: 1.5px solid ${isSelected ? '#00d4ff' : 'rgba(255,255,255,0.08)'};
-                                background: ${isSelected ? 'rgba(0, 212, 255, 0.16)' : 'rgba(255,255,255,0.02)'};
-                                box-shadow: ${isSelected ? '0 0 20px rgba(0,212,255,0.25)' : 'none'};
-                                display: flex;
-                                align-items: center;
-                                gap: 14px;
-                            `;
-                            card.innerHTML = `
-                                <span style="font-size:28px;">${l.flag}</span>
-                                <div style="flex:1; min-width:0;">
-                                    <div style="font-weight:700; font-size:1rem; color:${isSelected ? '#00d4ff' : '#fff'}; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">
-                                        ${l.native}
-                                    </div>
-                                    <div style="font-size:0.8rem; color:#8fa3b8; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">
-                                        ${l.name} · ${l.region}
-                                    </div>
-                                </div>
-                                ${isSelected ? '<span style="color:#00ff88; font-weight:bold; font-size:18px;">✓</span>' : ''}
-                            `;
-
-                            card.addEventListener('click', () => {
-                                applySelectedLanguage(l.code);
-                            });
-
-                            langGrid.appendChild(card);
-                        });
-                    }
-                }
-            }
-
-            function applySelectedLanguage(code) {
-                if (!window.SmartRouteI18n) return;
-                SmartRouteI18n.setLanguage(code);
-                SmartRouteI18n.applyLanguage(code);
-                renderLanguageOptions();
-                const info = SmartRouteI18n.getLanguageInfo(code);
-                if (window.SmartRoute && SmartRoute.showToast) {
-                    SmartRoute.showToast(`🌐 Language applied: ${info.name} (${info.native})`, 'success', 3000);
-                }
-            }
-
-            if (langDropdown) {
-                langDropdown.addEventListener('change', (e) => {
-                    applySelectedLanguage(e.target.value);
-                });
-            }
-
-            if (btnLangApply) {
-                btnLangApply.addEventListener('click', () => {
-                    let targetCode = null;
-                    const checkedRadio = document.querySelector('input[name="lang_radio"]:checked');
-                    if (checkedRadio) {
-                        targetCode = checkedRadio.value;
-                    } else if (langDropdown) {
-                        targetCode = langDropdown.value;
-                    }
-                    if (!targetCode && window.SmartRouteI18n) targetCode = SmartRouteI18n.getLanguage();
-                    applySelectedLanguage(targetCode || 'en');
-                });
-            }
-
-            if (btnResetLang) {
-                btnResetLang.addEventListener('click', () => {
-                    applySelectedLanguage('en');
-                });
-            }
-
-            if (langSearchInput) {
-                langSearchInput.addEventListener('input', (e) => {
-                    currentSearchTerm = e.target.value;
-                    renderLanguageOptions();
-                });
-            }
-
-            const regionBtns = document.querySelectorAll('#lang-region-filters .btn-filter');
-            regionBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    regionBtns.forEach(b => {
-                        b.classList.remove('active');
-                        b.style.borderColor = 'rgba(255,255,255,0.15)';
-                        b.style.background = 'rgba(255,255,255,0.05)';
-                        b.style.color = '#8fa3b8';
-                    });
-                    btn.classList.add('active');
-                    btn.style.borderColor = '#00d4ff';
-                    btn.style.background = 'rgba(0,212,255,0.2)';
-                    btn.style.color = '#00d4ff';
-                    currentCategoryFilter = btn.dataset.filter || 'all';
-                    renderLanguageOptions();
-                });
+            document.getElementById('lang-select').addEventListener('change', function () {
+                pending = this.value;
+                setBar(pending, pending !== getSaved());
+                paintGrid();
             });
 
-            window.addEventListener('smartroute:language-changed', () => {
-                renderLanguageOptions();
+            document.getElementById('btn-apply').addEventListener('click', function () {
+                var code = document.getElementById('lang-select').value || pending || 'en';
+                applyLanguage(code);
             });
 
-            renderLanguageOptions();
+            document.getElementById('btn-reset').addEventListener('click', function () {
+                applyLanguage('en');
+            });
         });
+    })();
     </script>
 </body>
 </html>
