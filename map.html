@@ -12,23 +12,32 @@
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/components.css">
     <style>
-        .map-page { display:flex; flex-direction:column; gap:12px; height:calc(100vh - 80px); }
-        .mode-tabs { display:flex; gap:8px; flex-wrap:wrap; }
-        .mode-tab {
+        .map-page { display:flex; flex-direction:column; gap:12px; height:calc(100vh - 72px); }
+        .mode-tabs, .route-tabs { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+        .mode-tab, .route-btn {
             padding:8px 14px; border-radius:8px; border:1px solid rgba(0,212,255,0.25);
-            background:rgba(8,18,38,0.8); color:#8fa3b8; cursor:pointer; font-weight:700; font-size:0.85rem;
+            background:rgba(8,18,38,0.85); color:#8fa3b8; cursor:pointer; font-weight:700; font-size:0.82rem;
         }
-        .mode-tab.active { background:rgba(0,212,255,0.15); color:#00d4ff; border-color:#00d4ff; }
+        .mode-tab.active, .route-btn.active { background:rgba(0,212,255,0.15); color:#00d4ff; border-color:#00d4ff; }
+        .route-btn.safe.active { border-color:#00ff88; color:#00ff88; background:rgba(0,255,136,0.12); }
+        .route-btn.alt.active { border-color:#ff9500; color:#ff9500; background:rgba(255,149,0,0.12); }
         .map-stage {
-            flex:1; min-height:420px; border-radius:16px; overflow:hidden; position:relative;
+            flex:1; min-height:400px; border-radius:16px; overflow:hidden; position:relative;
             border:1px solid rgba(0,212,255,0.2); background:#030814;
         }
         #map-2d, #map-3d { position:absolute; inset:0; width:100%; height:100%; }
         #map-3d { display:none; }
+        .map-legend {
+            position:absolute; top:12px; right:12px; z-index:500;
+            background:rgba(5,12,28,0.92); border:1px solid rgba(0,212,255,0.3);
+            border-radius:10px; padding:10px 12px; font-size:0.75rem; color:#c8d8e8; min-width:160px;
+        }
+        .map-legend div { display:flex; align-items:center; gap:8px; margin:4px 0; }
+        .swatch { width:22px; height:4px; border-radius:2px; }
         .map-hint {
             position:absolute; bottom:12px; left:12px; z-index:500;
             background:rgba(5,12,28,0.9); border:1px solid rgba(0,212,255,0.3);
-            padding:8px 12px; border-radius:8px; font-size:0.75rem; color:#8fa3b8;
+            padding:8px 12px; border-radius:8px; font-size:0.75rem; color:#8fa3b8; max-width:70%;
         }
     </style>
 </head>
@@ -39,19 +48,34 @@
                 <div class="page-header">
                     <div>
                         <h1 class="page-title">Live Map</h1>
-                        <p class="page-subtitle">NER GIS routes · 2D satellite · 3D terrain</p>
+                        <p class="page-subtitle">NER corridors · safest &amp; alternate road routes</p>
                     </div>
                 </div>
 
                 <div class="mode-tabs">
-                    <button class="mode-tab active" id="tab-2d" onclick="switchViewMode('2d')">🗺 2D MAP VIEW</button>
-                    <button class="mode-tab" id="tab-3d" onclick="switchViewMode('3d')">🌐 3D TERRAIN VIEW</button>
+                    <button class="mode-tab active" id="tab-2d" onclick="switchViewMode('2d')">🗺 2D MAP</button>
+                    <button class="mode-tab" id="tab-3d" onclick="switchViewMode('3d')">🌐 3D TERRAIN</button>
+                </div>
+
+                <div class="route-tabs">
+                    <span style="color:#8fa3b8;font-size:0.8rem;font-weight:600;">Routes:</span>
+                    <button class="route-btn active" id="btn-all" onclick="setRouteFilter('all')">All Corridors</button>
+                    <button class="route-btn safe active" id="btn-safe" onclick="setRouteFilter('safe')">✓ Safest Roads</button>
+                    <button class="route-btn alt active" id="btn-alt" onclick="setRouteFilter('alt')">↔ Alternate Routes</button>
+                    <button class="route-btn" id="btn-blocked" onclick="setRouteFilter('blocked')">⛔ Blocked / Risk</button>
                 </div>
 
                 <div class="map-stage">
                     <div id="map-2d"></div>
                     <div id="map-3d"></div>
-                    <div class="map-hint" id="map-hint">2D: drag to pan · scroll to zoom · roads & vehicles on NER corridors</div>
+                    <div class="map-legend">
+                        <strong style="color:#00d4ff;">Legend</strong>
+                        <div><span class="swatch" style="background:#00ff88;"></span> Safest (accessible)</div>
+                        <div><span class="swatch" style="background:#00d4ff;height:0;border-top:3px dashed #00d4ff;"></span> Alternate detour</div>
+                        <div><span class="swatch" style="background:#ff9500;"></span> Partial / caution</div>
+                        <div><span class="swatch" style="background:#ff3b3b;"></span> Blocked / critical</div>
+                    </div>
+                    <div class="map-hint" id="map-hint">Showing NER road network with safest &amp; alternate routes along real corridors</div>
                 </div>
             </main>
         </div>
@@ -63,68 +87,118 @@
     <script>
         let scene3D = null;
         let currentMode = '2d';
+        let roadLayers = {};
+        let altLayers = [];
+        let showSafe = true, showAlt = true, showBlocked = true, showAll = true;
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', function () {
             if (window.SmartRoute) {
                 SmartRoute.initSharedComponents({
                     title: 'Live Map',
-                    subtitle: 'National Emergency 3D Terrain & Tactical Monitoring'
+                    subtitle: 'Safest & alternate routes · NER corridors'
                 });
             }
             init2D();
-            setTimeout(init3D, 400);
+            setTimeout(init3D, 500);
         });
 
         function init2D() {
             if (!window.MapEngine || !MapEngine.initMap) {
                 if (typeof L !== 'undefined') {
-                    const map = L.map('map-2d').setView([25.8, 91.6], 7);
-                    L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18 }).addTo(map);
+                    window._fallbackMap = L.map('map-2d').setView([25.8, 91.6], 7);
+                    L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18 }).addTo(window._fallbackMap);
                 }
                 return;
             }
             MapEngine.initMap('map-2d');
-            if (MapEngine.addRoads) MapEngine.addRoads();
+            roadLayers = MapEngine.addRoads() || {};
             if (MapEngine.addIncidents) MapEngine.addIncidents();
             if (MapEngine.addVehicles) MapEngine.addVehicles();
             if (MapEngine.animateVehicles) MapEngine.animateVehicles();
+
+            // Draw alternate / safest detours along roads (curved polylines)
+            if (MapEngine.drawAlternateRoutes) {
+                altLayers = MapEngine.drawAlternateRoutes() || [];
+            }
+            applyRouteVisibility();
+            if (window.SmartRoute) SmartRoute.showToast('Safest & alternate road routes loaded', 'success', 2500);
+        }
+
+        function setRouteFilter(mode) {
+            if (mode === 'all') {
+                showAll = !showAll;
+                if (showAll) { showSafe = true; showAlt = true; showBlocked = true; }
+            } else if (mode === 'safe') {
+                showSafe = !showSafe;
+            } else if (mode === 'alt') {
+                showAlt = !showAlt;
+            } else if (mode === 'blocked') {
+                showBlocked = !showBlocked;
+            }
+            document.getElementById('btn-all').classList.toggle('active', showSafe && showAlt && showBlocked);
+            document.getElementById('btn-safe').classList.toggle('active', showSafe);
+            document.getElementById('btn-alt').classList.toggle('active', showAlt);
+            document.getElementById('btn-blocked').classList.toggle('active', showBlocked);
+            applyRouteVisibility();
+        }
+
+        function applyRouteVisibility() {
+            // Primary ROAD_DATA layers by status
+            var data = (MapEngine && MapEngine.ROAD_DATA) || [];
+            data.forEach(function (road) {
+                var layer = roadLayers[road.id];
+                if (!layer) return;
+                var visible = true;
+                if (road.status === 'accessible') visible = showSafe;
+                else if (road.status === 'partial') visible = showSafe || showBlocked;
+                else if (road.status === 'blocked') visible = showBlocked;
+                if (visible) {
+                    if (MapEngine.map && !MapEngine.map.hasLayer(layer)) layer.addTo(MapEngine.map);
+                } else {
+                    if (MapEngine.map && MapEngine.map.hasLayer(layer)) MapEngine.map.removeLayer(layer);
+                }
+            });
+            // Alternate route polylines
+            altLayers.forEach(function (layer) {
+                if (!layer || !MapEngine.map) return;
+                if (showAlt) {
+                    if (!MapEngine.map.hasLayer(layer)) layer.addTo(MapEngine.map);
+                } else {
+                    if (MapEngine.map.hasLayer(layer)) MapEngine.map.removeLayer(layer);
+                }
+            });
         }
 
         function init3D() {
             if (scene3D) return;
             if (window.MapEngine && typeof MapEngine.create3DScene === 'function') {
                 scene3D = MapEngine.create3DScene('map-3d', { autoRotate: true });
-                if (window.SmartRoute) SmartRoute.showToast('3D Terrain engine ready', 'success', 2000);
             }
         }
 
         function switchViewMode(mode) {
             currentMode = mode;
-            const c2 = document.getElementById('map-2d');
-            const c3 = document.getElementById('map-3d');
-            const t2 = document.getElementById('tab-2d');
-            const t3 = document.getElementById('tab-3d');
-            const hint = document.getElementById('map-hint');
-            t2.classList.toggle('active', mode === '2d');
-            t3.classList.toggle('active', mode === '3d');
+            var c2 = document.getElementById('map-2d');
+            var c3 = document.getElementById('map-3d');
+            document.getElementById('tab-2d').classList.toggle('active', mode === '2d');
+            document.getElementById('tab-3d').classList.toggle('active', mode === '3d');
+            var hint = document.getElementById('map-hint');
             if (mode === '3d') {
                 c2.style.display = 'none';
                 c3.style.display = 'block';
                 init3D();
                 if (scene3D && scene3D.renderer && scene3D.camera) {
-                    const w = c3.clientWidth, h = c3.clientHeight;
+                    var w = c3.clientWidth, h = c3.clientHeight;
                     scene3D.renderer.setSize(w, h);
                     scene3D.camera.aspect = w / Math.max(h, 1);
                     scene3D.camera.updateProjectionMatrix();
                 }
-                if (hint) hint.textContent = '3D: drag to orbit · scroll to zoom · terrain, roads & vehicles';
-                if (window.SmartRoute) SmartRoute.showToast('Switched to 3D Terrain View', 'info', 2000);
+                if (hint) hint.textContent = '3D terrain: drag to orbit · scroll to zoom';
             } else {
                 c3.style.display = 'none';
                 c2.style.display = 'block';
-                if (hint) hint.textContent = '2D: drag to pan · scroll to zoom · roads & vehicles on NER corridors';
-                if (window.MapEngine && MapEngine.map) MapEngine.map.invalidateSize();
-                if (window.SmartRoute) SmartRoute.showToast('Switched to 2D Map View', 'info', 2000);
+                if (hint) hint.textContent = 'Showing NER road network with safest & alternate routes along real corridors';
+                if (MapEngine && MapEngine.map) MapEngine.map.invalidateSize();
             }
         }
     </script>
