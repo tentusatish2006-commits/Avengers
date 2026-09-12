@@ -70,7 +70,7 @@ function buildSidebar() {
   const sidebar = document.createElement('aside');
   sidebar.className = 'sidebar' + (collapsed ? ' collapsed' : '');
   sidebar.id = 'sidebar';
-  sidebar.innerHTML = '\n    <a href="dashboard.html" class="sidebar-logo">\n      <div class="sidebar-logo-icon">SR</div>\n      <div class="sidebar-logo-text">\n        <div class="sidebar-logo-title" data-i18n="app_name">SmartRoute</div>\n        <div class="sidebar-logo-sub">Emergency Mgmt</div>\n      </div>\n    </a>\n    <nav class="sidebar-section" id="sidebar-nav"></nav>\n    <div class="sidebar-bottom">\n      <div class="sidebar-user">\n        <div class="user-avatar" id="sidebar-user-avatar">NE</div>\n        <div>\n          <div class="user-name" id="sidebar-user-name">Admin Officer</div>\n          <div class="user-role" id="sidebar-user-role">Command HQ · NER</div>\n        </div>\n      </div>\n      <a href="login.html" class="nav-item" id="sr-sign-out">\n        <span class="nav-icon">⏻</span>\n        <span class="nav-label" data-i18n="sign_out">Sign Out</span>\n      </a>\n    </div>';
+  sidebar.innerHTML = '<a href="dashboard.html" class="sidebar-logo"><div class="sidebar-logo-icon">SR</div><div class="sidebar-logo-text"><div class="sidebar-logo-title" data-i18n="app_name">SmartRoute</div><div class="sidebar-logo-sub">Emergency Mgmt</div></div></a><nav class="sidebar-section" id="sidebar-nav"></nav><div class="sidebar-bottom"><div class="sidebar-user"><div class="user-avatar" id="sidebar-user-avatar">NE</div><div><div class="user-name" id="sidebar-user-name">Admin Officer</div><div class="user-role" id="sidebar-user-role">Command HQ · NER</div></div></div><a href="login.html" class="nav-item" id="sr-sign-out"><span class="nav-icon">⏻</span><span class="nav-label" data-i18n="sign_out">Sign Out</span></a></div>';
   const nav = sidebar.querySelector('#sidebar-nav');
   SMARTROUTE_NAV.forEach(section => {
     const label = document.createElement('div');
@@ -175,6 +175,35 @@ function loadAndApplyI18n() {
   });
 }
 
+function refreshLanguage(code) {
+  try { code = code || localStorage.getItem('sr_language') || 'en'; } catch (e) { code = 'en'; }
+  document.documentElement.lang = code;
+  if (window.SmartRouteI18n) {
+    SmartRouteI18n._currentLang = code;
+    document.querySelectorAll('[data-i18n]').forEach(function (el) {
+      var key = el.getAttribute('data-i18n');
+      var tr = SmartRouteI18n.t(key, code);
+      if (tr && tr !== key) el.textContent = tr;
+    });
+    if (SmartRouteI18n.applyDeep) SmartRouteI18n.applyDeep(code);
+    else if (SmartRouteI18n.applyLanguage) SmartRouteI18n.applyLanguage(code);
+  }
+  if (typeof SMARTROUTE_NAV !== 'undefined' && window.SmartRouteI18n) {
+    SMARTROUTE_NAV.forEach(function (section) {
+      document.querySelectorAll('[data-i18n="' + section.secKey + '"]').forEach(function (el) {
+        var tr = SmartRouteI18n.t(section.secKey, code);
+        if (tr && tr !== section.secKey) el.textContent = tr;
+      });
+      section.items.forEach(function (item) {
+        document.querySelectorAll('[data-i18n="' + item.i18n + '"]').forEach(function (el) {
+          var tr = SmartRouteI18n.t(item.i18n, code);
+          if (tr && tr !== item.i18n) el.textContent = tr;
+        });
+      });
+    });
+  }
+}
+
 function initSharedComponents(config) {
   config = config || {};
   if (!document.getElementById('sr-sidebar-scroll-fix')) {
@@ -273,7 +302,8 @@ window.SmartRoute = {
   getPageId: getPageId,
   enforceAuthIfNeeded: enforceAuthIfNeeded,
   isLoggedIn: isLoggedIn,
-  loadAndApplyI18n: loadAndApplyI18n
+  loadAndApplyI18n: loadAndApplyI18n,
+  refreshLanguage: refreshLanguage
 };
 
 (function () {
