@@ -14,77 +14,51 @@
     <style>
         html, body { height: 100%; margin: 0; overflow: hidden; }
         .map-page {
-            display: flex;
-            flex-direction: column;
-            height: calc(100vh - 64px);
-            gap: 8px;
-            padding-bottom: 0 !important;
+            display: flex; flex-direction: column;
+            height: calc(100vh - 64px); gap: 8px; padding-bottom: 0 !important;
         }
         .map-toolbar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            align-items: center;
-            flex-shrink: 0;
+            display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex-shrink: 0;
         }
         .mode-tab, .route-btn {
-            padding: 7px 12px;
-            border-radius: 8px;
+            padding: 7px 12px; border-radius: 8px;
             border: 1px solid rgba(0,212,255,0.25);
-            background: rgba(8,18,38,0.9);
-            color: #8fa3b8;
-            cursor: pointer;
-            font-weight: 700;
-            font-size: 0.8rem;
-            font-family: Outfit, sans-serif;
+            background: rgba(8,18,38,0.9); color: #8fa3b8;
+            cursor: pointer; font-weight: 700; font-size: 0.8rem; font-family: Outfit, sans-serif;
         }
         .mode-tab.active, .route-btn.active {
-            background: rgba(0,212,255,0.15);
-            color: #00d4ff;
-            border-color: #00d4ff;
+            background: rgba(0,212,255,0.15); color: #00d4ff; border-color: #00d4ff;
         }
         .route-btn.safe.active { border-color: #00ff88; color: #00ff88; background: rgba(0,255,136,0.1); }
-        .route-btn.alt.active { border-color: #00d4ff; color: #00d4ff; }
+        .route-btn.alt.active { border-color: #ff9500; color: #ff9500; }
         .route-btn.risk.active { border-color: #ff3b3b; color: #ff6b6b; }
         .legend-inline {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            align-items: center;
-            margin-left: auto;
-            font-size: 0.72rem;
-            color: #8fa3b8;
+            display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+            margin-left: auto; font-size: 0.72rem; color: #8fa3b8;
         }
         .legend-inline span { display: inline-flex; align-items: center; gap: 5px; }
         .swatch { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
-        /* Full-bleed map — no overlays covering it */
         .map-stage {
-            flex: 1 1 auto;
-            min-height: 0;
-            position: relative;
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid rgba(0,212,255,0.2);
-            background: #0a1628;
+            flex: 1 1 auto; min-height: 0; position: relative;
+            border-radius: 12px; overflow: hidden;
+            border: 1px solid rgba(0,212,255,0.2); background: #0a1628;
         }
         #map-2d, #map-3d {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            width: 100%; height: 100%; z-index: 1;
         }
         #map-3d { display: none; }
-        /* Leaflet must fill container */
-        #map-2d .leaflet-container,
-        .leaflet-container {
-            width: 100% !important;
-            height: 100% !important;
-            background: #0a1628;
-        }
+        .leaflet-container { width: 100% !important; height: 100% !important; background: #0a1628; }
         .page-header { flex-shrink: 0; margin-bottom: 0 !important; }
         .page-title { font-size: 1.25rem !important; margin: 0 !important; }
         .page-subtitle { margin: 2px 0 0 !important; font-size: 0.8rem !important; }
+        .tracking-chip {
+            position: absolute; bottom: 14px; left: 14px; z-index: 600;
+            background: rgba(5,12,28,0.92); border: 1px solid rgba(0,212,255,0.3);
+            border-radius: 12px; padding: 10px 14px; color: #e8f4ff; font-size: 0.8rem;
+            font-family: Outfit, sans-serif;
+        }
+        .tracking-chip .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #00ff88; margin-right: 6px; }
     </style>
 </head>
 <body>
@@ -94,27 +68,29 @@
                 <div class="page-header">
                     <div>
                         <h1 class="page-title">Live Map</h1>
-                        <p class="page-subtitle">NER corridors · safest &amp; alternate routes</p>
+                        <p class="page-subtitle">Real road routes (OSRM) · vehicles on corridors</p>
                     </div>
                 </div>
 
                 <div class="map-toolbar">
                     <button type="button" class="mode-tab active" id="tab-2d" onclick="switchViewMode('2d')">🗺 2D Map</button>
                     <button type="button" class="mode-tab" id="tab-3d" onclick="switchViewMode('3d')">🌐 3D Terrain</button>
-                    <button type="button" class="route-btn safe active" id="btn-safe" onclick="setRouteFilter('safe')">✓ Safest</button>
-                    <button type="button" class="route-btn alt active" id="btn-alt" onclick="setRouteFilter('alt')">↔ Alternate</button>
-                    <button type="button" class="route-btn risk active" id="btn-blocked" onclick="setRouteFilter('blocked')">⛔ Risk</button>
+                    <button type="button" class="route-btn safe active" id="btn-safe" onclick="setRouteFilter('safe')">✓ Safe</button>
+                    <button type="button" class="route-btn alt active" id="btn-alt" onclick="setRouteFilter('alt')">◐ Moderate</button>
+                    <button type="button" class="route-btn risk active" id="btn-blocked" onclick="setRouteFilter('blocked')">⛔ Disrupted</button>
                     <div class="legend-inline">
-                        <span><i class="swatch" style="background:#00ff88"></i>Safest</span>
-                        <span><i class="swatch" style="background:#00d4ff"></i>Alternate</span>
-                        <span><i class="swatch" style="background:#ff9500"></i>Partial</span>
-                        <span><i class="swatch" style="background:#ff3b3b"></i>Blocked</span>
+                        <span><i class="swatch" style="background:#00ff88"></i>Safe route</span>
+                        <span><i class="swatch" style="background:#ff9500"></i>Moderate risk</span>
+                        <span><i class="swatch" style="background:#ff3b3b"></i>Disrupted</span>
                     </div>
                 </div>
 
                 <div class="map-stage" id="map-stage">
                     <div id="map-2d"></div>
                     <div id="map-3d"></div>
+                    <div class="tracking-chip" id="tracking-chip">
+                        <span class="dot"></span>Live Vehicle Tracking · <span id="veh-count">0</span> vehicles on road routes
+                    </div>
                 </div>
             </main>
         </div>
@@ -125,49 +101,31 @@
     <script src="js/map-3d-engine.js"></script>
     <script>
         let scene3D = null;
-        let currentMode = '2d';
-        let roadLayers = {};
-        let altLayers = [];
         let showSafe = true, showAlt = true, showBlocked = true;
 
         document.addEventListener('DOMContentLoaded', function () {
             if (window.SmartRoute) {
                 SmartRoute.initSharedComponents({
                     title: 'Live Map',
-                    subtitle: 'NER safest & alternate road routes'
+                    subtitle: 'OSRM road geometry · NER corridors'
                 });
             }
-            // Wait for layout so map has real height
-            setTimeout(init2D, 100);
-            setTimeout(function () {
-                if (window.MapEngine && MapEngine.map) MapEngine.map.invalidateSize();
-            }, 400);
+            setTimeout(bootMap, 120);
         });
 
-        function init2D() {
-            var el = document.getElementById('map-2d');
-            if (!el) return;
-
-            if (window.MapEngine && MapEngine.initMap) {
-                MapEngine.initMap('map-2d');
-                roadLayers = MapEngine.addRoads() || {};
-                if (MapEngine.addIncidents) MapEngine.addIncidents();
-                if (MapEngine.addVehicles) MapEngine.addVehicles();
-                if (MapEngine.animateVehicles) MapEngine.animateVehicles();
-                if (MapEngine.drawAlternateRoutes) altLayers = MapEngine.drawAlternateRoutes() || [];
-                applyRouteVisibility();
-                setTimeout(function () {
-                    if (MapEngine.map) {
-                        MapEngine.map.invalidateSize();
-                        MapEngine.map.setView([25.8, 91.6], 7);
-                    }
-                }, 200);
-            } else if (typeof L !== 'undefined') {
-                var map = L.map('map-2d').setView([25.8, 91.6], 7);
-                L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18 }).addTo(map);
-                window.MapEngine = window.MapEngine || {};
-                MapEngine.map = map;
-                setTimeout(function () { map.invalidateSize(); }, 200);
+        async function bootMap() {
+            if (!window.MapEngine) return;
+            try {
+                await MapEngine.bootstrapMap('map-2d');
+                var n = Object.keys(MapEngine.vehicleMarkers || {}).length;
+                var el = document.getElementById('veh-count');
+                if (el) el.textContent = String(n);
+                if (window.SmartRoute) {
+                    SmartRoute.showToast('Road routes loaded via OSRM — vehicles tracking on roads', 'success', 3000);
+                }
+            } catch (e) {
+                console.error(e);
+                if (window.SmartRoute) SmartRoute.showToast('Map load issue: ' + e.message, 'warn');
             }
         }
 
@@ -178,28 +136,19 @@
             document.getElementById('btn-safe').classList.toggle('active', showSafe);
             document.getElementById('btn-alt').classList.toggle('active', showAlt);
             document.getElementById('btn-blocked').classList.toggle('active', showBlocked);
-            applyRouteVisibility();
+            applyVisibility();
         }
 
-        function applyRouteVisibility() {
-            if (!window.MapEngine || !MapEngine.map) return;
-            var data = MapEngine.ROAD_DATA || [];
-            data.forEach(function (road) {
-                var layer = roadLayers[road.id];
-                if (!layer) return;
+        function applyVisibility() {
+            if (!MapEngine || !MapEngine.ROUTE_DEFS) return;
+            MapEngine.ROUTE_DEFS.forEach(function (def) {
+                var layer = MapEngine.roadLayers[def.id];
+                if (!layer || !MapEngine.map) return;
                 var visible = true;
-                if (road.status === 'accessible') visible = showSafe;
-                else if (road.status === 'partial') visible = showSafe || showBlocked;
-                else if (road.status === 'blocked') visible = showBlocked;
+                if (def.status === 'accessible') visible = showSafe;
+                else if (def.status === 'partial') visible = showAlt;
+                else if (def.status === 'blocked') visible = showBlocked;
                 if (visible) {
-                    if (!MapEngine.map.hasLayer(layer)) layer.addTo(MapEngine.map);
-                } else if (MapEngine.map.hasLayer(layer)) {
-                    MapEngine.map.removeLayer(layer);
-                }
-            });
-            altLayers.forEach(function (layer) {
-                if (!layer) return;
-                if (showAlt) {
                     if (!MapEngine.map.hasLayer(layer)) layer.addTo(MapEngine.map);
                 } else if (MapEngine.map.hasLayer(layer)) {
                     MapEngine.map.removeLayer(layer);
@@ -215,7 +164,6 @@
         }
 
         function switchViewMode(mode) {
-            currentMode = mode;
             var c2 = document.getElementById('map-2d');
             var c3 = document.getElementById('map-3d');
             document.getElementById('tab-2d').classList.toggle('active', mode === '2d');
@@ -224,18 +172,10 @@
                 c2.style.display = 'none';
                 c3.style.display = 'block';
                 init3D();
-                if (scene3D && scene3D.renderer && scene3D.camera) {
-                    var w = c3.clientWidth, h = c3.clientHeight;
-                    scene3D.renderer.setSize(w, h);
-                    scene3D.camera.aspect = w / Math.max(h, 1);
-                    scene3D.camera.updateProjectionMatrix();
-                }
             } else {
                 c3.style.display = 'none';
                 c2.style.display = 'block';
-                if (MapEngine && MapEngine.map) {
-                    setTimeout(function () { MapEngine.map.invalidateSize(); }, 100);
-                }
+                if (MapEngine && MapEngine.map) setTimeout(function () { MapEngine.map.invalidateSize(); }, 100);
             }
         }
 
