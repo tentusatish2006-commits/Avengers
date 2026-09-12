@@ -139,7 +139,11 @@ function ensureI18nLoaded(cb) {
     e.src = 'js/i18n-enhance.js';
     e.onload = function () {
       window.__srI18nEnhanceLoaded = true;
-      if (cb) cb();
+      var f = document.createElement('script');
+      f.src = 'js/force-i18n.js';
+      f.onload = function () { if (cb) cb(); };
+      f.onerror = function () { if (cb) cb(); };
+      document.head.appendChild(f);
     };
     e.onerror = function () { if (cb) cb(); };
     document.head.appendChild(e);
@@ -171,6 +175,7 @@ function loadAndApplyI18n() {
     SmartRouteI18n._currentLang = code;
     if (SmartRouteI18n.applyLanguage) SmartRouteI18n.applyLanguage(code);
     if (SmartRouteI18n.applyDeep) SmartRouteI18n.applyDeep(code);
+    if (window.SmartRouteForceI18n) SmartRouteForceI18n.apply(code);
     document.documentElement.lang = code;
   });
 }
@@ -188,6 +193,7 @@ function refreshLanguage(code) {
     if (SmartRouteI18n.applyDeep) SmartRouteI18n.applyDeep(code);
     else if (SmartRouteI18n.applyLanguage) SmartRouteI18n.applyLanguage(code);
   }
+  if (window.SmartRouteForceI18n) SmartRouteForceI18n.apply(code);
   if (typeof SMARTROUTE_NAV !== 'undefined' && window.SmartRouteI18n) {
     SMARTROUTE_NAV.forEach(function (section) {
       document.querySelectorAll('[data-i18n="' + section.secKey + '"]').forEach(function (el) {
@@ -261,6 +267,7 @@ function initSharedComponents(config) {
 
   setTimeout(loadAndApplyI18n, 50);
   setTimeout(loadAndApplyI18n, 500);
+  setTimeout(loadAndApplyI18n, 1000);
 }
 
 function showToast(msg, type, duration) {
@@ -319,7 +326,7 @@ window.SmartRoute = {
     else load('js/signup-register.js');
   }
   if (path === 'language.html' || path === 'settings.html') {
-    load('js/language-apply.js');
+    load('js/force-i18n.js', function () { load('js/language-apply.js'); });
   }
 })();
 
