@@ -1,7 +1,4 @@
-/* ============================================================
-   SmartRoute i18n enhance — deep apply + phrase map + persist
-   Patches SmartRouteI18n after i18n.js loads
-   ============================================================ */
+/* Deep i18n: switch all UI text from English to selected language */
 (function () {
   'use strict';
 
@@ -21,7 +18,6 @@
     'lang_active_badge','lang_applied_msg'
   ];
 
-  /* Extra UI phrases: English -> { hi, as, bn, ... } */
   var PHRASES = {
     'Live Map': { hi: 'लाइव मानचित्र', as: 'লাইভ মানচিত্ৰ', bn: 'লাইভ মানচিত্র', te: 'లైవ్ మ్యాప్', ta: 'நேரடி வரைபடம்', kn: 'ಲೈವ್ ನಕ್ಷೆ', mr: 'लाइव्ह नकाशा', gu: 'લાઇવ નકશો', ml: 'ലൈവ് മാപ്പ്', pa: 'ਲਾਈਵ ਨਕਸ਼ਾ', or: 'ଲାଇଭ୍ ମାନଚିତ୍ର', ne: 'लाइभ नक्सा', es: 'Mapa en vivo', fr: 'Carte en direct' },
     'Dashboard': { hi: 'डैशबोर्ड', as: 'ডেশ্বব’ৰ্ড', bn: 'ড্যাশবোর্ড', te: 'డాష్‌బోర్డ్', ta: 'டாஷ்போர்டு', kn: 'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್', mr: 'डॅशबोर्ड', gu: 'ડેશબોર્ડ', ml: 'ഡാഷ്ബോർഡ്', pa: 'ਡੈਸ਼ਬੋਰਡ', or: 'ଡ୍ୟାସବୋର୍ଡ', ne: 'ड्यासबोर्ड', es: 'Panel', fr: 'Tableau de bord' },
@@ -44,43 +40,75 @@
     'APPLY LANGUAGE': { hi: 'भाषा लागू करें', as: 'ভাষা প্ৰয়োগ কৰক', bn: 'ভাষা প্রয়োগ করুন', te: 'భాష వర్తింపజేయి', ta: 'மொழியைப் பயன்படுத்து', kn: 'ಭಾಷೆ ಅನ್ವಯಿಸಿ', mr: 'भाषा लागू करा', gu: 'ભાષા લાગુ કરો', ml: 'ഭാഷ പ്രയോഗിക്കുക', pa: 'ਭਾਸ਼ਾ ਲਾਗੂ ਕਰੋ', or: 'ଭାଷା ପ୍ରୟୋଗ କରନ୍ତୁ', ne: 'भाषा लागू गर्नुहोस्', es: 'APLICAR IDIOMA', fr: 'APPLIQUER LA LANGUE' },
     'Currently Active': { hi: 'वर्तमान में सक्रिय', as: 'বৰ্তমান সক্ৰিয়', bn: 'বর্তমানে সক্রিয়', te: 'ప్రస్తుతం సక్రియం', ta: 'தற்போது செயலில்', kn: 'ಪ್ರಸ್ತುತ ಸಕ್ರಿಯ', mr: 'सध्या सक्रिय', gu: 'હાલ સક્રિય', ml: 'നിലവിൽ സജീവം', pa: 'ਮੌਜੂਦਾ ਸਰਗਰਮ', or: 'ସମ୍ପ୍ରତି ସକ୍ରିୟ', ne: 'हाल सक्रिय', es: 'Actualmente activo', fr: 'Actuellement actif' },
     'Interface Language': { hi: 'इंटरफ़ेस भाषा', as: 'ইণ্টাৰফেচ ভাষা', bn: 'ইন্টারফেস ভাষা', te: 'ఇంటర్‌ఫేస్ భాష', ta: 'இடைமுக மொழி', kn: 'ಇಂಟರ್ಫೇಸ್ ಭಾಷೆ', mr: 'इंटरफेस भाषा', gu: 'ઇન્ટરફેસ ભાષા', ml: 'ഇന്റർഫേസ് ഭാഷ', pa: 'ਇੰਟਰਫੇਸ ਭਾਸ਼ਾ', or: 'ଇଣ୍ଟରଫେସ୍ ଭାଷା', ne: 'इन्टरफेस भाषा', es: 'Idioma de la interfaz', fr: 'Langue de l’interface' },
-    'Access Command Center': { hi: 'कमांड सेंटर में प्रवेश', as: 'কমাণ্ড চেণ্টাৰত প্ৰৱেশ', bn: 'কমান্ড সেন্টারে প্রবেশ', te: 'కమాండ్ సెంటర్‌లోకి ప్రవేశం', ta: 'கட்டளை மையம் அணுகல்', kn: 'ಕಮಾಂಡ್ ಸೆಂಟರ್ ಪ್ರವೇಶ', mr: 'कमांड सेंटर प्रवेश', gu: 'કમાન્ડ સેન્ટર પ્રવેશ', ml: 'കമാൻഡ് സെന്റർ ആക്‌സസ്', pa: 'ਕਮਾਂਡ ਸੈਂਟਰ ਪਹੁੰਚ', or: 'କମାଣ୍ଡ ସେଣ୍ଟର ପ୍ରବେଶ', ne: 'कमान्ड सेन्टर प्रवेश', es: 'Acceder al centro de mando', fr: 'Accéder au centre de commande' },
     'OPERATIONS': { hi: 'संचालन', as: 'পৰিচালনা', bn: 'অপারেশন', te: 'ఆపరేషన్స్', ta: 'செயல்பாடுகள்', kn: 'ಕಾರ್ಯಾಚರಣೆಗಳು', mr: 'ऑपरेशन्स', gu: 'ઓપરેશન્સ', ml: 'ഓപ്പറേഷൻസ്', pa: 'ਓਪਰੇਸ਼ਨ', or: 'ଅପରେସନ', ne: 'सञ्चालन', es: 'OPERACIONES', fr: 'OPÉRATIONS' },
     'INTELLIGENCE': { hi: 'इंटेलिजेंस', as: 'ইনটেলিজেন্স', bn: 'ইন্টেলিজেন্স', te: 'ఇంటెలిజెన్స్', ta: 'உளவுத்துறை', kn: 'ಇಂಟೆಲಿಜೆನ್ಸ್', mr: 'इंटेलिजन्स', gu: 'ઇન્ટેલિજન્સ', ml: 'ഇന്റലിജൻസ്', pa: 'ਇੰਟੈਲੀਜੈਂਸ', or: 'ଇଣ୍ଟେଲିଜେନ୍ସ', ne: 'बुद्धिमत्ता', es: 'INTELIGENCIA', fr: 'RENSEIGNEMENT' },
     'TRANSPORT': { hi: 'परिवहन', as: 'পৰিবহণ', bn: 'পরিবহন', te: 'రవాణా', ta: 'போக்குவரத்து', kn: 'ಸಾರಿಗೆ', mr: 'परिवहन', gu: 'પરિવહન', ml: 'ഗതാഗതം', pa: 'ਆਵਾਜਾਈ', or: 'ପରିବହନ', ne: 'यातायात', es: 'TRANSPORTE', fr: 'TRANSPORT' },
     'MONITORING': { hi: 'निगरानी', as: 'নিৰীক্ষণ', bn: 'নিরীক্ষণ', te: 'పర్యవేక్షణ', ta: 'கண்காணிப்பு', kn: 'ಮೇಲ್ವಿಚಾರಣೆ', mr: 'निरीक्षण', gu: 'મોનિટરિંગ', ml: 'നിരീക്ഷണം', pa: 'ਨਿਗਰਾਨੀ', or: 'ମନିଟରିଂ', ne: 'निगरानी', es: 'MONITOREO', fr: 'SURVEILLANCE' },
     'SYSTEM': { hi: 'सिस्टम', as: 'চিস্টেম', bn: 'সিস্টেম', te: 'సిస్టమ్', ta: 'அமைப்பு', kn: 'ಸಿಸ್ಟಮ್', mr: 'सिस्टम', gu: 'સિસ્ટમ', ml: 'സിസ്റ്റം', pa: 'ਸਿਸਟਮ', or: 'ସିଷ୍ଟମ', ne: 'प्रणाली', es: 'SISTEMA', fr: 'SYSTÈME' },
     'FIELD': { hi: 'फील्ड', as: 'ফিল্ড', bn: 'ফিল্ড', te: 'ఫీల్డ్', ta: 'களம்', kn: 'ಫೀಲ್ಡ್', mr: 'फील्ड', gu: 'ફીલ્ડ', ml: 'ഫീൽഡ്', pa: 'ਫੀਲਡ', or: 'ଫିଲ୍ଡ', ne: 'फिल्ड', es: 'CAMPO', fr: 'TERRAIN' },
-    'ANALYTICS': { hi: 'एनालिटिक्स', as: 'এনালিটিক্স', bn: 'অ্যানালিটিক্স', te: 'విశ్లేషణలు', ta: 'பகுப்பாய்வு', kn: 'ವಿಶ್ಲೇಷಣೆ', mr: 'विश्लेषण', gu: 'એનાલિટિક્સ', ml: 'അനലിറ്റിക്സ്', pa: 'ਵਿਸ਼ਲੇਸ਼ਣ', or: 'ବିଶ୍ଳେଷଣ', ne: 'एनालिटिक्स', es: 'ANALÍTICA', fr: 'ANALYTIQUE' }
+    'ANALYTICS': { hi: 'एनालिटिक्स', as: 'এনালিটিক্স', bn: 'অ্যানালিটিক্স', te: 'విశ్లేషణలు', ta: 'பகுப்பாய்வு', kn: 'ವಿಶ್ಲೇಷಣೆ', mr: 'विश्लेषण', gu: 'એનાલિટિક્સ', ml: 'അനലിറ്റിക്സ്', pa: 'ਵਿਸ਼ਲੇਸ਼ਣ', or: 'ବିଶ୍ଳେଷଣ', ne: 'एनालिटिक्स', es: 'ANALÍTICA', fr: 'ANALYTIQUE' },
+    'Risk Corridors': { hi: 'जोखिम गलियारे', as: 'বিপদৰ কৰিডৰ', bn: 'ঝুঁকি করিডোর', te: 'ప్రమాద కారిడార్లు', ta: 'ஆபத்து வழித்தடங்கள்', kn: 'ಅಪಾಯ ಕಾರಿಡಾರ್‌ಗಳು', mr: 'धोका कॉरिडॉर', gu: 'જોખમ કોરિડોર', ml: 'അപകട ഇടനാഴികൾ', pa: 'ਖਤਰੇ ਵਾਲੇ ਕਾਰੀਡੋਰ', or: 'ବିପଦ କରିଡର', ne: 'जोखिम करिडोर', es: 'Corredores de riesgo', fr: 'Corridors à risque' },
+    'Districts': { hi: 'जिले', as: 'জিলাসমূহ', bn: 'জেলা', te: 'జిల్లాలు', ta: 'மாவட்டங்கள்', kn: 'ಜಿಲ್ಲೆಗಳು', mr: 'जिल्हे', gu: 'જિલ્લાઓ', ml: 'ജില്ലകൾ', pa: 'ਜ਼ਿਲ੍ਹੇ', or: 'ଜିଲ୍ଲା', ne: 'जिल्लाहरू', es: 'Distritos', fr: 'Districts' },
+    'Infrastructure': { hi: 'अवसंरचना', as: 'আন্তঃগাঁথনি', bn: 'অবকাঠামো', te: 'మౌలిక సదుపాయాలు', ta: 'உள்கட்டமைப்பு', kn: 'ಮೂಲಸೌಕರ್ಯ', mr: 'पायाभूत सुविधा', gu: 'ઈન્ફ્રાસ્ટ્રક્ચર', ml: 'അടിസ്ഥാന സൗകര്യം', pa: 'ਬੁਨਿਆਦੀ ਢਾਂਚਾ', or: 'ଭିତ୍ତିଭୂମି', ne: 'पूर्वाधार', es: 'Infraestructura', fr: 'Infrastructure' },
+    'Live Simulation': { hi: 'लाइव सिमुलेशन', as: 'লাইভ ছিমুলেচন', bn: 'লাইভ সিমুলেশন', te: 'లైవ్ సిమ్యులేషన్', ta: 'நேரடி உருவகப்படுத்துதல்', kn: 'ಲೈವ್ ಸಿಮ್ಯುಲೇಶನ್', mr: 'लाइव्ह सिम्युलेशन', gu: 'લાઇવ સિમ્યુલેશન', ml: 'ലൈവ് സിമുലേഷൻ', pa: 'ਲਾਈਵ ਸਿਮੂਲੇਸ਼ਨ', or: 'ଲାଇଭ୍ ସିମୁଲେସନ', ne: 'लाइभ सिमुलेसन', es: 'Simulación en vivo', fr: 'Simulation en direct' },
+    'Officer Dashboard': { hi: 'अधिकारी डैशबोर्ड', as: 'বিষয়া ডেশ্বব’ৰ্ড', bn: 'অফিসার ড্যাশবোর্ড', te: 'అధికారి డాష్‌బోర్డ్', ta: 'அதிகாரி டாஷ்போர்டு', kn: 'ಅಧಿಕಾರಿ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್', mr: 'अधिकारी डॅशबोर्ड', gu: 'અધિકારી ડેશબોર્ડ', ml: 'ഓഫീസർ ഡാഷ്ബോർഡ്', pa: 'ਅਫਸਰ ਡੈਸ਼ਬੋਰਡ', or: 'ଅଧିକାରୀ ଡ୍ୟାସବୋର୍ଡ', ne: 'अधिकृत ड्यासबोर्ड', es: 'Panel del oficial', fr: 'Tableau de bord agent' },
+    'AI Command Center': { hi: 'एआई कमांड सेंटर', as: 'এআই কমাণ্ড চেণ্টাৰ', bn: 'এআই কমান্ড সেন্টার', te: 'AI కమాండ్ సెంటర్', ta: 'AI கட்டளை மையம்', kn: 'AI ಕಮಾಂಡ್ ಸೆಂಟರ್', mr: 'एआय कमांड सेंटर', gu: 'AI કમાન્ડ સેન્ટર', ml: 'AI കമാൻഡ് സെന്റർ', pa: 'AI ਕਮਾਂਡ ਸੈਂਟਰ', or: 'AI କମାଣ୍ଡ ସେଣ୍ଟର', ne: 'एआई कमान्ड सेन्टर', es: 'Centro de mando IA', fr: 'Centre de commande IA' },
+    'AI Photo Analysis': { hi: 'एआई फोटो विश्लेषण', as: 'এআই ফটো বিশ্লেষণ', bn: 'এআই ফটো বিশ্লেষণ', te: 'AI ఫోటో విశ్లేషణ', ta: 'AI புகைப்பட பகுப்பாய்வு', kn: 'AI ಫೋಟೋ ವಿಶ್ಲೇಷಣೆ', mr: 'एआय फोटो विश्लेषण', gu: 'AI ફોટો વિશ્લેષણ', ml: 'AI ഫോട്ടോ വിശകലനം', pa: 'AI ਫੋਟੋ ਵਿਸ਼ਲੇਸ਼ਣ', or: 'AI ଫଟୋ ବିଶ୍ଳେଷଣ', ne: 'एआई फोटो विश्लेषण', es: 'Análisis de fotos IA', fr: 'Analyse photo IA' },
+    'LIVE': { hi: 'लाइव', as: 'লাইভ', bn: 'লাইভ', te: 'లైవ్', ta: 'நேரடி', kn: 'ಲೈವ್', mr: 'लाइव्ह', gu: 'લાઇવ', ml: 'ലൈവ്', pa: 'ਲਾਈਵ', or: 'ଲାଇଭ୍', ne: 'लाइभ', es: 'EN VIVO', fr: 'EN DIRECT' }
   };
+
+  // Reverse maps: any known translation -> English, so we can re-translate
+  var TO_ENGLISH = {};
+  Object.keys(PHRASES).forEach(function (en) {
+    TO_ENGLISH[en] = en;
+    var row = PHRASES[en];
+    Object.keys(row).forEach(function (code) {
+      TO_ENGLISH[row[code]] = en;
+    });
+  });
 
   function getStoredLang() {
     try { return localStorage.getItem('sr_language') || 'en'; } catch (e) { return 'en'; }
   }
 
-  function buildPhraseMap(code) {
+  function buildTargetMap(code) {
     var map = {};
-    if (!code || code === 'en') return map;
+    if (!code) code = 'en';
     Object.keys(PHRASES).forEach(function (en) {
-      var row = PHRASES[en];
-      if (row && row[code]) map[en] = row[code];
+      if (code === 'en') {
+        map[en] = en;
+      } else if (PHRASES[en][code]) {
+        map[en] = PHRASES[en][code];
+      }
+      // also map every other language variant -> target
+      Object.keys(PHRASES[en]).forEach(function (c) {
+        var src = PHRASES[en][c];
+        if (code === 'en') map[src] = en;
+        else if (PHRASES[en][code]) map[src] = PHRASES[en][code];
+      });
     });
-    // From dictionary keys via t()
     if (window.SmartRouteI18n && SmartRouteI18n.t) {
       ALL_KEYS.forEach(function (key) {
         var en = SmartRouteI18n.t(key, 'en');
         var tr = SmartRouteI18n.t(key, code);
-        if (en && tr && en !== tr && en !== key) map[en] = tr;
+        if (en && tr) {
+          map[en] = tr;
+          // all language versions of this key
+          ['hi','as','bn','te','ta','kn','mr','gu','ml','pa','or','ne','es','fr'].forEach(function (c) {
+            var v = SmartRouteI18n.t(key, c);
+            if (v && v !== key) map[v] = tr;
+          });
+        }
       });
     }
     return map;
   }
 
-  function translateString(text, map) {
+  function translateText(text, map) {
     if (!text || !map) return text;
     var t = text.trim();
+    if (!t) return text;
     if (map[t]) return text.replace(t, map[t]);
-    // case-insensitive exact
     var lower = t.toLowerCase();
     for (var k in map) {
       if (k.toLowerCase() === lower) return text.replace(t, map[k]);
@@ -89,7 +117,7 @@
   }
 
   function walkAndTranslate(root, map) {
-    if (!root || !map || !Object.keys(map).length) return;
+    if (!root || !map) return;
     var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
     var nodes = [];
     while (walker.nextNode()) nodes.push(walker.currentNode);
@@ -97,24 +125,36 @@
       var parent = node.parentElement;
       if (!parent) return;
       var tag = parent.tagName;
-      if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT') return;
+      if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT' || tag === 'CODE') return;
       if (parent.closest && parent.closest('[data-i18n-skip]')) return;
       var original = node.nodeValue;
       if (!original || !original.trim()) return;
-      // Don't translate pure numbers / coords
-      if (/^[\d\s.,:+\-°%]+$/.test(original.trim())) return;
-      var next = translateString(original, map);
+      if (/^[\d\s.,:+\-°%/()]+$/.test(original.trim())) return;
+      var next = translateText(original, map);
       if (next !== original) node.nodeValue = next;
     });
-
-    // placeholders, titles, aria-labels
     root.querySelectorAll('[placeholder],[title],[aria-label]').forEach(function (el) {
       ['placeholder', 'title', 'aria-label'].forEach(function (attr) {
         if (!el.hasAttribute(attr)) return;
         var v = el.getAttribute(attr);
-        var nv = translateString(v, map);
+        var nv = translateText(v, map);
         if (nv !== v) el.setAttribute(attr, nv);
       });
+    });
+  }
+
+  function applyByKeys(code) {
+    if (!window.SmartRouteI18n) return;
+    document.querySelectorAll('[data-i18n]').forEach(function (el) {
+      var key = el.getAttribute('data-i18n');
+      var translated = SmartRouteI18n.t(key, code);
+      if (translated && translated !== key) {
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+          el.setAttribute('placeholder', translated);
+        } else {
+          el.textContent = translated;
+        }
+      }
     });
   }
 
@@ -122,30 +162,10 @@
     code = code || getStoredLang();
     try { localStorage.setItem('sr_language', code); } catch (e) {}
     document.documentElement.lang = code;
+    if (window.SmartRouteI18n) SmartRouteI18n._currentLang = code;
 
-    if (window.SmartRouteI18n) {
-      SmartRouteI18n._currentLang = code;
-      // attribute-based
-      document.querySelectorAll('[data-i18n]').forEach(function (el) {
-        var key = el.getAttribute('data-i18n');
-        var translated = SmartRouteI18n.t(key, code);
-        if (translated && translated !== key) {
-          if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-            if (el.getAttribute('data-i18n-value') === '1') el.value = translated;
-            else el.setAttribute('placeholder', translated);
-          } else {
-            el.textContent = translated;
-          }
-        }
-      });
-      document.querySelectorAll('[data-i18n-placeholder]').forEach(function (el) {
-        var key = el.getAttribute('data-i18n-placeholder');
-        var translated = SmartRouteI18n.t(key, code);
-        if (translated && translated !== key) el.setAttribute('placeholder', translated);
-      });
-    }
-
-    var map = buildPhraseMap(code);
+    applyByKeys(code);
+    var map = buildTargetMap(code);
     walkAndTranslate(document.body, map);
 
     try {
@@ -162,15 +182,11 @@
       try { origApply(code); } catch (e) {}
       deepApply(code);
     };
-
     SmartRouteI18n.applyDeep = deepApply;
 
-    // Re-apply stored language now
     var stored = getStoredLang();
-    if (stored) {
-      SmartRouteI18n._currentLang = stored;
-      deepApply(stored);
-    }
+    SmartRouteI18n._currentLang = stored;
+    deepApply(stored);
     return true;
   }
 
@@ -185,9 +201,7 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 
-  // Re-apply after sidebar builds
-  window.addEventListener('smartroute:language-changed', function () {});
   setTimeout(function () {
     if (window.SmartRouteI18n) deepApply(getStoredLang());
-  }, 600);
+  }, 700);
 })();
