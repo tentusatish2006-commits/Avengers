@@ -1,4 +1,4 @@
-/* SmartRoute user registry — signup accounts required for login */
+/* SmartRoute user registry */
 (function (global) {
   var KEY = 'sr_users';
 
@@ -22,27 +22,34 @@
 
   function registerUser(user) {
     var users = readUsers();
-    var id = normalizeId(user.username || user.officerId || user.email);
-    if (!id || !user.password) throw new Error('Username and password required');
+    var username = (user.username || '').trim();
+    var officerId = (user.officerId || '').trim();
+    var email = (user.email || '').trim();
+    var password = String(user.password || '');
+    if (!password) throw new Error('Password required');
+    if (!username && !officerId && !email) throw new Error('Name, badge ID, or email required');
+
+    var ids = [username, officerId, email].map(normalizeId).filter(Boolean);
     var existing = users.findIndex(function (u) {
-      return normalizeId(u.username) === id ||
-        normalizeId(u.officerId) === id ||
-        normalizeId(u.email) === id;
+      var uids = [u.username, u.officerId, u.email].map(normalizeId);
+      return ids.some(function (id) { return uids.indexOf(id) !== -1; });
     });
+
     var record = {
-      username: (user.username || '').trim(),
-      officerId: (user.officerId || '').trim(),
-      email: (user.email || '').trim(),
-      password: String(user.password),
+      username: username || officerId || email,
+      officerId: officerId,
+      email: email,
+      password: password,
       role: user.role || 'FIELD OFFICER',
       department: user.department || '',
       region: user.region || ''
     };
+
     if (existing >= 0) users[existing] = record;
     else users.push(record);
     writeUsers(users);
-    // active session fields
-    localStorage.setItem('sr_username', record.username || record.officerId);
+
+    localStorage.setItem('sr_username', record.username);
     localStorage.setItem('sr_officer_id', record.officerId);
     localStorage.setItem('sr_email', record.email);
     localStorage.setItem('sr_user_role', record.role);
@@ -56,21 +63,24 @@
     var id = normalizeId(identifier);
     var pass = String(password || '');
     var users = readUsers();
+
     if (!users.length) {
       return { ok: false, reason: 'no_users' };
     }
+
     var match = users.find(function (u) {
       return normalizeId(u.username) === id ||
         normalizeId(u.officerId) === id ||
         normalizeId(u.email) === id;
     });
+
     if (!match) return { ok: false, reason: 'not_found' };
-    if (match.password !== pass) return { ok: false, reason: 'bad_password' };
+    if (String(match.password) !== pass) return { ok: false, reason: 'bad_password' };
     return { ok: true, user: match };
   }
 
   function startSession(user) {
-    localStorage.setItem('sr_username', user.username || user.officerId);
+    localStorage.setItem('sr_username', user.username || user.officerId || '');
     localStorage.setItem('sr_officer_id', user.officerId || '');
     localStorage.setItem('sr_email', user.email || '');
     localStorage.setItem('sr_user_role', user.role || '');
@@ -79,15 +89,11 @@
     localStorage.setItem('sr_logged_in', '1');
   }
 
-  function countUsers() {
-    return readUsers().length;
-  }
-
   global.SmartRouteAuth = {
     registerUser: registerUser,
     validateLogin: validateLogin,
     startSession: startSession,
     readUsers: readUsers,
-    countUsers: countUsers
+    countUsers: function () { return readUsers().length; }
   };
 })(window);

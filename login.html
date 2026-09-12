@@ -5,15 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartRoute - Login</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/design-system.css">
-    <link rel="stylesheet" href="css/components.css">
     <style>
         * { box-sizing: border-box; }
         body, html { margin:0; padding:0; min-height:100%; font-family:'Outfit',sans-serif; background:#030810; color:#fff; }
         body {
             min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
-            background: radial-gradient(ellipse at 20% 20%, rgba(0,80,120,0.35), transparent 50%),
-                        radial-gradient(ellipse at 80% 80%, rgba(0,60,40,0.25), transparent 50%), #030810;
+            background: radial-gradient(ellipse at 20% 20%, rgba(0,80,120,0.35), transparent 50%), #030810;
         }
         .login-card {
             width:100%; max-width:420px; padding:36px 32px; border-radius:18px;
@@ -32,13 +29,12 @@
             width:100%; background:rgba(3,10,22,0.9); border:1px solid rgba(100,200,255,0.25);
             padding:12px 14px; border-radius:8px; color:#fff; font-family:Outfit,sans-serif; font-size:0.95rem; outline:none;
         }
-        .form-control:focus { border-color:#00d4ff; box-shadow:0 0 10px rgba(0,212,255,0.25); }
+        .form-control:focus { border-color:#00d4ff; }
         .btn-login {
             width:100%; margin-top:8px; padding:14px; border:none; border-radius:8px; cursor:pointer;
             font-weight:800; font-size:0.95rem; letter-spacing:1px; text-transform:uppercase;
             background:linear-gradient(90deg,#00d4ff,#00ff88); color:#030810; font-family:Outfit,sans-serif;
         }
-        .btn-login:disabled { opacity:0.5; cursor:not-allowed; }
         .error-msg {
             display:none; margin-top:12px; padding:12px; border-radius:8px;
             background:rgba(255,59,59,0.12); border:1px solid rgba(255,59,59,0.45);
@@ -65,17 +61,17 @@
         <form id="login-form" autocomplete="off">
             <div class="form-group">
                 <label class="form-label" for="login-user">Officer ID / Name / Email</label>
-                <input type="text" id="login-user" class="form-control" placeholder="As registered at Sign Up" autocomplete="username">
+                <input type="text" id="login-user" class="form-control" placeholder="Same as Sign Up" autocomplete="username">
             </div>
             <div class="form-group">
                 <label class="form-label" for="login-pass">Security Passcode</label>
-                <input type="password" id="login-pass" class="form-control" placeholder="Your signup passcode" autocomplete="current-password">
+                <input type="password" id="login-pass" class="form-control" placeholder="Same as Sign Up" autocomplete="current-password">
             </div>
             <div class="error-msg" id="login-error"></div>
             <button type="submit" class="btn-login" id="btn-login">Access Command Center</button>
         </form>
 
-        <p class="hint">Login works only with an account created on Sign Up.</p>
+        <p class="hint">Use the exact Name / Badge ID / Email and passcode from Sign Up.</p>
 
         <div class="links">
             No account? <a href="signup.html">Sign Up first →</a><br><br>
@@ -102,8 +98,22 @@
             box.innerHTML = '';
         }
 
+        function goDashboard() {
+            var ret = 'dashboard.html';
+            try {
+                var r = localStorage.getItem('sr_return_to');
+                if (r && r.indexOf('login') === -1 && r.indexOf('signup') === -1) ret = r;
+                localStorage.removeItem('sr_return_to');
+            } catch (e) {}
+            // Force navigation (replace avoids back-button loop)
+            window.location.replace(ret);
+        }
+
         function doLogin(e) {
-            if (e) e.preventDefault();
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
             hideError();
 
             var user = (document.getElementById('login-user').value || '').trim();
@@ -114,8 +124,9 @@
                 return false;
             }
 
+            // Wait for auth script if still loading
             if (!window.SmartRouteAuth) {
-                showError('Auth system failed to load. Refresh the page.');
+                showError('Auth system loading… try again in a second.');
                 return false;
             }
 
@@ -123,11 +134,11 @@
 
             if (!result.ok) {
                 if (result.reason === 'no_users') {
-                    showError('No registered officers found. Please <a href="signup.html">Sign Up first</a> to create your account.');
+                    showError('No registered officers found. Please <a href="signup.html">Sign Up first</a>.');
                 } else if (result.reason === 'not_found') {
-                    showError('Invalid details — this officer is not registered. Please <a href="signup.html">Sign Up first</a> or check your ID / email.');
+                    showError('Invalid details — officer not registered. <a href="signup.html">Sign Up first</a> or check Name / Badge / Email.');
                 } else if (result.reason === 'bad_password') {
-                    showError('Invalid details — passcode does not match the signup record. Try again or <a href="signup.html">Sign Up</a> with a new account.');
+                    showError('Invalid details — passcode does not match. Try again or <a href="signup.html">Sign Up</a>.');
                 } else {
                     showError('Invalid details. Please <a href="signup.html">Sign Up first</a>.');
                 }
@@ -135,25 +146,26 @@
                 return false;
             }
 
+            // Success — set session then enter dashboard
+            try {
+                SmartRouteAuth.startSession(result.user);
+                localStorage.setItem('sr_logged_in', '1');
+                localStorage.setItem('sr_username', result.user.username || result.user.officerId || user);
+            } catch (err) {
+                showError('Could not save session. Allow site data/localStorage and retry.');
+                return false;
+            }
+
             document.getElementById('btn-login').disabled = true;
             document.getElementById('loading').style.display = 'flex';
-            SmartRouteAuth.startSession(result.user);
 
-            var ret = 'dashboard.html';
-            try {
-                ret = localStorage.getItem('sr_return_to') || 'dashboard.html';
-                localStorage.removeItem('sr_return_to');
-            } catch (err2) {}
-
-            setTimeout(function () { window.location.href = ret; }, 500);
+            setTimeout(goDashboard, 400);
             return false;
         }
 
-        document.getElementById('login-form').addEventListener('submit', doLogin);
-        document.getElementById('btn-login').addEventListener('click', function (e) {
-            e.preventDefault();
-            doLogin(e);
-        });
+        var form = document.getElementById('login-form');
+        form.addEventListener('submit', doLogin);
+        document.getElementById('btn-login').addEventListener('click', doLogin);
     })();
     </script>
 </body>

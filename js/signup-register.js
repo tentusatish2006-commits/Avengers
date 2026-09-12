@@ -1,84 +1,95 @@
-/* Hook signup form to SmartRouteAuth.registerUser */
+/* Override signup to always save into SmartRouteAuth registry */
 (function () {
-  function enhance() {
-    if (typeof window.doSignup !== 'function') return false;
-    var original = window.doSignup;
-    window.doSignup = function () {
-      var pass = (document.getElementById('password') || {}).value || '';
-      var confirmPass = (document.getElementById('confirm-password') || {}).value || '';
-      if (pass !== confirmPass) {
-        alert('Passcodes do not match. Please verify your passcode.');
-        return;
-      }
-      if (!pass || pass.length < 3) {
-        alert('Passcode must be at least 3 characters.');
-        return;
-      }
+  function registerFromForm() {
+    var pass = ((document.getElementById('password') || {}).value || '');
+    var confirmPass = ((document.getElementById('confirm-password') || {}).value || '');
+    if (pass !== confirmPass) {
+      alert('Passcodes do not match.');
+      return false;
+    }
+    if (!pass || pass.length < 3) {
+      alert('Passcode must be at least 3 characters.');
+      return false;
+    }
 
-      var activeRole = document.querySelector('.role-card.active .role-title');
-      var role = activeRole ? activeRole.innerText.trim() : 'ADMINISTRATOR';
-      var name = ((document.getElementById('full-name') || {}).value || '').trim();
-      var badge = ((document.getElementById('badge-id') || {}).value || '').trim();
-      var dept = ((document.getElementById('department') || {}).value || '');
-      var region = ((document.getElementById('region') || {}).value || '');
-      var email = ((document.getElementById('email') || {}).value || '').trim();
+    var activeRole = document.querySelector('.role-card.active .role-title');
+    var role = activeRole ? activeRole.innerText.trim() : 'ADMINISTRATOR';
+    var name = ((document.getElementById('full-name') || {}).value || '').trim();
+    var badge = ((document.getElementById('badge-id') || {}).value || '').trim();
+    var dept = ((document.getElementById('department') || {}).value || '');
+    var region = ((document.getElementById('region') || {}).value || '');
+    var email = ((document.getElementById('email') || {}).value || '').trim();
 
-      if (!name && !badge && !email) {
-        alert('Enter full name, badge ID, or email to register.');
-        return;
-      }
+    if (!name && !badge && !email) {
+      alert('Enter full name, badge ID, or email.');
+      return false;
+    }
 
-      try {
-        if (window.SmartRouteAuth) {
-          SmartRouteAuth.registerUser({
-            username: name || badge || email,
-            officerId: badge,
-            email: email,
-            password: pass,
-            role: role,
-            department: dept,
-            region: region
-          });
-        } else {
-          // fallback single-user
-          localStorage.setItem('sr_username', name || badge);
-          localStorage.setItem('sr_officer_id', badge);
-          localStorage.setItem('sr_email', email);
-          localStorage.setItem('sr_user_role', role);
-          localStorage.setItem('sr_logged_in', '1');
-          var users = [];
-          try { users = JSON.parse(localStorage.getItem('sr_users') || '[]'); } catch (e) {}
-          users.push({ username: name, officerId: badge, email: email, password: pass, role: role });
-          localStorage.setItem('sr_users', JSON.stringify(users));
-        }
-      } catch (err) {
-        alert(err.message || 'Registration failed');
-        return;
-      }
+    if (!window.SmartRouteAuth) {
+      alert('Auth system not loaded. Refresh and try again.');
+      return false;
+    }
 
-      var loading = document.getElementById('loading');
-      if (loading) loading.style.display = 'flex';
+    try {
+      SmartRouteAuth.registerUser({
+        username: name || badge || email,
+        officerId: badge,
+        email: email,
+        password: pass,
+        role: role,
+        department: dept,
+        region: region
+      });
+    } catch (err) {
+      alert(err.message || 'Registration failed');
+      return false;
+    }
 
-      setTimeout(function () {
-        window.location.href = 'dashboard.html';
-      }, 700);
-    };
-    return true;
+    var loading = document.getElementById('loading');
+    if (loading) loading.style.display = 'flex';
+    setTimeout(function () {
+      window.location.replace('dashboard.html');
+    }, 600);
+    return false;
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
-    // load auth-users if missing
+  function wire() {
+    window.doSignup = registerFromForm;
+    var form = document.getElementById('signup-form');
+    if (form) {
+      form.onsubmit = function (e) {
+        e.preventDefault();
+        registerFromForm();
+        return false;
+      };
+    }
+    var btn = document.querySelector('.btn-signup');
+    if (btn) {
+      btn.onclick = function (e) {
+        e.preventDefault();
+        registerFromForm();
+        return false;
+      };
+    }
+  }
+
+  function boot() {
     if (!window.SmartRouteAuth) {
       var s = document.createElement('script');
       s.src = 'js/auth-users.js';
-      s.onload = function () { enhance(); };
+      s.onload = wire;
       document.head.appendChild(s);
+    } else {
+      wire();
     }
-    // retry until doSignup exists (inline script order)
-    var tries = 0;
-    var t = setInterval(function () {
-      tries++;
-      if (enhance() || tries > 40) clearInterval(t);
-    }, 50);
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+  // late bind in case form is painted later
+  setTimeout(wire, 300);
+  setTimeout(wire, 1000);
 })();
