@@ -4,91 +4,57 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartRoute - Login</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/design-system.css">
-    <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/components.css">
     <style>
         * { box-sizing: border-box; }
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            font-family: 'Outfit', sans-serif; background: #030810; color: #fff;
-        }
+        body, html { margin:0; padding:0; min-height:100%; font-family:'Outfit',sans-serif; background:#030810; color:#fff; }
         body {
-            min-height: 100vh;
-            display: flex; align-items: center; justify-content: center;
-            background:
-                radial-gradient(ellipse at 20% 20%, rgba(0,80,120,0.35) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 80%, rgba(0,60,40,0.25) 0%, transparent 50%),
-                #030810;
-            padding: 20px;
+            min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+            background: radial-gradient(ellipse at 20% 20%, rgba(0,80,120,0.35), transparent 50%),
+                        radial-gradient(ellipse at 80% 80%, rgba(0,60,40,0.25), transparent 50%), #030810;
         }
         .login-card {
-            width: 100%; max-width: 420px; padding: 36px 32px; border-radius: 18px;
-            background: rgba(4, 12, 28, 0.92);
-            border: 1px solid rgba(0, 212, 255, 0.25);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 30px rgba(0,212,255,0.08);
+            width:100%; max-width:420px; padding:36px 32px; border-radius:18px;
+            background:rgba(4,12,28,0.94); border:1px solid rgba(0,212,255,0.25);
+            box-shadow:0 20px 50px rgba(0,0,0,0.6);
         }
         h2 {
-            margin: 0; text-align: center; font-size: 1.9rem; font-weight: 800; letter-spacing: 2px;
-            background: linear-gradient(90deg, #00d4ff, #00ff88);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin:0; text-align:center; font-size:1.9rem; font-weight:800; letter-spacing:2px;
+            background:linear-gradient(90deg,#00d4ff,#00ff88);
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent;
         }
-        .subtitle {
-            text-align: center; color: #8fa3b0; font-size: 0.8rem; margin: 8px 0 22px;
-            letter-spacing: 1px; text-transform: uppercase;
-        }
-        .role-selector { display: flex; gap: 8px; margin-bottom: 20px; }
-        .role-card {
-            flex: 1; background: rgba(255,255,255,0.03); border: 1px solid rgba(100,200,255,0.12);
-            border-radius: 10px; padding: 12px 6px; text-align: center; cursor: pointer;
-            transition: 0.2s;
-        }
-        .role-card.active, .role-card:hover {
-            border-color: #00d4ff; background: rgba(0,212,255,0.12);
-        }
-        .role-icon { font-size: 1.2rem; }
-        .role-title { font-size: 0.7rem; font-weight: 700; color: #fff; margin-top: 4px; }
-        .form-group { margin-bottom: 14px; }
-        .form-label {
-            display: block; font-size: 0.72rem; font-weight: 700; color: #8fa3b8;
-            letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px;
-        }
+        .subtitle { text-align:center; color:#8fa3b0; font-size:0.8rem; margin:8px 0 22px; letter-spacing:1px; text-transform:uppercase; }
+        .form-group { margin-bottom:14px; }
+        .form-label { display:block; font-size:0.72rem; font-weight:700; color:#8fa3b8; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:6px; }
         .form-control {
-            width: 100%; background: rgba(3,10,22,0.9); border: 1px solid rgba(100,200,255,0.25);
-            padding: 12px 14px; border-radius: 8px; color: #fff; font-family: Outfit, sans-serif;
-            font-size: 0.95rem; outline: none;
+            width:100%; background:rgba(3,10,22,0.9); border:1px solid rgba(100,200,255,0.25);
+            padding:12px 14px; border-radius:8px; color:#fff; font-family:Outfit,sans-serif; font-size:0.95rem; outline:none;
         }
-        .form-control:focus {
-            border-color: #00d4ff; box-shadow: 0 0 10px rgba(0,212,255,0.25);
-        }
+        .form-control:focus { border-color:#00d4ff; box-shadow:0 0 10px rgba(0,212,255,0.25); }
         .btn-login {
-            width: 100%; margin-top: 8px; padding: 14px; border: none; border-radius: 8px;
-            cursor: pointer; font-weight: 800; font-size: 0.95rem; letter-spacing: 1px;
-            text-transform: uppercase; font-family: Outfit, sans-serif;
-            background: linear-gradient(90deg, #00d4ff, #00ff88); color: #030810;
+            width:100%; margin-top:8px; padding:14px; border:none; border-radius:8px; cursor:pointer;
+            font-weight:800; font-size:0.95rem; letter-spacing:1px; text-transform:uppercase;
+            background:linear-gradient(90deg,#00d4ff,#00ff88); color:#030810; font-family:Outfit,sans-serif;
         }
-        .btn-login:hover { filter: brightness(1.08); }
-        .btn-login:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-login:disabled { opacity:0.5; cursor:not-allowed; }
         .error-msg {
-            display: none; margin-top: 12px; padding: 10px 12px; border-radius: 8px;
-            background: rgba(255,59,59,0.12); border: 1px solid rgba(255,59,59,0.45);
-            color: #ff8a8a; font-size: 0.85rem;
+            display:none; margin-top:12px; padding:12px; border-radius:8px;
+            background:rgba(255,59,59,0.12); border:1px solid rgba(255,59,59,0.45);
+            color:#ff8a8a; font-size:0.85rem; line-height:1.45;
         }
-        .links { margin-top: 18px; text-align: center; font-size: 0.85rem; color: #8fa3b0; }
-        .links a { color: #00d4ff; text-decoration: none; font-weight: 700; }
+        .error-msg a { color:#00d4ff; font-weight:700; }
+        .links { margin-top:18px; text-align:center; font-size:0.85rem; color:#8fa3b0; }
+        .links a { color:#00d4ff; text-decoration:none; font-weight:700; }
         .loading-overlay {
-            position: fixed; inset: 0; background: rgba(3,8,16,0.92); z-index: 100;
-            display: none; align-items: center; justify-content: center; flex-direction: column;
+            position:fixed; inset:0; background:rgba(3,8,16,0.92); z-index:100;
+            display:none; align-items:center; justify-content:center; flex-direction:column;
         }
-        .spinner {
-            width: 48px; height: 48px; border: 3px solid rgba(0,212,255,0.15);
-            border-left-color: #00d4ff; border-radius: 50%;
-            animation: spin 0.85s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .loading-text { margin-top: 14px; color: #00d4ff; font-weight: 700; letter-spacing: 1px; }
-        .hint { margin-top: 12px; font-size: 0.75rem; color: #6a8ea8; text-align: center; }
+        .spinner { width:48px; height:48px; border:3px solid rgba(0,212,255,0.15); border-left-color:#00d4ff; border-radius:50%; animation:spin .85s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .loading-text { margin-top:14px; color:#00d4ff; font-weight:700; }
+        .hint { margin-top:12px; font-size:0.75rem; color:#6a8ea8; text-align:center; }
     </style>
 </head>
 <body>
@@ -96,38 +62,23 @@
         <h2>SMARTROUTE</h2>
         <div class="subtitle">Command Access · North-Eastern Region</div>
 
-        <div class="role-selector">
-            <div class="role-card active" data-role="ADMINISTRATOR" onclick="selectRole(this)">
-                <div class="role-icon">🔧</div>
-                <div class="role-title">ADMINISTRATOR</div>
-            </div>
-            <div class="role-card" data-role="FIELD OFFICER" onclick="selectRole(this)">
-                <div class="role-icon">📍</div>
-                <div class="role-title">FIELD OFFICER</div>
-            </div>
-            <div class="role-card" data-role="LOCAL AUTHORITY" onclick="selectRole(this)">
-                <div class="role-icon">🏛</div>
-                <div class="role-title">LOCAL AUTHORITY</div>
-            </div>
-        </div>
-
         <form id="login-form" autocomplete="off">
             <div class="form-group">
-                <label class="form-label" for="login-user">Officer / Command ID</label>
-                <input type="text" id="login-user" class="form-control" placeholder="e.g. NE-CMD-001" autocomplete="username">
+                <label class="form-label" for="login-user">Officer ID / Name / Email</label>
+                <input type="text" id="login-user" class="form-control" placeholder="As registered at Sign Up" autocomplete="username">
             </div>
             <div class="form-group">
                 <label class="form-label" for="login-pass">Security Passcode</label>
-                <input type="password" id="login-pass" class="form-control" placeholder="Enter passcode" autocomplete="current-password">
+                <input type="password" id="login-pass" class="form-control" placeholder="Your signup passcode" autocomplete="current-password">
             </div>
             <div class="error-msg" id="login-error"></div>
             <button type="submit" class="btn-login" id="btn-login">Access Command Center</button>
         </form>
 
-        <p class="hint">Enter any ID (2+ chars) and passcode (3+ chars) to continue.</p>
+        <p class="hint">Login works only with an account created on Sign Up.</p>
 
         <div class="links">
-            New officer? <a href="signup.html">Sign Up</a><br><br>
+            No account? <a href="signup.html">Sign Up first →</a><br><br>
             <a href="index.html" style="color:#6a8ea8;font-weight:500">← Back to Gateway</a>
         </div>
     </div>
@@ -137,68 +88,56 @@
         <div class="loading-text">AUTHENTICATING...</div>
     </div>
 
+    <script src="js/auth-users.js"></script>
     <script>
     (function () {
-        // Do NOT clear session until successful login attempt with empty fields
-        // Only clear logged_in flag so protected pages still require this login
-
-        function selectRole(el) {
-            document.querySelectorAll('.role-card').forEach(function (c) { c.classList.remove('active'); });
-            el.classList.add('active');
-        }
-        window.selectRole = selectRole;
-
-        function showError(msg) {
+        function showError(html) {
             var box = document.getElementById('login-error');
-            box.textContent = msg;
+            box.innerHTML = html;
             box.style.display = 'block';
         }
-
         function hideError() {
             var box = document.getElementById('login-error');
             box.style.display = 'none';
-            box.textContent = '';
+            box.innerHTML = '';
         }
 
         function doLogin(e) {
             if (e) e.preventDefault();
             hideError();
 
-            var userEl = document.getElementById('login-user');
-            var passEl = document.getElementById('login-pass');
-            var user = (userEl.value || '').trim();
-            var pass = (passEl.value || '').trim();
+            var user = (document.getElementById('login-user').value || '').trim();
+            var pass = (document.getElementById('login-pass').value || '').trim();
 
             if (!user || !pass) {
-                showError('Please enter both Officer / Command ID and Security Passcode.');
-                return false;
-            }
-            if (user.length < 2) {
-                showError('Officer ID must be at least 2 characters.');
-                return false;
-            }
-            if (pass.length < 3) {
-                showError('Passcode must be at least 3 characters.');
+                showError('Please enter both Officer ID / Name / Email and Security Passcode.');
                 return false;
             }
 
-            var active = document.querySelector('.role-card.active');
-            var role = active ? (active.getAttribute('data-role') || 'ADMINISTRATOR') : 'ADMINISTRATOR';
+            if (!window.SmartRouteAuth) {
+                showError('Auth system failed to load. Refresh the page.');
+                return false;
+            }
 
-            var btn = document.getElementById('btn-login');
-            btn.disabled = true;
+            var result = SmartRouteAuth.validateLogin(user, pass);
+
+            if (!result.ok) {
+                if (result.reason === 'no_users') {
+                    showError('No registered officers found. Please <a href="signup.html">Sign Up first</a> to create your account.');
+                } else if (result.reason === 'not_found') {
+                    showError('Invalid details — this officer is not registered. Please <a href="signup.html">Sign Up first</a> or check your ID / email.');
+                } else if (result.reason === 'bad_password') {
+                    showError('Invalid details — passcode does not match the signup record. Try again or <a href="signup.html">Sign Up</a> with a new account.');
+                } else {
+                    showError('Invalid details. Please <a href="signup.html">Sign Up first</a>.');
+                }
+                try { localStorage.removeItem('sr_logged_in'); } catch (err) {}
+                return false;
+            }
+
+            document.getElementById('btn-login').disabled = true;
             document.getElementById('loading').style.display = 'flex';
-
-            try {
-                localStorage.setItem('sr_username', user);
-                localStorage.setItem('sr_user_role', role);
-                localStorage.setItem('sr_logged_in', '1');
-            } catch (err) {
-                showError('Browser storage blocked. Allow localStorage and try again.');
-                btn.disabled = false;
-                document.getElementById('loading').style.display = 'none';
-                return false;
-            }
+            SmartRouteAuth.startSession(result.user);
 
             var ret = 'dashboard.html';
             try {
@@ -206,9 +145,7 @@
                 localStorage.removeItem('sr_return_to');
             } catch (err2) {}
 
-            setTimeout(function () {
-                window.location.href = ret;
-            }, 500);
+            setTimeout(function () { window.location.href = ret; }, 500);
             return false;
         }
 
@@ -216,16 +153,6 @@
         document.getElementById('btn-login').addEventListener('click', function (e) {
             e.preventDefault();
             doLogin(e);
-        });
-
-        // Enter key support
-        ['login-user', 'login-pass'].forEach(function (id) {
-            document.getElementById(id).addEventListener('keydown', function (e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    doLogin(e);
-                }
-            });
         });
     })();
     </script>
