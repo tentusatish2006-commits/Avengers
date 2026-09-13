@@ -24,6 +24,8 @@
         .phase-card.success { border-color: #00ff88; }
         .log { font-size: 0.8rem; color: #8fa3b8; max-height: 160px; overflow: auto; font-family: JetBrains Mono, monospace; }
         .gemini-box { padding: 10px; border-radius: 10px; background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.3); font-size: 0.85rem; white-space: pre-wrap; }
+        .photo-preview-panel { padding: 10px; border-radius: 10px; background: rgba(8,18,38,0.95); border: 1px solid rgba(255,149,0,0.35); display: none; }
+        .photo-preview-panel img { width: 100%; max-height: 160px; object-fit: cover; border-radius: 8px; margin-top: 8px; }
         .legend span { margin-right: 10px; font-size: 0.75rem; color: #8fa3b8; }
         .sw { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 4px; }
         @media (max-width: 900px) { .sim-stage { grid-template-columns: 1fr; } }
@@ -35,7 +37,7 @@
     <main class="page-body" style="padding:12px;">
       <div class="page-header">
         <h1 class="page-title">Live Simulation</h1>
-        <p class="page-subtitle">Matching photo for each problem: landslide → landslide image, road damage → potholes, flood → flood</p>
+        <p class="page-subtitle">NER drill · road routes · problem-matched field photos</p>
       </div>
       <div class="sim-layout">
         <div class="glass-card sim-controls">
@@ -53,7 +55,7 @@
             <span><i class="sw" style="background:#00ff88"></i>Safe</span>
             <span><i class="sw" style="background:#ff9500"></i>Alternate</span>
             <span><i class="sw" style="background:#ff3b3b"></i>Critical</span>
-            <span>📷 Problem-matched photos</span>
+            <span>📷 Matched photos</span>
           </div>
         </div>
         <div class="sim-stage">
@@ -61,7 +63,13 @@
           <div class="sim-side">
             <div class="phase-card" id="phase-card">
               <div id="phase-title" style="font-weight:800;color:#00d4ff;">Ready</div>
-              <div id="phase-desc" style="margin-top:6px;color:#c8d8e8;font-size:0.9rem;">Play — each hazard shows its own field photo.</div>
+              <div id="phase-desc" style="margin-top:6px;color:#c8d8e8;font-size:0.9rem;">Play — flood / landslide / road-damage each show their photo.</div>
+            </div>
+            <div class="photo-preview-panel" id="photo-panel">
+              <div style="font-size:10px;color:#ff9500;font-weight:800;" id="photo-kind">FIELD PHOTO</div>
+              <div style="font-weight:700;color:#00d4ff;margin-top:4px;" id="photo-title"></div>
+              <img id="photo-img" alt="Field evidence" />
+              <div style="font-size:11px;color:#8fa3b8;margin-top:6px;" id="photo-meta"></div>
             </div>
             <div class="glass-card" style="padding:10px;">
               <div style="font-weight:700;color:#00d4ff;margin-bottom:6px;">Gemini</div>
@@ -79,7 +87,9 @@
 </div>
 
 <script src="js/components.js"></script>
-<script src="js/sim-problem-photos.js"></script>
+<script src="js/sim-photo-landslide.js"></script>
+<script src="js/sim-photo-road.js"></script>
+<script src="js/sim-photo-flood.js"></script>
 <script src="js/map-engine.js"></script>
 <script src="js/gemini-api.js"></script>
 <script>
@@ -87,12 +97,18 @@
   var layers = { safe: null, alt: null, critical: null, flood: null };
   var vehicleMarker = null, incidentMarker = null, photoMarkers = [], vehiclePath = [], vehicleIdx = 0, moveTimer = null;
 
+  // Built-in fallbacks if photo packs fail to load (still problem-matched)
+  var FALLBACK_PHOTOS = {
+    landslide: 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?auto=format&fit=crop&w=800&q=80',
+    road_damage: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=800&q=80',
+    flood: 'https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=800&q=80'
+  };
+
   function photoUrl(kind) {
-    if (window.SIM_PROBLEM_PHOTOS && SIM_PROBLEM_PHOTOS[kind]) return SIM_PROBLEM_PHOTOS[kind];
-    // fallback paths if photo pack not loaded
-    if (kind === 'landslide') return 'assets/sim/landslide.jpg';
-    if (kind === 'road_damage') return 'assets/sim/road-damage.jpg';
-    return 'assets/sim/flood.jpg';
+    var p = window.SIM_PROBLEM_PHOTOS && SIM_PROBLEM_PHOTOS[kind];
+    if (p && typeof p === 'string' && (p.indexOf('data:') === 0 || p.indexOf('http') === 0 || p.indexOf('assets/') === 0))
+      return p;
+    return FALLBACK_PHOTOS[kind] || FALLBACK_PHOTOS.flood;
   }
 
   var PROBLEM_PHOTOS = {
@@ -100,7 +116,7 @@
       id: 'P-GHY-FLOOD', lat: 26.18, lng: 91.75,
       title: 'Flooded approach road — Guwahati', problem: 'Flood',
       officer: 'FO-018 Ananya Das', time: '2026-09-13 07:05 IST',
-      note: 'Flood water on approach road · 26.1800°N 91.7500°E'
+      note: 'Flood water on approach · 26.1800°N 91.7500°E'
     },
     landslide: {
       id: 'P-TAW-SLIDE', lat: 27.58, lng: 91.86,
@@ -110,7 +126,7 @@
     },
     road_damage: {
       id: 'P-SHL-DMG', lat: 25.62, lng: 91.92,
-      title: 'Potholes / road surface damage — Shillong sector', problem: 'Road damage',
+      title: 'Potholes / road surface damage — Shillong', problem: 'Road damage',
       officer: 'FO-031 B. Lyngdoh', time: '2026-09-13 07:20 IST',
       note: 'Multiple potholes after rain · 25.6200°N 91.9200°E'
     }
@@ -120,8 +136,8 @@
     { t: '🌧 HEAVY RAINFALL DETECTED', c: 'warning', d: 'Extreme precipitation — Guwahati sector.', fly: [26.15, 91.75], z: 8 },
     { t: '🛣 LOAD NER ROAD NETWORK', c: '', d: 'Safe / alternate / critical routes on real roads.', action: 'load_routes' },
     { t: '🌊 FLOOD + FLOOD PHOTO', c: 'warning', d: 'Flood zone + matching flood field photo.', action: 'show_flood', fly: [26.18, 91.75], z: 11 },
-    { t: '⚠ LANDSLIDE + LANDSLIDE PHOTO', c: 'critical', d: 'Tawang landslide + matching landslide photo (debris on road).', action: 'show_incident', fly: [27.58, 91.86], z: 11 },
-    { t: '📷 ROAD DAMAGE + POTHOLE PHOTO', c: 'warning', d: 'Shillong sector surface damage + matching pothole photo.', action: 'photo_road', fly: [25.62, 91.92], z: 11 },
+    { t: '⚠ LANDSLIDE + LANDSLIDE PHOTO', c: 'critical', d: 'Tawang landslide + matching landslide photo.', action: 'show_incident', fly: [27.58, 91.86], z: 11 },
+    { t: '📷 ROAD DAMAGE + POTHOLE PHOTO', c: 'warning', d: 'Shillong surface damage + matching pothole photo.', action: 'photo_road', fly: [25.62, 91.92], z: 11 },
     { t: '🚛 CONVOY ON SAFE ROAD', c: 'warning', d: 'Vehicle follows OSRM road path.', action: 'show_vehicle' },
     { t: '🤖 GEMINI ANALYSIS', c: '', d: 'Gemini NER routing advice.', action: 'gemini' },
     { t: '🟢 EMPHASIZE ROUTES', c: 'success', d: 'Highlight safe & alternate roads.', action: 'emphasize_routes' },
@@ -146,6 +162,15 @@
     var p = PROBLEM_PHOTOS[kind];
     if (!p || !map) return;
     var url = photoUrl(kind);
+
+    // Side panel photo (always visible during that problem)
+    var panel = document.getElementById('photo-panel');
+    panel.style.display = 'block';
+    document.getElementById('photo-kind').textContent = 'FIELD PHOTO · ' + p.problem.toUpperCase();
+    document.getElementById('photo-title').textContent = p.title;
+    document.getElementById('photo-img').src = url;
+    document.getElementById('photo-meta').textContent = p.officer + ' · ' + p.time + ' · ' + p.note;
+
     var html =
       '<div style="min-width:230px;max-width:280px">' +
       '<div style="font-size:10px;color:#ff9500;font-weight:800">FIELD PHOTO · ' + p.problem.toUpperCase() + '</div>' +
@@ -158,7 +183,7 @@
     photoMarkers.push(m);
     m.openPopup();
     map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 11), { duration: 0.9 / speed });
-    log('Photo for problem: ' + p.problem);
+    log('Photo shown for: ' + p.problem);
   }
 
   async function osrmLine(waypoints) {
@@ -286,6 +311,7 @@
     if (incidentMarker) map.removeLayer(incidentMarker);
     photoMarkers.forEach(function (m) { try { map.removeLayer(m); } catch (e) {} });
     photoMarkers = []; vehicleMarker = incidentMarker = null;
+    document.getElementById('photo-panel').style.display = 'none';
     document.getElementById('phase-title').textContent = 'Ready';
     document.getElementById('sim-log').innerHTML = '';
     map.setView([26.2, 92.0], 7);
