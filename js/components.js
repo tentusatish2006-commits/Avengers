@@ -108,7 +108,6 @@ function buildSidebar() {
     const label = document.createElement('div');
     label.className = 'sidebar-section-label';
     label.setAttribute('data-i18n', section.secKey);
-    // CRITICAL: translate at build time (not only English)
     label.textContent = tr(section.secKey, section.section);
     nav.appendChild(label);
 
@@ -141,6 +140,31 @@ function buildSidebar() {
   return sidebar;
 }
 
+function rebuildSidebar() {
+  var old = document.getElementById('sidebar');
+  var appShell = document.querySelector('.app-shell');
+  if (!appShell) return;
+  var next = buildSidebar();
+  if (old) {
+    old.replaceWith(next);
+  } else {
+    appShell.insertBefore(next, appShell.firstChild);
+  }
+  initSidebarToggle();
+  var so = document.getElementById('sr-sign-out');
+  if (so) {
+    so.addEventListener('click', function (e) {
+      e.preventDefault();
+      try {
+        localStorage.removeItem('sr_logged_in');
+        localStorage.removeItem('sr_username');
+        localStorage.removeItem('sr_user_role');
+      } catch (err) {}
+      window.location.href = 'login.html';
+    });
+  }
+}
+
 function buildNavbar(title, subtitle) {
   const nav = document.createElement('header');
   nav.className = 'navbar';
@@ -150,7 +174,7 @@ function buildNavbar(title, subtitle) {
       '<div><div class="navbar-title">' + (title || 'SmartRoute') + '</div>' +
       '<div class="page-subtitle" style="margin:0;font-size:12px;color:var(--text-muted)">' + (subtitle || '') + '</div></div></div>' +
     '<div class="navbar-right">' +
-      '<span class="status-indicator"><span class="status-dot"></span> LIVE</span>' +
+      '<span class="status-indicator"><span class="status-dot"></span> ' + tr('live', 'LIVE') + '</span>' +
       '<span class="navbar-clock" id="navbar-clock">--:--:--</span>' +
       '<a href="alerts.html" class="navbar-alert-btn">🔔</a>' +
       '<a href="settings.html" class="navbar-alert-btn">⚙</a></div>';
@@ -172,15 +196,19 @@ function initSidebarToggle() {
   const sidebar = document.getElementById('sidebar');
   const mainContent = document.getElementById('main-content');
   if (!btn || !sidebar) return;
-  btn.addEventListener('click', function () {
+  btn.onclick = function () {
     const isCollapsed = sidebar.classList.toggle('collapsed');
     if (mainContent) mainContent.classList.toggle('sidebar-collapsed', isCollapsed);
     localStorage.setItem('sr-sidebar-collapsed', isCollapsed ? '1' : '0');
-  });
+  };
 }
 
 function ensureI18nLoaded(cb) {
   function loadScript(src, next) {
+    if (document.querySelector('script[src="' + src + '"]')) {
+      if (next) next();
+      return;
+    }
     var s = document.createElement('script');
     s.src = src;
     s.onload = function () { if (next) next(); };
@@ -203,38 +231,55 @@ function ensureI18nLoaded(cb) {
   loadScript('js/i18n.js', afterI18n);
 }
 
+function applyFullLanguage(code) {
+  code = code || currentLang();
+  try { localStorage.setItem('sr_language', code); } catch (e) {}
+  document.documentElement.lang = code;
+
+  if (window.SmartRouteI18n) {
+    SmartRouteI18n._currentLang = code;
+    try {
+      if (SmartRouteI18n.setLanguage) SmartRouteI18n.setLanguage(code);
+      else if (SmartRouteI18n.applyLanguage) SmartRouteI18n.applyLanguage(code);
+    } catch (e) {}
+  }
+  try {
+    if (window.SmartRouteI18n && SmartRouteI18n.applyDeep) SmartRouteI18n.applyDeep(code);
+  } catch (e) {}
+  try {
+    if (window.SmartRouteI18nRuntime) SmartRouteI18nRuntime.applyAll(code);
+  } catch (e) {}
+  try {
+    if (window.SmartRouteForceI18n) SmartRouteForceI18n.apply(code);
+  } catch (e) {}
+
+  // Rebuild sidebar so labels are from dictionary for this language
+  try { rebuildSidebar(); } catch (e) {}
+
+  document.querySelectorAll('[data-i18n]').forEach(function (el) {
+    var key = el.getAttribute('data-i18n');
+    if (!key || !window.SmartRouteI18n) return;
+    var v = SmartRouteI18n.t(key, code);
+    if (v && v !== key) el.textContent = v;
+  });
+}
+
 function loadAndApplyI18n() {
   ensureI18nLoaded(function () {
-    var code = currentLang();
-    if (window.SmartRouteI18n) {
-      SmartRouteI18n._currentLang = code;
-      try {
-        if (SmartRouteI18n.applyLanguage) SmartRouteI18n.applyLanguage(code);
-      } catch (e) {}
-    }
-    if (window.SmartRouteI18nRuntime) SmartRouteI18nRuntime.applyAll(code);
-    if (window.SmartRouteForceI18n) SmartRouteForceI18n.apply(code);
-    document.documentElement.lang = code;
+    applyFullLanguage(currentLang());
   });
 }
 
 function refreshLanguage(code) {
   code = code || currentLang();
   try { localStorage.setItem('sr_language', code); } catch (e) {}
-  if (window.SmartRouteI18nRuntime) {
-    SmartRouteI18nRuntime.setLang(code);
-  } else {
-    loadAndApplyI18n();
-  }
-  // Rebuild sidebar text without full page reload
-  var nav = document.getElementById('sidebar-nav');
-  if (nav && window.SmartRouteI18n) {
-    document.querySelectorAll('[data-i18n]').forEach(function (el) {
-      var key = el.getAttribute('data-i18n');
-      var v = SmartRouteI18n.t(key, code);
-      if (v && v !== key) el.textContent = v;
+  ensureI18nLoaded(function () {
+    applyFullLanguage(code);
+    // Extra passes after late DOM mounts
+    [150, 400, 900].forEach(function (ms) {
+      setTimeout(function () { applyFullLanguage(code); }, ms);
     });
-  }
+  });
 }
 
 function initSharedComponents(config) {
@@ -255,7 +300,6 @@ function initSharedComponents(config) {
   var appShell = document.querySelector('.app-shell');
   if (!appShell) return;
 
-  // Ensure i18n available before building sidebar so labels are translated
   ensureI18nLoaded(function () {
     if (!document.getElementById('sidebar')) {
       appShell.insertBefore(buildSidebar(), appShell.firstChild);
@@ -295,8 +339,9 @@ function initSharedComponents(config) {
       });
     }
 
-    loadAndApplyI18n();
-    setTimeout(loadAndApplyI18n, 400);
+    applyFullLanguage(currentLang());
+    setTimeout(function () { applyFullLanguage(currentLang()); }, 300);
+    setTimeout(function () { applyFullLanguage(currentLang()); }, 800);
   });
 }
 
@@ -340,7 +385,9 @@ window.SmartRoute = {
   enforceAuthIfNeeded: enforceAuthIfNeeded,
   isLoggedIn: isLoggedIn,
   loadAndApplyI18n: loadAndApplyI18n,
-  refreshLanguage: refreshLanguage
+  refreshLanguage: refreshLanguage,
+  applyFullLanguage: applyFullLanguage,
+  rebuildSidebar: rebuildSidebar
 };
 
 (function () {
@@ -358,5 +405,5 @@ window.SmartRoute = {
 })();
 
 ensureI18nLoaded(function () {
-  loadAndApplyI18n();
+  applyFullLanguage(currentLang());
 });
