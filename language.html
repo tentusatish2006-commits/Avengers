@@ -1,1 +1,420 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language & Region - SmartRoute</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+Telugu:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/components.css">
+    <style>
+        .lang-page { max-width: 900px; margin: 0 auto; padding: 8px 4px 40px; font-family: 'Outfit', 'Noto Sans Telugu', sans-serif; }
+        .lang-card {
+            background: rgba(8,18,38,0.9);
+            border: 1px solid rgba(0,212,255,0.25);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+        .lang-card h2 { margin: 0 0 6px; color: #00d4ff; font-size: 1.25rem; }
+        .lang-card p { margin: 0 0 16px; color: #8fa3b8; font-size: 0.9rem; }
+        .active-bar {
+            display: flex; align-items: center; gap: 14px;
+            padding: 14px 16px; border-radius: 12px;
+            background: rgba(0,212,255,0.1);
+            border: 1px solid rgba(0,212,255,0.35);
+            margin-bottom: 18px;
+            transition: border-color 0.25s, background 0.25s;
+        }
+        .active-bar.flash {
+            border-color: #00ff88;
+            background: rgba(0,255,136,0.12);
+        }
+        .active-bar .flag { font-size: 2rem; }
+        .active-bar .meta { flex: 1; }
+        .active-bar .name { font-weight: 700; color: #fff; font-size: 1.05rem; }
+        .active-bar .sub { color: #8fa3b8; font-size: 0.85rem; margin-top: 2px; }
+        .active-bar .badge {
+            background: rgba(0,255,136,0.15); color: #00ff88;
+            border: 1px solid rgba(0,255,136,0.4);
+            padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
+        }
+        .active-bar .badge.pending {
+            background: rgba(255,149,0,0.15); color: #ff9500;
+            border-color: rgba(255,149,0,0.4);
+        }
+        label.field { display: block; font-size: 0.75rem; font-weight: 700; color: #8fa3b8;
+            text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+        select#lang-select {
+            width: 100%; max-width: 420px; padding: 12px 14px; border-radius: 10px;
+            background: #061018; border: 1px solid rgba(0,212,255,0.3); color: #fff;
+            font-size: 1rem; font-family: inherit; outline: none;
+        }
+        .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+        .btn-apply {
+            padding: 12px 22px; border: none; border-radius: 10px; cursor: pointer;
+            font-weight: 800; font-size: 0.95rem; font-family: inherit;
+            background: linear-gradient(135deg, #00d4ff, #0099cc); color: #031018;
+        }
+        .btn-apply:disabled { opacity: 0.6; cursor: wait; }
+        .btn-reset {
+            padding: 12px 18px; border-radius: 10px; cursor: pointer; font-weight: 700;
+            font-family: inherit; background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.15); color: #c8d8e8;
+        }
+        .lang-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 10px; margin-top: 16px;
+        }
+        .lang-chip {
+            padding: 12px; border-radius: 10px; cursor: pointer; text-align: center;
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+        }
+        .lang-chip.selected, .lang-chip:hover {
+            border-color: #00d4ff; background: rgba(0,212,255,0.12);
+        }
+        .lang-chip .f { font-size: 1.5rem; }
+        .lang-chip .n { font-weight: 700; color: #fff; margin-top: 4px; font-size: 0.9rem; }
+        .lang-chip .nat { color: #00d4ff; font-size: 0.85rem; }
+        .hint { margin-top: 14px; color: #6a8ea8; font-size: 0.8rem; line-height: 1.45; }
+        .preview {
+            margin-top: 16px; padding: 14px; border-radius: 10px;
+            background: rgba(0,0,0,0.25); border: 1px dashed rgba(0,212,255,0.25);
+            color: #e8f4ff; font-size: 1.05rem; line-height: 1.6;
+        }
+        .preview strong { color: #00d4ff; }
+        .status-line {
+            margin-top: 12px;
+            font-size: 0.9rem;
+            color: #00ff88;
+            min-height: 1.2em;
+            font-weight: 600;
+        }
+        .status-line.err { color: #ff6b6b; }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <div class="main-content" id="main-content">
+            <main class="page-body lang-page">
+                <div class="page-header" style="margin-bottom:16px;">
+                    <h1 class="page-title" data-i18n="nav_language">Language & Region</h1>
+                    <p class="page-subtitle">Select a language, then click APPLY LANGUAGE</p>
+                </div>
+
+                <div class="lang-card">
+                    <h2>Interface Language</h2>
+                    <p>Choose a language below, then press <strong>APPLY LANGUAGE</strong> to activate it across the whole site (all pages).</p>
+
+                    <div class="active-bar" id="active-bar">
+                        <div class="flag" id="active-flag">🇬🇧</div>
+                        <div class="meta">
+                            <div class="name" id="active-name">English (English)</div>
+                            <div class="sub" id="active-sub">Global • Currently active</div>
+                        </div>
+                        <div class="badge" id="active-badge">ACTIVE</div>
+                    </div>
+
+                    <label class="field" for="lang-select">Interface Language</label>
+                    <select id="lang-select">
+                        <option value="en">🇬🇧 English</option>
+                        <option value="hi">🇮🇳 Hindi — हिन्दी</option>
+                        <option value="as">🇮🇳 Assamese — অসমীয়া</option>
+                        <option value="bn">🇮🇳 Bengali — বাংলা</option>
+                        <option value="te">🇮🇳 Telugu — తెలుగు</option>
+                        <option value="ta">🇮🇳 Tamil — தமிழ்</option>
+                        <option value="mr">🇮🇳 Marathi — मराठी</option>
+                        <option value="gu">🇮🇳 Gujarati — ગુજરાતી</option>
+                        <option value="kn">🇮🇳 Kannada — ಕನ್ನಡ</option>
+                        <option value="ml">🇮🇳 Malayalam — മലയാളം</option>
+                        <option value="pa">🇮🇳 Punjabi — ਪੰਜਾਬੀ</option>
+                        <option value="or">🇮🇳 Odia — ଓଡ଼ିଆ</option>
+                        <option value="ne">🇳🇵 Nepali — नेपाली</option>
+                        <option value="es">🇪🇸 Spanish — Español</option>
+                        <option value="fr">🇫🇷 French — Français</option>
+                    </select>
+
+                    <div class="actions">
+                        <button type="button" class="btn-apply" id="btn-apply">✓ APPLY LANGUAGE</button>
+                        <button type="button" class="btn-reset" id="btn-reset">Reset to English</button>
+                    </div>
+
+                    <div class="status-line" id="status-line"></div>
+
+                    <div class="hint">After Apply, the page reloads and every screen (menu + page text) uses the new language.</div>
+
+                    <div class="preview">
+                        <strong>Preview:</strong> <span id="preview-text">Dashboard · Live Map · Incidents · Alerts</span>
+                    </div>
+                </div>
+
+                <div class="lang-card">
+                    <h2>Quick select</h2>
+                    <div class="lang-grid" id="lang-grid"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/i18n.js"></script>
+    <script src="js/i18n-enhance.js"></script>
+    <script src="js/force-i18n.js"></script>
+    <script src="js/i18n-runtime.js"></script>
+    <script src="js/components.js"></script>
+    <script>
+    (function () {
+        var LANGS = [
+            { code: 'en', name: 'English', native: 'English', flag: '🇬🇧', region: 'Global' },
+            { code: 'hi', name: 'Hindi', native: 'हिन्दी', flag: '🇮🇳', region: 'National' },
+            { code: 'as', name: 'Assamese', native: 'অসমীয়া', flag: '🇮🇳', region: 'North-East' },
+            { code: 'bn', name: 'Bengali', native: 'বাংলা', flag: '🇮🇳', region: 'North-East' },
+            { code: 'te', name: 'Telugu', native: 'తెలుగు', flag: '🇮🇳', region: 'Andhra / Telangana' },
+            { code: 'ta', name: 'Tamil', native: 'தமிழ்', flag: '🇮🇳', region: 'Tamil Nadu' },
+            { code: 'mr', name: 'Marathi', native: 'मराठी', flag: '🇮🇳', region: 'Maharashtra' },
+            { code: 'gu', name: 'Gujarati', native: 'ગુજરાતી', flag: '🇮🇳', region: 'Gujarat' },
+            { code: 'kn', name: 'Kannada', native: 'ಕನ್ನಡ', flag: '🇮🇳', region: 'Karnataka' },
+            { code: 'ml', name: 'Malayalam', native: 'മലയാളം', flag: '🇮🇳', region: 'Kerala' },
+            { code: 'pa', name: 'Punjabi', native: 'ਪੰਜਾਬੀ', flag: '🇮🇳', region: 'Punjab' },
+            { code: 'or', name: 'Odia', native: 'ଓଡ଼ିଆ', flag: '🇮🇳', region: 'Odisha' },
+            { code: 'ne', name: 'Nepali', native: 'नेपाली', flag: '🇳🇵', region: 'Sikkim / North-East' },
+            { code: 'es', name: 'Spanish', native: 'Español', flag: '🇪🇸', region: 'International' },
+            { code: 'fr', name: 'French', native: 'Français', flag: '🇫🇷', region: 'International' }
+        ];
+
+        var pending = 'en';
+
+        function info(code) {
+            return LANGS.find(function (l) { return l.code === code; }) || LANGS[0];
+        }
+
+        function getSaved() {
+            try {
+                var s = localStorage.getItem('sr_language');
+                return s || 'en';
+            } catch (e) {
+                return 'en';
+            }
+        }
+
+        function setStatus(msg, isErr) {
+            var el = document.getElementById('status-line');
+            if (!el) return;
+            el.textContent = msg || '';
+            el.className = 'status-line' + (isErr ? ' err' : '');
+        }
+
+        function setBar(code, isPending) {
+            var i = info(code);
+            document.getElementById('active-flag').textContent = i.flag;
+            document.getElementById('active-name').textContent = i.name + ' (' + i.native + ')';
+            document.getElementById('active-sub').textContent =
+                i.region + (isPending ? ' • Selected — click APPLY LANGUAGE' : ' • Currently active');
+            var badge = document.getElementById('active-badge');
+            badge.textContent = isPending ? 'PENDING' : 'ACTIVE';
+            badge.className = 'badge' + (isPending ? ' pending' : '');
+
+            var keys = ['nav_dashboard', 'nav_map', 'nav_incidents', 'nav_alerts'];
+            var parts = keys.map(function (k) {
+                if (window.SmartRouteI18n && SmartRouteI18n.t) {
+                    return SmartRouteI18n.t(k, code);
+                }
+                return k;
+            });
+            document.getElementById('preview-text').textContent = parts.join(' · ');
+
+            var sel = document.getElementById('lang-select');
+            if (sel && sel.value !== code) sel.value = code;
+        }
+
+        function paintGrid() {
+            var grid = document.getElementById('lang-grid');
+            grid.innerHTML = '';
+            LANGS.forEach(function (l) {
+                var d = document.createElement('div');
+                d.className = 'lang-chip' + (l.code === pending ? ' selected' : '');
+                d.innerHTML =
+                    '<div class="f">' + l.flag + '</div>' +
+                    '<div class="n">' + l.name + '</div>' +
+                    '<div class="nat">' + l.native + '</div>';
+                d.onclick = function () {
+                    pending = l.code;
+                    document.getElementById('lang-select').value = l.code;
+                    setBar(l.code, l.code !== getSaved());
+                    paintGrid();
+                    setStatus(
+                        l.code === getSaved()
+                            ? l.name + ' is already active.'
+                            : l.name + ' selected — click APPLY LANGUAGE to activate.'
+                    );
+                };
+                grid.appendChild(d);
+            });
+        }
+
+        function rewriteNav(code) {
+            if (!window.SmartRouteI18n) return;
+            document.querySelectorAll('[data-i18n]').forEach(function (el) {
+                var key = el.getAttribute('data-i18n');
+                var tr = SmartRouteI18n.t(key, code);
+                if (tr && tr !== key) el.textContent = tr;
+            });
+            var map = {
+                'dashboard.html': 'nav_dashboard', 'map.html': 'nav_map',
+                'incidents.html': 'nav_incidents', 'alerts.html': 'nav_alerts',
+                'emergency.html': 'nav_emergency', 'route-prediction.html': 'nav_route_prediction',
+                'alternate-routes.html': 'nav_alternate_routes', 'ai-command.html': 'nav_ai_command',
+                'photo-analysis.html': 'nav_photo_analysis', 'weather.html': 'nav_weather',
+                'vehicle-tracking.html': 'nav_vehicle_tracking', 'deliveries.html': 'nav_deliveries',
+                'corridors.html': 'nav_corridors', 'districts.html': 'nav_districts',
+                'infrastructure.html': 'nav_infrastructure', 'officers.html': 'nav_officers',
+                'reports.html': 'nav_reports', 'analytics.html': 'nav_analytics',
+                'simulation.html': 'nav_simulation', 'field-report.html': 'nav_field_report',
+                'officer-dashboard.html': 'nav_officer_dashboard', 'language.html': 'nav_language',
+                'admin.html': 'nav_admin', 'settings.html': 'nav_settings', 'login.html': 'sign_out'
+            };
+            document.querySelectorAll('a.nav-item, .nav-item').forEach(function (a) {
+                var href = (a.getAttribute('href') || '').split('/').pop();
+                var key = map[href];
+                if (!key) return;
+                var lab = a.querySelector('.nav-label');
+                if (!lab) return;
+                var tr = SmartRouteI18n.t(key, code);
+                if (tr && tr !== key) lab.textContent = tr;
+            });
+            document.querySelectorAll('.sidebar-section-label').forEach(function (el) {
+                var key = el.getAttribute('data-i18n');
+                if (!key) return;
+                var tr = SmartRouteI18n.t(key, code);
+                if (tr && tr !== key) el.textContent = tr;
+            });
+        }
+
+        function applyLanguage(code) {
+            code = String(code || 'en').toLowerCase().trim();
+            var i = info(code);
+            pending = code;
+
+            var btn = document.getElementById('btn-apply');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Applying…';
+            }
+
+            try {
+                localStorage.setItem('sr_language', code);
+            } catch (e) {
+                setStatus('Could not save language (storage blocked).', true);
+            }
+            document.documentElement.lang = code;
+
+            setBar(code, false);
+            paintGrid();
+
+            var bar = document.getElementById('active-bar');
+            if (bar) {
+                bar.classList.add('flash');
+                setTimeout(function () { bar.classList.remove('flash'); }, 900);
+            }
+
+            try {
+                if (window.SmartRouteI18n) {
+                    SmartRouteI18n._currentLang = code;
+                    if (typeof SmartRouteI18n.setLanguage === 'function') {
+                        SmartRouteI18n.setLanguage(code);
+                    } else if (typeof SmartRouteI18n.applyLanguage === 'function') {
+                        SmartRouteI18n.applyLanguage(code);
+                    }
+                }
+            } catch (e1) {}
+
+            try {
+                if (window.SmartRouteI18nRuntime && SmartRouteI18nRuntime.setLang) {
+                    SmartRouteI18nRuntime.setLang(code);
+                }
+            } catch (e2) {}
+
+            try {
+                if (window.SmartRouteForceI18n && SmartRouteForceI18n.apply) {
+                    SmartRouteForceI18n.apply(code);
+                }
+            } catch (e3) {}
+
+            try {
+                if (window.SmartRoute && SmartRoute.applyFullLanguage) {
+                    SmartRoute.applyFullLanguage(code);
+                } else if (window.SmartRoute && SmartRoute.refreshLanguage) {
+                    SmartRoute.refreshLanguage(code);
+                }
+            } catch (e4) {}
+
+            try {
+                if (window.SmartRouteI18n && SmartRouteI18n.applyDeep) {
+                    SmartRouteI18n.applyDeep(code);
+                }
+            } catch (e5) {}
+
+            rewriteNav(code);
+
+            try {
+                window.dispatchEvent(new CustomEvent('smartroute:language-changed', {
+                    detail: { language: code, info: i }
+                }));
+            } catch (e6) {}
+
+            setStatus('✓ Language set to ' + i.name + ' (' + i.native + '). Reloading full interface…');
+            if (window.SmartRoute && SmartRoute.showToast) {
+                SmartRoute.showToast('Language: ' + i.name + ' — applying to all pages…', 'success', 2500);
+            }
+
+            setTimeout(function () {
+                window.location.reload();
+            }, 900);
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.SmartRoute) {
+                SmartRoute.initSharedComponents({
+                    title: 'Language & Region',
+                    subtitle: 'Apply language across the platform'
+                });
+            }
+
+            var saved = getSaved();
+            pending = saved;
+            document.getElementById('lang-select').value = saved;
+            setBar(saved, false);
+            paintGrid();
+            setStatus('Current language: ' + info(saved).name);
+
+            setTimeout(function () {
+                try { localStorage.setItem('sr_language', saved); } catch (e) {}
+                if (window.SmartRoute && SmartRoute.applyFullLanguage) SmartRoute.applyFullLanguage(saved);
+                else rewriteNav(saved);
+                setBar(saved, false);
+            }, 400);
+
+            document.getElementById('lang-select').addEventListener('change', function () {
+                pending = this.value;
+                setBar(pending, pending !== getSaved());
+                paintGrid();
+                setStatus(
+                    pending === getSaved()
+                        ? info(pending).name + ' is already active.'
+                        : info(pending).name + ' selected — click APPLY LANGUAGE to activate.'
+                );
+            });
+
+            document.getElementById('btn-apply').addEventListener('click', function () {
+                var code = document.getElementById('lang-select').value || pending || 'en';
+                applyLanguage(code);
+            });
+
+            document.getElementById('btn-reset').addEventListener('click', function () {
+                applyLanguage('en');
+            });
+        });
+    })();
+    </script>
+</body>
+</html>
