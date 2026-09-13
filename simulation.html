@@ -3,435 +3,398 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Simulation - SmartRoute</title>
-    
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <title>Live Simulation - SmartRoute NER</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-
-    <!-- CDNs -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
-
-    <!-- Local Assets -->
     <link rel="stylesheet" href="css/design-system.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/components.css">
-    
     <style>
-        .sim-layout {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            height: calc(100vh - 120px);
+        .sim-layout { display: flex; flex-direction: column; gap: 12px; height: calc(100vh - 100px); }
+        .sim-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px; }
+        .sim-btn {
+            padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(0,212,255,0.35);
+            background: rgba(8,18,38,0.95); color: #e8f4ff; font-weight: 700; cursor: pointer; font-family: Outfit, sans-serif;
         }
-        
-        .sim-controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-        }
-        .controls-left { display: flex; gap: 15px; align-items: center; }
-        .speed-btn {
-            background: transparent; border: 1px solid rgba(255,255,255,0.2);
-            color: #aaa; padding: 5px 10px; border-radius: 4px; cursor: pointer;
-        }
-        .speed-btn.active { background: rgba(0,212,255,0.2); color: #00d4ff; border-color: #00d4ff; }
-
-        .progress-bar-container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: relative;
-            margin: 10px 20px;
-        }
-        .progress-line {
-            position: absolute; top: 50%; left: 0; right: 0;
-            height: 2px; background: rgba(255,255,255,0.1); z-index: 1;
-        }
-        .progress-line-fill {
-            position: absolute; top: 50%; left: 0;
-            height: 2px; background: #00d4ff; z-index: 2;
-            transition: width 0.5s ease;
-            width: 0%;
-        }
-        .phase-dot {
-            width: 14px; height: 14px; border-radius: 50%;
-            background: #222; border: 2px solid rgba(255,255,255,0.3);
-            z-index: 3; position: relative; transition: all 0.5s ease;
-        }
-        .phase-dot.active {
-            background: #00d4ff; border-color: #fff;
-            box-shadow: 0 0 10px #00d4ff; transform: scale(1.3);
-        }
-
-        #map {
-            width: 100%;
-            height: 45vh;
-            border-radius: 12px;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
-        }
-
-        .sim-bottom {
-            display: flex;
-            gap: 15px;
-            flex: 1;
-            min-height: 200px;
-        }
-        .log-panel {
-            width: 40%;
-            overflow-y: auto;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .log-entry {
-            background: rgba(255,255,255,0.05);
-            border-left: 3px solid #00d4ff;
-            padding: 10px 15px;
-            border-radius: 4px;
-            animation: slideIn 0.3s ease forwards;
-            font-size: 0.9rem;
-        }
-        .log-entry.critical { border-left-color: #ff3b3b; background: rgba(255,59,59,0.1); }
-        .log-entry.success { border-left-color: #00ff88; background: rgba(0,255,136,0.1); }
-        .log-entry.warning { border-left-color: #ff9500; background: rgba(255,149,0,0.1); }
-        
-        .status-panel {
-            width: 60%;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
-        #phase-title {
-            font-size: 2rem;
-            text-align: center;
-            background: linear-gradient(90deg, #00d4ff, #b050ff);
-            -webkit-background-clip: text; color: transparent;
-            margin-bottom: 20px;
-            animation: pulse 2s infinite;
-        }
-        
-        .eta-card { display: none; background: rgba(0,212,255,0.1); border: 1px solid #00d4ff; padding: 20px; border-radius: 12px; text-align: center; }
-        
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(-20px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes pulse {
-            0% { opacity: 0.8; transform: scale(0.98); }
-            50% { opacity: 1; transform: scale(1.02); }
-            100% { opacity: 0.8; transform: scale(0.98); }
-        }
-        
-        /* Map Overlay UI */
-        .overlay-card {
-            position: absolute; top: 20px; right: 20px; z-index: 1000;
-            background: rgba(0,0,0,0.8); border: 1px solid #00d4ff;
-            padding: 15px; border-radius: 12px; backdrop-filter: blur(5px);
-            display: none; color: #fff;
-        }
+        .sim-btn.play { background: linear-gradient(135deg,#00ff88,#00b359); color: #030810; border: none; }
+        .sim-stage { flex: 1; min-height: 360px; display: grid; grid-template-columns: 1fr 320px; gap: 12px; }
+        #map { height: 100%; min-height: 360px; border-radius: 12px; border: 1px solid rgba(0,212,255,0.25); }
+        .sim-side { display: flex; flex-direction: column; gap: 10px; overflow: auto; }
+        .phase-card { padding: 12px; border-radius: 10px; background: rgba(8,18,38,0.9); border: 1px solid rgba(0,212,255,0.2); }
+        .phase-card.critical { border-color: #ff3b3b; }
+        .phase-card.warning { border-color: #ff9500; }
+        .phase-card.success { border-color: #00ff88; }
+        .log { font-size: 0.8rem; color: #8fa3b8; max-height: 160px; overflow: auto; font-family: JetBrains Mono, monospace; }
+        .gemini-box { padding: 10px; border-radius: 10px; background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.3); font-size: 0.85rem; white-space: pre-wrap; }
+        .legend span { margin-right: 10px; font-size: 0.75rem; color: #8fa3b8; }
+        .sw { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 4px; }
+        @media (max-width: 900px) { .sim-stage { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
-    <div class="app-shell">
-        <div class="main-content" id="main-content">
-            <main class="page-body">
-                
-                <div class="sim-layout">
-                    <!-- Controls -->
-                    <div class="glass-card sim-controls">
-                        <div class="controls-left">
-                            <button class="btn-primary" id="btn-start" style="background: rgba(0,255,136,0.25); border-color: #00ff88; color: #00ff88; font-weight:800; font-size: 13px; letter-spacing:0.5px;">▶ START LIVE SIMULATION</button>
-                            <button class="btn-primary" id="btn-pause" style="background: rgba(255,215,0,0.2); border-color: #ffd700; color: #ffd700;">⏸ PAUSE</button>
-                            <button class="btn-primary" id="btn-reset">🔄 RESET</button>
-                        </div>
-                        <div style="color:#aaa;">
-                            Speed: 
-                            <button class="speed-btn active" data-speed="1">1x</button>
-                            <button class="speed-btn" data-speed="2">2x</button>
-                            <button class="speed-btn" data-speed="4">4x</button>
-                        </div>
-                    </div>
+<div class="app-shell">
+  <div class="main-content" id="main-content">
+    <main class="page-body" style="padding:12px;">
+      <div class="page-header">
+        <h1 class="page-title">Live Simulation</h1>
+        <p class="page-subtitle">NER crisis drill · road-network routes · geo-tagged photos · Gemini AI</p>
+      </div>
 
-                    <!-- Progress -->
-                    <div class="progress-bar-container">
-                        <div class="progress-line"></div>
-                        <div class="progress-line-fill" id="progress-fill"></div>
-                        <!-- Generated by JS -->
-                    </div>
-
-                    <!-- Map -->
-                    <div style="position: relative;">
-                        <div id="map"></div>
-
-                        <!-- Field Officer Photo & AI Detection Modal during Sim -->
-                        <div id="sim-photo-modal" style="display:none;position:absolute;top:20px;left:50%;transform:translateX(-50%);z-index:2000;background:rgba(5,12,28,0.95);border:1.5px solid #00d4ff;border-radius:16px;padding:16px;box-shadow:0 10px 40px rgba(0,212,255,0.4);width:340px;text-align:center;backdrop-filter:blur(10px);">
-                            <div style="font-size:11px;font-weight:700;color:#00d4ff;letter-spacing:1.2px;margin-bottom:8px;">FIELD OFFICER GEO-REPORT #FO-042 (RAVI KUMAR)</div>
-                            <div style="height:150px;border-radius:8px;position:relative;overflow:hidden;border:1px solid rgba(0,212,255,0.4);box-shadow:0 4px 15px rgba(0,0,0,0.6);">
-                                <img src="https://images.unsplash.com/photo-1580741569354-1d4be2b38a67?w=700&q=80" style="width:100%;height:100%;object-fit:cover;" alt="Field Damage">
-                                <div style="position:absolute;bottom:6px;left:8px;font-size:10px;color:#fff;font-family:'JetBrains Mono',monospace;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:4px;">LAT 27.584 · LNG 91.862 · TAWANG</div>
-                                <div style="position:absolute;top:6px;right:8px;background:rgba(255,59,59,0.9);color:#fff;font-size:9px;padding:3px 8px;border-radius:4px;font-weight:800;letter-spacing:0.05em;">CRITICAL HAZARD</div>
-                            </div>
-                            <div style="margin-top:10px;font-size:13px;font-weight:700;color:#00ff88;">Vision AI: 96% Landslide Blockage Confirmed</div>
-                            <div style="font-size:11px;color:#8fa3b8;margin-top:4px;">Debris Volume: ~180 m³ · Cleared Lane: 0% · NH-13 KM62</div>
-                        </div>
-
-                        <div class="overlay-card" id="overlay-risk">
-                            <h4 style="margin:0 0 10px 0; color:#ff3b3b;">Brahmaputra Flood Risk Escalating</h4>
-                            <div style="font-size: 2rem; font-weight: bold;" id="risk-val">40%</div>
-                        </div>
-                    </div>
-
-                    <!-- Bottom panels -->
-                    <div class="sim-bottom">
-                        <div class="glass-card log-panel" id="log-container">
-                            <div class="log-entry" style="opacity: 0.5;">System initialized. Waiting to start simulation...</div>
-                        </div>
-                        <div class="glass-card status-panel">
-                            <h2 id="phase-title">Ready for Simulation</h2>
-                            <p id="phase-desc" style="color: #aaa; text-align: center; max-width: 80%;">Press START to begin the 18-phase automated disaster response demonstration.</p>
-                            
-                            <div class="eta-card" id="eta-panel">
-                                <h3>Route Optimization Complete</h3>
-                                <p style="margin-bottom: 5px;">Original ETA: <span style="text-decoration: line-through; color: #ff3b3b;">14:30</span></p>
-                                <p style="font-size: 1.5rem; font-weight: bold; color: #00ff88; margin: 0;">New ETA: 16:05</p>
-                                <p style="color: #00d4ff; font-size: 0.9rem;">(+1h 35m via Alternate Route)</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </main>
+      <div class="sim-layout">
+        <div class="glass-card sim-controls">
+          <button class="sim-btn play" id="btn-play" onclick="togglePlay()">▶ PLAY</button>
+          <button class="sim-btn" onclick="resetSim()">⟲ RESET</button>
+          <button class="sim-btn" onclick="stepOnce()">⏭ STEP</button>
+          <label style="color:#8fa3b8;font-size:0.85rem;">Speed
+            <select id="sim-speed" onchange="speed=parseFloat(this.value)">
+              <option value="0.75">0.75x</option>
+              <option value="1" selected>1x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2">2x</option>
+            </select>
+          </label>
+          <div class="legend">
+            <span><i class="sw" style="background:#00ff88"></i>Safe</span>
+            <span><i class="sw" style="background:#ff9500"></i>Alternate</span>
+            <span><i class="sw" style="background:#ff3b3b"></i>Critical</span>
+            <span>📷 Geo-photo</span>
+          </div>
         </div>
-    </div>
 
-    <script src="js/components.js"></script>
-    <script src="js/map-engine.js"></script>
-    <script>
-        let map;
-        let simInterval;
-        let currentPhase = -1;
-        let speed = 1;
-        let isPlaying = false;
-        
-        // Map layers
-        let roadLayer, floodLayer, vehicleMarker, incidentMarker, altRouteLayer;
+        <div class="sim-stage">
+          <div id="map"></div>
+          <div class="sim-side">
+            <div class="phase-card" id="phase-card">
+              <div id="phase-title" style="font-weight:800;color:#00d4ff;">Ready</div>
+              <div id="phase-desc" style="margin-top:6px;color:#c8d8e8;font-size:0.9rem;">Press PLAY to run the NER live simulation.</div>
+            </div>
+            <div class="glass-card" style="padding:10px;">
+              <div style="font-weight:700;color:#00d4ff;margin-bottom:6px;">Gemini live analysis</div>
+              <div class="gemini-box" id="gemini-out">Waiting for phase…</div>
+              <div style="margin-top:8px;font-size:0.75rem;color:#6a8ea8;">Set key: localStorage.setItem('sr_gemini_key','YOUR_KEY')</div>
+            </div>
+            <div class="glass-card" style="padding:10px;">
+              <div style="font-weight:700;margin-bottom:6px;">Event log</div>
+              <div class="log" id="sim-log"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
 
-        const phases = [
-            { t: "🌧 HEAVY RAINFALL DETECTED", c: "warning", d: "Weather sensors report extreme precipitation in Brahmaputra / Guwahati sector.", fly: [26.15, 91.75], z: 8 },
-            { t: "🤖 AI TERRAIN ANALYSIS", c: "", d: "Analyzing rainfall accumulation + Himalayan mountain watershed elevation.", fly: [26.15, 91.75], z: 9 },
-            { t: "🌊 FLOOD RISK ESCALATING", c: "warning", d: "Brahmaputra river gauge rising rapidly across riverine lowlands.", action: 'risk_up' },
-            { t: "🛣 ROAD STATUS DEGRADING", c: "critical", d: "AH-1 / NH-27 corridor structural integrity dropping due to saturation.", action: 'road_degrade' },
-            { t: "🌊 FLOOD ZONE APPEARS", c: "critical", d: "Simulation identifies imminent flood inundation zone near Guwahati riverfront.", action: 'show_flood' },
-            { t: "⚠ INCIDENT MARKER", c: "critical", d: "AI predicts catastrophic mountain landslide at NH-13 Tawang Pass KM62.", action: 'show_incident', fly: [27.58, 91.86], z: 10 },
-            { t: "🚨 CRITICAL ALERT", c: "critical", d: "System generates automated SOS broadcast for North-Eastern Command." },
-            { t: "🚛 VEHICLES AT RISK", c: "warning", d: "Medicine convoy MED-Convoy-NE1 identified heading toward blocked sector.", action: 'show_vehicle' },
-            { t: "🤖 AI ROUTE CALCULATION", c: "", d: "Computing 3 alternate detour paths avoiding flood zone & landslide pass..." },
-            { t: "🟢 SAFEST ROUTE HIGHLIGHTED", c: "success", d: "Alternative elevated route via GS-1 / Shillong Bypass confirmed 100% accessible.", action: 'show_alt_route' },
-            { t: "🔄 VEHICLE REROUTED", c: "success", d: "Dynamic navigation detour instructions dispatched to MED-Convoy-NE1.", action: 'move_vehicle' },
-            { t: "⏱ ETA UPDATED", c: "success", d: "Regional PHC hospital receiving updated delivery schedule (+1h 35m).", action: 'show_eta' },
-            { t: "📷 FIELD OFFICER PHOTO", c: "", d: "Officer FO-042 Ravi Kumar uploads high-res ground truth photo of rockfall." },
-            { t: "🤖 AI IMAGE ANALYSIS", c: "success", d: "Vision AI confirms 96% confidence: Massive Landslide Debris Obstruction." },
-            { t: "📊 STATUS UPDATED", c: "", d: "Global North-Eastern disaster ledger registers complete sector blockage." },
-            { t: "👮 RESPONSE TEAM ASSIGNED", c: "success", d: "NDRF Unit-4 & BRO earthmovers dispatched from Guwahati base station." },
-            { t: "📈 ANALYTICS UPDATED", c: "", d: "Historical logs and predictive route accessibility models synchronized." },
-            { t: "✅ INCIDENT RESOLVED", c: "success", d: "Detour convoy safely arrived. Emergency response active. Demonstrating stability.", action: 'resolve' }
-        ];
+<script src="js/components.js"></script>
+<script src="js/map-engine.js"></script>
+<script src="js/gemini-api.js"></script>
+<script>
+  var map, simTimer = null, currentPhase = -1, speed = 1, isPlaying = false;
+  var layers = { safe: null, alt: null, critical: null, flood: null };
+  var vehicleMarker = null, incidentMarker = null;
+  var photoMarkers = [];
+  var vehiclePath = [];
+  var vehicleIdx = 0;
+  var moveTimer = null;
 
-        document.addEventListener('DOMContentLoaded', () => {
-            if(window.SmartRoute) SmartRoute.initSharedComponents({title: 'Live Simulation', subtitle: '18-Phase North-Eastern Disaster Response Demonstration'});
-            
-            // Init Satellite Map with North-Eastern Names matching the photo
-            if (window.MapEngine && window.MapEngine.initMap) {
-                map = MapEngine.initMap('map', {
-                    center: [25.80, 91.60],
-                    zoom: 7,
-                    zoomControl: true,
-                    regionLabels: true
-                });
-            } else {
-                map = L.map('map', {zoomControl: true}).setView([25.80, 91.60], 7);
-                L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-                    maxZoom: 20,
-                    subdomains: ['mt0','mt1','mt2','mt3']
-                }).addTo(map);
-            }
-            
-            // Setup Progress dots
-            const pbar = document.querySelector('.progress-bar-container');
-            for(let i=0; i<18; i++) {
-                let dot = document.createElement('div');
-                dot.className = 'phase-dot';
-                dot.id = `dot-${i}`;
-                pbar.appendChild(dot);
-            }
+  // Geo-tagged field photos (NER)
+  var GEO_PHOTOS = [
+    {
+      id: 'P-TAW-01',
+      lat: 27.58, lng: 91.86,
+      title: 'Tawang Pass rockfall',
+      officer: 'FO-042 Ravi Kumar',
+      time: '2026-09-13 06:42 IST',
+      url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80',
+      note: 'Single-lane blocked · geotag 27.5800°N 91.8600°E'
+    },
+    {
+      id: 'P-GHY-02',
+      lat: 26.18, lng: 91.75,
+      title: 'Guwahati riverfront flooding',
+      officer: 'FO-018 Ananya Das',
+      time: '2026-09-13 07:05 IST',
+      url: 'https://images.unsplash.com/photo-1547683905-f686c993aae5?w=600&q=80',
+      note: 'Water on AH-1 approach · geotag 26.1800°N 91.7500°E'
+    },
+    {
+      id: 'P-SHL-03',
+      lat: 25.57, lng: 91.89,
+      title: 'Shillong bypass clear',
+      officer: 'FO-031 B. Lyngdoh',
+      time: '2026-09-13 07:20 IST',
+      url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=80',
+      note: 'Alternate elevated road open · geotag 25.5700°N 91.8900°E'
+    },
+    {
+      id: 'P-SIL-04',
+      lat: 24.83, lng: 92.78,
+      title: 'Silchar sector drainage',
+      officer: 'FO-027 R. Choudhury',
+      time: '2026-09-13 07:35 IST',
+      url: 'https://images.unsplash.com/photo-1527482797697-8795b05a13fe?w=600&q=80',
+      note: 'Moderate risk · geotag 24.8300°N 92.7800°E'
+    }
+  ];
 
+  var phases = [
+    { t: '🌧 HEAVY RAINFALL DETECTED', c: 'warning', d: 'Extreme precipitation — Brahmaputra / Guwahati sector.', fly: [26.15, 91.75], z: 8 },
+    { t: '🛣 LOAD NER ROAD NETWORK', c: '', d: 'Drawing safe, alternate and critical routes along real roads (OSRM).', action: 'load_routes' },
+    { t: '🌊 FLOOD RISK ZONE', c: 'warning', d: 'Inundation risk near Guwahati riverfront.', action: 'show_flood' },
+    { t: '⚠ LANDSLIDE INCIDENT', c: 'critical', d: 'NH approach to Tawang Pass disrupted.', action: 'show_incident', fly: [27.58, 91.86], z: 10 },
+    { t: '📷 GEO-TAGGED FIELD PHOTOS', c: '', d: 'Pinning Jio/GPS-tagged officer photos on the map.', action: 'show_photos' },
+    { t: '🚛 CONVOY ON SAFE ROAD', c: 'warning', d: 'MED-Convoy starts on Guwahati–Shillong road geometry.', action: 'show_vehicle' },
+    { t: '🤖 GEMINI LIVE ANALYSIS', c: '', d: 'Calling Gemini API for NER routing advice.', action: 'gemini' },
+    { t: '🟢 SAFEST + ALTERNATE ROUTES', c: 'success', d: 'Highlighting road-following safe & alternate corridors.', action: 'emphasize_routes' },
+    { t: '🔄 VEHICLE FOLLOWS ROAD', c: 'success', d: 'Convoy animates along OSRM polyline (not a straight line).', action: 'move_vehicle' },
+    { t: '📷 VISION PHOTO REVIEW', c: '', d: 'Gemini reviews geotagged landslide photo description.', action: 'gemini_photo' },
+    { t: '✅ SIMULATION STABILIZED', c: 'success', d: 'Critical segment isolated; traffic on safe NER roads.', action: 'resolve' }
+  ];
 
-            // Controls
-            document.getElementById('btn-start').onclick = startSim;
-            document.getElementById('btn-pause').onclick = pauseSim;
-            document.getElementById('btn-reset').onclick = resetSim;
-            
-            document.querySelectorAll('.speed-btn').forEach(b => {
-                b.onclick = (e) => {
-                    document.querySelectorAll('.speed-btn').forEach(btn => btn.classList.remove('active'));
-                    e.target.classList.add('active');
-                    speed = parseInt(e.target.getAttribute('data-speed'));
-                    if(isPlaying) { pauseSim(); startSim(); }
-                }
-            });
+  function log(msg) {
+    var el = document.getElementById('sim-log');
+    el.innerHTML = '[' + new Date().toLocaleTimeString() + '] ' + msg + '<br>' + el.innerHTML;
+  }
 
-            // Autoplay support if opened from Dashboard
-            const params = new URLSearchParams(window.location.search);
-            if (params.get('autoplay') === '1') {
-                setTimeout(() => {
-                    startSim();
-                    if (window.SmartRoute) SmartRoute.showToast('Autoplay: Live Crisis Simulation Launched', 'info');
-                }, 800);
-            }
-        });
+  function photoIcon() {
+    return L.divIcon({
+      className: '',
+      html: '<div style="width:28px;height:28px;border-radius:8px;background:#0a1628;border:2px solid #00d4ff;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 12px rgba(0,212,255,0.6);">📷</div>',
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    });
+  }
 
-        function startSim() {
-            if(currentPhase >= phases.length - 1) return;
-            isPlaying = true;
-            if (window.SmartRoute) SmartRoute.showToast('Live 18-Phase Crisis Simulation Started', 'info');
-            nextPhase();
-            simInterval = setInterval(nextPhase, 4000 / speed);
-        }
+  async function osrmLine(waypoints) {
+    if (window.MapEngine && MapEngine.fetchOsrmCoords) {
+      try {
+        var coords = await MapEngine.fetchOsrmCoords(waypoints);
+        if (coords && coords.length > 2) return coords;
+      } catch (e) { console.warn(e); }
+    }
+    // fallback chain via public OSRM
+    try {
+      var path = waypoints.map(function (p) { return p[1] + ',' + p[0]; }).join(';');
+      var url = 'https://router.project-osrm.org/route/v1/driving/' + path + '?overview=full&geometries=geojson';
+      var res = await fetch(url);
+      var data = await res.json();
+      if (data.routes && data.routes[0]) {
+        return data.routes[0].geometry.coordinates.map(function (c) { return [c[1], c[0]]; });
+      }
+    } catch (e2) { console.warn(e2); }
+    return waypoints;
+  }
 
-        function pauseSim() {
-            isPlaying = false;
-            clearInterval(simInterval);
-        }
+  async function drawRoadRoutes() {
+    // Guwahati -> Shillong (safe)
+    var safeWp = [[26.1445, 91.7362], [25.90, 91.88], [25.5788, 91.8933]];
+    // Guwahati -> Silchar (alternate)
+    var altWp = [[26.1445, 91.7362], [25.5, 92.3], [24.8333, 92.7789]];
+    // approach Tawang (critical)
+    var critWp = [[26.1445, 91.7362], [26.8, 92.1], [27.58, 91.86]];
 
-        function resetSim() {
-            pauseSim();
-            currentPhase = -1;
-            document.getElementById('log-container').innerHTML = '';
-            document.getElementById('progress-fill').style.width = '0%';
-            document.querySelectorAll('.phase-dot').forEach(d => d.classList.remove('active'));
-            document.getElementById('phase-title').innerText = 'Ready for Simulation';
-            document.getElementById('phase-desc').innerText = 'Press START to begin.';
-            document.getElementById('eta-panel').style.display = 'none';
-            document.getElementById('overlay-risk').style.display = 'none';
-            
-            // Clear map
-            if(roadLayer) map.removeLayer(roadLayer);
-            if(floodLayer) map.removeLayer(floodLayer);
-            if(incidentMarker) map.removeLayer(incidentMarker);
-            if(vehicleMarker) map.removeLayer(vehicleMarker);
-            if(altRouteLayer) map.removeLayer(altRouteLayer);
-            
-            map.setView([25.80, 91.60], 7);
+    var safe = await osrmLine(safeWp);
+    var alt = await osrmLine(altWp);
+    var crit = await osrmLine(critWp);
 
-            try {
-                if (window.SmartRouteAPI && window.SmartRouteAPI.resetSimulation) {
-                    window.SmartRouteAPI.resetSimulation();
-                }
-            } catch(e) {}
-            if (window.SmartRoute) SmartRoute.showToast('Simulation state reset', 'info');
-        }
+    if (layers.safe) map.removeLayer(layers.safe);
+    if (layers.alt) map.removeLayer(layers.alt);
+    if (layers.critical) map.removeLayer(layers.critical);
 
-        function nextPhase() {
-            currentPhase++;
-            if(currentPhase >= phases.length) {
-                pauseSim();
-                return;
-            }
+    layers.critical = L.polyline(crit, { color: '#ff3b3b', weight: 5, opacity: 0.85 }).addTo(map)
+      .bindPopup('Critical / disrupted corridor toward Tawang');
+    layers.alt = L.polyline(alt, { color: '#ff9500', weight: 5, opacity: 0.9, dashArray: '10,8' }).addTo(map)
+      .bindPopup('Alternate route via Silchar sector');
+    layers.safe = L.polyline(safe, { color: '#00ff88', weight: 6, opacity: 0.95 }).addTo(map)
+      .bindPopup('Safest route: Guwahati → Shillong (road network)');
 
-            const p = phases[currentPhase];
-            
-            // Trigger backend simulation phase
-            try {
-                if (window.SmartRouteAPI && window.SmartRouteAPI.triggerSimulationPhase) {
-                    window.SmartRouteAPI.triggerSimulationPhase(currentPhase + 1);
-                }
-            } catch(e) {}
+    vehiclePath = safe;
+    log('OSRM road routes drawn (safe / alternate / critical)');
+  }
 
-            // Update UI
-            document.getElementById('phase-title').innerText = p.t;
-            document.getElementById('phase-desc').innerText = p.d;
-            
-            const log = document.getElementById('log-container');
-            const entry = document.createElement('div');
-            entry.className = `log-entry ${p.c}`;
-            entry.innerHTML = `<strong>Phase ${currentPhase+1}:</strong> ${p.d}`;
-            log.appendChild(entry);
-            log.scrollTop = log.scrollHeight;
+  function clearPhotos() {
+    photoMarkers.forEach(function (m) { try { map.removeLayer(m); } catch (e) {} });
+    photoMarkers = [];
+  }
 
-            // Update Progress
-            document.getElementById('progress-fill').style.width = `${(currentPhase / 17) * 100}%`;
-            document.querySelectorAll('.phase-dot').forEach((d, i) => {
-                if(i <= currentPhase) d.classList.add('active');
-            });
+  function showGeoPhotos() {
+    clearPhotos();
+    GEO_PHOTOS.forEach(function (p) {
+      var html =
+        '<div style="min-width:200px">' +
+        '<div style="font-weight:700;color:#00d4ff">' + p.title + '</div>' +
+        '<img src="' + p.url + '" alt="geo photo" style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin:8px 0"/>' +
+        '<div style="font-size:11px;color:#8fa3b8">' + p.officer + '<br>' + p.time + '</div>' +
+        '<div style="font-size:11px;margin-top:4px">' + p.note + '</div>' +
+        '<div style="font-size:10px;color:#00ff88;margin-top:4px">ID ' + p.id + ' · GPS tagged</div></div>';
+      var m = L.marker([p.lat, p.lng], { icon: photoIcon() }).addTo(map).bindPopup(html);
+      photoMarkers.push(m);
+    });
+    // open first photo
+    if (photoMarkers[0]) photoMarkers[0].openPopup();
+    log('Geo-tagged photos pinned on map (' + GEO_PHOTOS.length + ')');
+  }
 
-            // Map Fly
-            if(p.fly) map.flyTo(p.fly, p.z, {duration: 2/speed});
+  function animateAlongPath() {
+    if (moveTimer) clearInterval(moveTimer);
+    if (!vehicleMarker || !vehiclePath || vehiclePath.length < 2) return;
+    vehicleIdx = 0;
+    moveTimer = setInterval(function () {
+      vehicleIdx++;
+      if (vehicleIdx >= vehiclePath.length) {
+        clearInterval(moveTimer);
+        moveTimer = null;
+        return;
+      }
+      vehicleMarker.setLatLng(vehiclePath[vehicleIdx]);
+    }, Math.max(20, 40 / speed));
+  }
 
-            // Actions
-            if(p.action === 'risk_up') {
-                document.getElementById('overlay-risk').style.display = 'block';
-                let r = 40;
-                let rInt = setInterval(() => {
-                    r += 3;
-                    document.getElementById('risk-val').innerText = `${r}%`;
-                    if(r >= 86) clearInterval(rInt);
-                }, 40);
-            }
-            if(p.action === 'road_degrade') {
-                // Animate road transition on AH-1: GREEN -> YELLOW -> ORANGE -> RED
-                roadLayer = L.polyline([[26.72, 88.42], [26.45, 90.10], [26.14, 91.73]], {color: '#00ff88', weight: 6, opacity: 0.9}).addTo(map);
-                setTimeout(() => { if(roadLayer) roadLayer.setStyle({color: '#ffcc00'}); }, 600 / speed);
-                setTimeout(() => { if(roadLayer) roadLayer.setStyle({color: '#ff9500'}); }, 1200 / speed);
-                setTimeout(() => { if(roadLayer) roadLayer.setStyle({color: '#ff3b3b'}); }, 1800 / speed);
-            }
-            if(p.action === 'show_flood') {
-                floodLayer = L.polygon([
-                    [26.18, 91.70], [26.24, 91.82], [26.14, 91.85], [26.11, 91.72]
-                ], {color: '#00d4ff', fillColor: '#00d4ff', fillOpacity: 0.45, dashArray: '6,6'}).addTo(map);
-            }
-            if(p.action === 'show_incident') {
-                let ic = L.divIcon({className: '', html: '<div style="width:32px;height:32px;background:#ff3b3b;border-radius:50%;box-shadow:0 0 25px #ff3b3b;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;border:2.5px solid #fff;">⚠</div>'});
-                incidentMarker = L.marker([27.58, 91.86], {icon: ic}).addTo(map);
-            }
-            if(p.action === 'show_vehicle') {
-                let vc = L.divIcon({className: '', html: '<div style="background:rgba(0,212,255,0.3);border:2px solid #00d4ff;border-radius:8px;padding:4px;font-size:20px;box-shadow:0 0 16px #00d4ff;">🚛</div>'});
-                vehicleMarker = L.marker([26.14, 91.73], {icon: vc}).addTo(map);
-            }
-            if(p.action === 'show_alt_route') {
-                altRouteLayer = L.polyline([[26.14, 91.73], [25.90, 91.88], [25.57, 91.89]], {color: '#00ff88', weight: 5, dashArray: '8, 8'}).addTo(map);
-            }
-            if(p.action === 'move_vehicle') {
-                if(vehicleMarker) vehicleMarker.setLatLng([25.90, 91.88]);
-            }
+  async function runPhase(i) {
+    var p = phases[i];
+    if (!p) return;
+    currentPhase = i;
+    var card = document.getElementById('phase-card');
+    card.className = 'phase-card ' + (p.c || '');
+    document.getElementById('phase-title').textContent = p.t;
+    document.getElementById('phase-desc').textContent = p.d;
+    log(p.t);
 
-            if(p.action === 'show_eta') {
-                document.getElementById('eta-panel').style.display = 'block';
-            }
-            if(currentPhase === 12 || currentPhase === 13) {
-                // Field Officer Photo & Vision AI Verification
-                document.getElementById('sim-photo-modal').style.display = 'block';
-                setTimeout(() => {
-                    document.getElementById('sim-photo-modal').style.display = 'none';
-                }, 3500 / speed);
-            }
-            if(p.action === 'resolve') {
-                if(floodLayer) map.removeLayer(floodLayer);
-                if(incidentMarker) map.removeLayer(incidentMarker);
-                if(roadLayer) roadLayer.setStyle({color: '#00ff88'});
-                document.getElementById('overlay-risk').style.display = 'none';
-                document.getElementById('sim-photo-modal').style.display = 'none';
-            }
-        }
-    </script>
+    if (p.fly) map.flyTo(p.fly, p.z || map.getZoom(), { duration: 1.2 / speed });
+
+    if (p.action === 'load_routes') await drawRoadRoutes();
+
+    if (p.action === 'show_flood') {
+      if (layers.flood) map.removeLayer(layers.flood);
+      layers.flood = L.polygon(
+        [[26.18, 91.70], [26.24, 91.82], [26.14, 91.85], [26.11, 91.72]],
+        { color: '#00d4ff', fillColor: '#00d4ff', fillOpacity: 0.35, dashArray: '6,6' }
+      ).addTo(map);
+    }
+
+    if (p.action === 'show_incident') {
+      if (incidentMarker) map.removeLayer(incidentMarker);
+      incidentMarker = L.marker([27.58, 91.86], {
+        icon: L.divIcon({
+          className: '',
+          html: '<div style="width:32px;height:32px;background:#ff3b3b;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;">⚠</div>',
+          iconSize: [32, 32], iconAnchor: [16, 16]
+        })
+      }).addTo(map).bindPopup('Critical landslide · Tawang approach');
+    }
+
+    if (p.action === 'show_photos') showGeoPhotos();
+
+    if (p.action === 'show_vehicle') {
+      if (vehicleMarker) map.removeLayer(vehicleMarker);
+      var start = (vehiclePath && vehiclePath[0]) || [26.1445, 91.7362];
+      vehicleMarker = L.marker(start, {
+        icon: L.divIcon({
+          className: '',
+          html: '<div style="font-size:22px;filter:drop-shadow(0 0 6px #00d4ff)">🚛</div>',
+          iconSize: [28, 28], iconAnchor: [14, 14]
+        })
+      }).addTo(map).bindPopup('MED-Convoy-NE1');
+    }
+
+    if (p.action === 'gemini' && window.SmartRouteGemini) {
+      document.getElementById('gemini-out').textContent = 'Calling Gemini…';
+      var r = await SmartRouteGemini.analyzeNERSituation(
+        'Simulation: flood near Guwahati, landslide near Tawang, convoy needs safest road to Shillong.'
+      );
+      document.getElementById('gemini-out').textContent = r.text || 'No response';
+      log(r.offline ? 'Gemini offline fallback' : 'Gemini live response');
+    }
+
+    if (p.action === 'emphasize_routes') {
+      if (layers.safe) layers.safe.setStyle({ weight: 8 });
+      if (layers.alt) layers.alt.setStyle({ weight: 6 });
+      map.fitBounds(layers.safe ? layers.safe.getBounds() : map.getBounds(), { padding: [30, 30] });
+    }
+
+    if (p.action === 'move_vehicle') animateAlongPath();
+
+    if (p.action === 'gemini_photo' && window.SmartRouteGemini) {
+      document.getElementById('gemini-out').textContent = 'Gemini photo review…';
+      var r2 = await SmartRouteGemini.analyzeFieldPhoto(
+        'Geo-tagged photo P-TAW-01 at 27.58N 91.86E: mountain rockfall blocking single lane.'
+      );
+      document.getElementById('gemini-out').textContent = r2.text || 'No response';
+      if (photoMarkers[0]) photoMarkers[0].openPopup();
+    }
+
+    if (p.action === 'resolve') {
+      if (layers.flood) map.removeLayer(layers.flood);
+      if (layers.critical) layers.critical.setStyle({ opacity: 0.35 });
+      if (layers.safe) layers.safe.setStyle({ weight: 7, color: '#00ff88' });
+    }
+  }
+
+  function stepOnce() {
+    var next = currentPhase + 1;
+    if (next >= phases.length) {
+      isPlaying = false;
+      document.getElementById('btn-play').textContent = '▶ PLAY';
+      if (simTimer) clearInterval(simTimer);
+      return;
+    }
+    runPhase(next);
+  }
+
+  function togglePlay() {
+    isPlaying = !isPlaying;
+    document.getElementById('btn-play').textContent = isPlaying ? '⏸ PAUSE' : '▶ PLAY';
+    if (isPlaying) {
+      if (currentPhase < 0) stepOnce();
+      simTimer = setInterval(function () {
+        if (!isPlaying) return;
+        stepOnce();
+      }, 3200 / speed);
+    } else if (simTimer) {
+      clearInterval(simTimer);
+      simTimer = null;
+    }
+  }
+
+  function resetSim() {
+    isPlaying = false;
+    document.getElementById('btn-play').textContent = '▶ PLAY';
+    if (simTimer) clearInterval(simTimer);
+    if (moveTimer) clearInterval(moveTimer);
+    currentPhase = -1;
+    ['safe', 'alt', 'critical', 'flood'].forEach(function (k) {
+      if (layers[k]) { try { map.removeLayer(layers[k]); } catch (e) {} layers[k] = null; }
+    });
+    if (vehicleMarker) { map.removeLayer(vehicleMarker); vehicleMarker = null; }
+    if (incidentMarker) { map.removeLayer(incidentMarker); incidentMarker = null; }
+    clearPhotos();
+    document.getElementById('phase-title').textContent = 'Ready';
+    document.getElementById('phase-desc').textContent = 'Press PLAY to run the NER live simulation.';
+    document.getElementById('gemini-out').textContent = 'Waiting for phase…';
+    document.getElementById('sim-log').innerHTML = '';
+    map.setView([26.2, 92.0], 7);
+    log('Simulation reset');
+  }
+
+  document.addEventListener('DOMContentLoaded', async function () {
+    if (window.SmartRoute) {
+      SmartRoute.initSharedComponents({
+        title: 'Live Simulation',
+        subtitle: 'NER road routes · geo photos · Gemini'
+      });
+    }
+    if (window.MapEngine && MapEngine.initMap) {
+      map = MapEngine.initMap('map', { center: [26.2, 92.0], zoom: 7 });
+    } else {
+      map = L.map('map').setView([26.2, 92.0], 7);
+      L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18 }).addTo(map);
+    }
+    // preload road routes so user sees them immediately
+    await drawRoadRoutes();
+    if (window.location.search.indexOf('autoplay') >= 0) {
+      setTimeout(togglePlay, 600);
+    }
+  });
+</script>
 </body>
 </html>
