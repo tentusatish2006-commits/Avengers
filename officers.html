@@ -5,18 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartRoute - Field Officers</title>
     
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     
-    <!-- CDNs -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
     
-    <!-- Local CSS -->
     <link rel="stylesheet" href="css/design-system.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/components.css">
@@ -29,8 +26,6 @@
             height: calc(100vh - 100px);
             padding: 20px 0;
         }
-        
-        /* Map Area */
         .map-container {
             border-radius: 16px;
             overflow: hidden;
@@ -41,15 +36,12 @@
             height: 100%;
             background: #030810;
         }
-        
-        /* Panel Area */
         .officers-panel {
             display: flex;
             flex-direction: column;
             overflow-y: auto;
             padding-right: 10px;
         }
-        
         .search-bar {
             width: 100%;
             background: rgba(255,255,255,0.05);
@@ -61,13 +53,11 @@
             margin-bottom: 15px;
         }
         .search-bar:focus { outline: none; border-color: var(--cyan); }
-        
         .officer-list {
             display: flex;
             flex-direction: column;
             gap: 12px;
         }
-        
         .officer-card {
             background: rgba(255,255,255,0.03);
             border: 1px solid rgba(255,255,255,0.08);
@@ -84,7 +74,6 @@
             border-color: var(--cyan-alpha);
             transform: translateX(4px);
         }
-        
         .avatar {
             width: 45px;
             height: 45px;
@@ -97,11 +86,9 @@
             color: var(--cyan);
             border: 1px solid var(--cyan-alpha);
         }
-        
         .officer-info { flex: 1; }
         .officer-name { font-weight: 600; font-size: 1rem; }
         .officer-meta { font-size: 0.75rem; color: #aaa; margin-top: 3px; }
-        
         .badge {
             padding: 4px 8px;
             border-radius: 4px;
@@ -111,8 +98,6 @@
         .badge-active { background: rgba(0, 255, 136, 0.2); color: var(--safe); }
         .badge-reporting { background: rgba(0, 212, 255, 0.2); color: var(--cyan); }
         .badge-off { background: rgba(255, 255, 255, 0.1); color: #aaa; }
-        
-        /* Selected Panel Details */
         .officer-detail-view {
             display: none;
             flex-direction: column;
@@ -120,7 +105,6 @@
             animation: fadeIn 0.3s ease;
         }
         .officer-detail-view.active { display: flex; }
-        
         .stat-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -135,7 +119,6 @@
         }
         .stat-box .val { font-size: 1.4rem; font-weight: 700; color: var(--cyan); }
         .stat-box .lbl { font-size: 0.75rem; color: #aaa; }
-        
         .officer-marker {
             width: 30px;
             height: 30px;
@@ -156,6 +139,11 @@
             border: 1px solid var(--cyan);
             animation: pulse-glow 2s infinite;
         }
+        .list-count {
+            font-size: 0.8rem;
+            color: #8fa3b8;
+            margin: -8px 0 12px;
+        }
     </style>
 </head>
 <body>
@@ -163,31 +151,26 @@
         <div class="main-content" id="main-content">
             <main class="page-body">
                 <div class="layout-2col">
-                    
-                    <!-- LEFT: Map -->
                     <div class="map-container">
                         <div id="officers-map"></div>
                     </div>
 
-                    <!-- RIGHT: Officers Panel -->
                     <div class="officers-panel glass-card p-4">
                         <div id="list-view">
                             <h3 class="mb-4">FIELD OFFICERS</h3>
-                            <input type="text" class="search-bar" placeholder="Search by name, ID or district...">
-                            
-                            <div class="officer-list" id="officer-list">
-                                <!-- Cards injected via JS -->
-                            </div>
+                            <input type="text" class="search-bar" id="officer-search" placeholder="Search by name, ID or district...">
+                            <div class="list-count" id="list-count"></div>
+                            <div class="officer-list" id="officer-list"></div>
                         </div>
                         
                         <div id="detail-view" class="officer-detail-view">
                             <button class="btn btn-outline btn-sm mb-3" id="btn-back" style="align-self: flex-start;">← Back to List</button>
                             
                             <div class="d-flex align-items-center" style="gap:15px; margin-bottom: 20px;">
-                                <div class="avatar" style="width:60px; height:60px; font-size:1.5rem;" id="det-avatar">RK</div>
+                                <div class="avatar" style="width:60px; height:60px; font-size:1.5rem;" id="det-avatar">—</div>
                                 <div>
-                                    <h3 id="det-name">Ravi Kumar</h3>
-                                    <div class="text-cyan font-sm" id="det-id">FO-042 | Assam Sector</div>
+                                    <h3 id="det-name">—</h3>
+                                    <div class="text-cyan font-sm" id="det-id">—</div>
                                 </div>
                                 <div style="margin-left:auto;">
                                     <span class="badge badge-active" id="det-status">ACTIVE</span>
@@ -196,17 +179,16 @@
                             
                             <div class="glass-card p-3 mb-2" style="border: 1px dashed rgba(255,255,255,0.2);">
                                 <div class="font-sm text-gray mb-1">Current Status / Location</div>
-                                <div id="det-loc-text">Guwahati Riverfront / Brahmaputra Patrol</div>
+                                <div id="det-loc-text">—</div>
                             </div>
 
-                            
                             <div class="stat-grid mb-3">
                                 <div class="stat-box">
-                                    <div class="val">4</div>
+                                    <div class="val" id="det-reports">—</div>
                                     <div class="lbl">Reports Filed Today</div>
                                 </div>
                                 <div class="stat-box">
-                                    <div class="val">112</div>
+                                    <div class="val" id="det-km">—</div>
                                     <div class="lbl">Km Covered</div>
                                 </div>
                             </div>
@@ -219,18 +201,16 @@
                             </div>
                         </div>
                     </div>
-
                 </div>
             </main>
         </div>
     </div>
 
-    <!-- Local Scripts -->
     <script src="js/components.js"></script>
     <script src="js/map-engine.js"></script>
     <script src="js/charts.js"></script>
     <script>
-        const officers = [
+        var BASE_OFFICERS = [
             { id: 'FO-042', name: 'Ravi Kumar', initials: 'RK', dist: 'Assam', lat: 26.1524, lng: 91.7510, status: 'ACTIVE', statusClass: 'badge-active', note: 'Guwahati Riverfront / Brahmaputra Patrol' },
             { id: 'FO-015', name: 'Lakshmi Devi', initials: 'LD', dist: 'Arunachal Pradesh', lat: 27.5840, lng: 91.8620, status: 'ACTIVE', statusClass: 'badge-active', note: 'NH-13 Tawang Pass sector' },
             { id: 'FO-028', name: 'Suresh Rao', initials: 'SR', dist: 'Nagaland', lat: 25.6700, lng: 94.1000, status: 'REPORTING', statusClass: 'badge-reporting', note: 'Kohima pass incident report' },
@@ -241,150 +221,189 @@
             { id: 'FO-055', name: 'Rajesh Varma', initials: 'RV', dist: 'Manipur', lat: 24.8170, lng: 93.9360, status: 'ACTIVE', statusClass: 'badge-active', note: 'Imphal valley causeway inspection' }
         ];
 
+        var OFFICERS_KEY = 'sr_field_officers';
+        var officers = [];
+        var offMap = null;
+        var selectedOfficer = null;
+        var officerMarkers = {};
 
-        let offMap = null;
-        let selectedOfficer = null;
-        const officerMarkers = {};
-
-        document.addEventListener('DOMContentLoaded', () => {
-            if(window.SmartRoute) {
-                SmartRoute.initSharedComponents({
-                    title: 'Field Officers',
-                    subtitle: 'GPS Officer Tracking & Deployment'
+        function loadAdminOfficers() {
+            try {
+                var raw = localStorage.getItem(OFFICERS_KEY);
+                var list = raw ? JSON.parse(raw) : [];
+                if (!Array.isArray(list)) return [];
+                return list.map(function (o) {
+                    return {
+                        id: o.id,
+                        name: o.name,
+                        initials: o.initials || 'FO',
+                        dist: o.dist || o.city || 'NER',
+                        lat: Number(o.lat) || 25.8,
+                        lng: Number(o.lng) || 91.6,
+                        status: o.status || 'ACTIVE',
+                        statusClass: o.statusClass || 'badge-active',
+                        note: o.note || ((o.city || o.dist || 'NER') + ' sector'),
+                        source: o.source || 'admin'
+                    };
                 });
+            } catch (e) {
+                return [];
             }
+        }
 
-            // Initialize Map
-            if(window.MapEngine) {
-                offMap = MapEngine.initMap('officers-map');
-                MapEngine.addRoads(offMap);
-                
-                // Add Officers to map
-                if(offMap) {
-                    officers.forEach(off => {
-                        const iconHtml = `
-                            <div class="officer-marker" title="${off.name} (${off.id})">
-                                👮
-                                <div class="officer-pulse"></div>
-                            </div>
-                        `;
-                        const icon = L.divIcon({ html: iconHtml, className: '', iconSize: [30, 30], iconAnchor: [15, 15] });
-                        const marker = L.marker([off.lat, off.lng], {icon: icon})
-                         .addTo(offMap)
-                         .bindTooltip(`<b>${off.name}</b><br>${off.id} - ${off.dist}`, {direction: 'top'});
-                        
-                        marker.on('click', () => {
-                            openOfficerDetail(off);
-                        });
-                        officerMarkers[off.id] = marker;
-                    });
-                }
-            }
-            
-            // Build List
-            renderOfficerList(officers);
-
-            // Search Filter
-            const searchInput = document.querySelector('.search-bar');
-            if(searchInput) {
-                searchInput.addEventListener('input', (e) => {
-                    const q = e.target.value.toLowerCase().trim();
-                    const filtered = officers.filter(o => 
-                        o.name.toLowerCase().includes(q) || 
-                        o.id.toLowerCase().includes(q) || 
-                        o.dist.toLowerCase().includes(q)
-                    );
-                    renderOfficerList(filtered);
-                });
-            }
-            
-            document.getElementById('btn-back').addEventListener('click', () => {
-                const detailView = document.getElementById('detail-view');
-                const listView = document.getElementById('list-view');
-                detailView.classList.remove('active');
-                listView.style.display = 'block';
-                if(offMap) offMap.setView([17.9, 82.8], 9);
+        function mergeOfficers() {
+            var extra = loadAdminOfficers();
+            var byId = {};
+            BASE_OFFICERS.forEach(function (o) { byId[o.id] = o; });
+            extra.forEach(function (o) {
+                // Admin-added officers override same ID; new IDs are appended
+                byId[o.id] = o;
             });
-        });
+            // Also match by name if admin added without conflicting FO id present in base
+            officers = Object.keys(byId).map(function (k) { return byId[k]; });
+            return officers;
+        }
+
+        function addMarker(off) {
+            if (!offMap || typeof L === 'undefined') return;
+            if (officerMarkers[off.id]) {
+                try { offMap.removeLayer(officerMarkers[off.id]); } catch (e) {}
+            }
+            var iconHtml =
+                '<div class="officer-marker" title="' + off.name + ' (' + off.id + ')">' +
+                '👮<div class="officer-pulse"></div></div>';
+            var icon = L.divIcon({ html: iconHtml, className: '', iconSize: [30, 30], iconAnchor: [15, 15] });
+            var marker = L.marker([off.lat, off.lng], { icon: icon })
+                .addTo(offMap)
+                .bindTooltip('<b>' + off.name + '</b><br>' + off.id + ' - ' + off.dist, { direction: 'top' });
+            marker.on('click', function () { openOfficerDetail(off); });
+            officerMarkers[off.id] = marker;
+        }
 
         function renderOfficerList(list) {
-            const listEl = document.getElementById('officer-list');
+            var listEl = document.getElementById('officer-list');
             listEl.innerHTML = '';
-            
-            list.forEach((off) => {
-                const card = document.createElement('div');
+            var countEl = document.getElementById('list-count');
+            if (countEl) {
+                countEl.textContent = list.length + ' officer' + (list.length === 1 ? '' : 's') +
+                    (list.length !== officers.length ? ' (filtered)' : '');
+            }
+
+            if (!list.length) {
+                listEl.innerHTML = '<div style="color:#8fa3b8;padding:12px;font-size:0.9rem;">No officers match your search. Add Field Officers from Admin → Add User.</div>';
+                return;
+            }
+
+            list.forEach(function (off) {
+                var card = document.createElement('div');
                 card.className = 'officer-card';
-                card.id = `card-${off.id}`;
-                card.innerHTML = `
-                    <div class="avatar">${off.initials}</div>
-                    <div class="officer-info">
-                        <div class="officer-name">${off.name}</div>
-                        <div class="officer-meta">${off.id} | ${off.dist}</div>
-                    </div>
-                    <div><span class="badge ${off.statusClass}">${off.status}</span></div>
-                `;
-                
-                card.addEventListener('click', () => {
-                    openOfficerDetail(off);
-                });
-                
+                card.id = 'card-' + off.id;
+                card.innerHTML =
+                    '<div class="avatar">' + off.initials + '</div>' +
+                    '<div class="officer-info">' +
+                    '<div class="officer-name">' + off.name + '</div>' +
+                    '<div class="officer-meta">' + off.id + ' | ' + off.dist +
+                    (off.source === 'admin' ? ' · <span style="color:#00ff88">new</span>' : '') +
+                    '</div></div>' +
+                    '<div><span class="badge ' + off.statusClass + '">' + off.status + '</span></div>';
+                card.addEventListener('click', function () { openOfficerDetail(off); });
                 listEl.appendChild(card);
             });
         }
 
         function openOfficerDetail(off) {
             selectedOfficer = off;
-            const listView = document.getElementById('list-view');
-            const detailView = document.getElementById('detail-view');
+            document.getElementById('list-view').style.display = 'none';
+            document.getElementById('detail-view').classList.add('active');
 
-            listView.style.display = 'none';
-            detailView.classList.add('active');
-            
-            // Populate details
             document.getElementById('det-avatar').textContent = off.initials;
             document.getElementById('det-name').textContent = off.name;
-            document.getElementById('det-id').textContent = `${off.id} | ${off.dist}`;
-            document.getElementById('det-status').className = `badge ${off.statusClass}`;
+            document.getElementById('det-id').textContent = off.id + ' | ' + off.dist;
+            document.getElementById('det-status').className = 'badge ' + off.statusClass;
             document.getElementById('det-status').textContent = off.status;
             document.getElementById('det-loc-text').textContent = off.note;
-            
-            // Fly to on map
-            if(offMap) {
+            document.getElementById('det-reports').textContent = off.source === 'admin' ? '0' : '4';
+            document.getElementById('det-km').textContent = off.source === 'admin' ? '0' : '112';
+
+            if (offMap) {
                 offMap.flyTo([off.lat, off.lng], 13, { animate: true, duration: 1.5 });
-                if(officerMarkers[off.id]) {
-                    officerMarkers[off.id].openTooltip();
-                }
+                if (officerMarkers[off.id]) officerMarkers[off.id].openTooltip();
             }
         }
 
         function assignIncidentToOfficer() {
-            if(!selectedOfficer) return;
-            if(window.SmartRoute && SmartRoute.showToast) {
-                SmartRoute.showToast(`Emergency Incident INC-002 dispatched to ${selectedOfficer.name} (${selectedOfficer.id})`, 'info');
+            if (!selectedOfficer) return;
+            if (window.SmartRoute && SmartRoute.showToast) {
+                SmartRoute.showToast('Emergency Incident INC-002 dispatched to ' + selectedOfficer.name + ' (' + selectedOfficer.id + ')', 'info');
             } else {
-                alert(`Emergency Incident dispatched to ${selectedOfficer.name}`);
+                alert('Emergency Incident dispatched to ' + selectedOfficer.name);
             }
         }
 
         function viewOfficerReports() {
-            if(!selectedOfficer) return;
-            if(window.SmartRoute && SmartRoute.showToast) {
-                SmartRoute.showToast(`Loading 4 filed field reports for ${selectedOfficer.name}...`, 'success');
+            if (!selectedOfficer) return;
+            if (window.SmartRoute && SmartRoute.showToast) {
+                SmartRoute.showToast('Loading field reports for ' + selectedOfficer.name + '...', 'success');
             }
-            setTimeout(() => {
-                window.location.href = 'reports.html';
-            }, 800);
+            setTimeout(function () { window.location.href = 'reports.html'; }, 800);
         }
 
         function trackOfficerLocation() {
-            if(!selectedOfficer) return;
-            if(window.SmartRoute && SmartRoute.showToast) {
-                SmartRoute.showToast(`Live GPS tracking channel opened for ${selectedOfficer.name} (18.05° N, 82.74° E)`, 'success');
+            if (!selectedOfficer) return;
+            if (window.SmartRoute && SmartRoute.showToast) {
+                SmartRoute.showToast(
+                    'Live GPS tracking for ' + selectedOfficer.name +
+                    ' (' + selectedOfficer.lat.toFixed(2) + '° N, ' + selectedOfficer.lng.toFixed(2) + '° E)',
+                    'success'
+                );
             }
-            if(offMap) {
+            if (offMap) {
                 offMap.flyTo([selectedOfficer.lat, selectedOfficer.lng], 15, { animate: true, duration: 1.2 });
             }
         }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.SmartRoute) {
+                SmartRoute.initSharedComponents({
+                    title: 'Field Officers',
+                    subtitle: 'GPS Officer Tracking & Deployment'
+                });
+            }
+
+            mergeOfficers();
+
+            if (window.MapEngine) {
+                offMap = MapEngine.initMap('officers-map');
+                MapEngine.addRoads(offMap);
+                if (offMap) {
+                    officers.forEach(addMarker);
+                    // NER overview
+                    offMap.setView([25.8, 91.6], 7);
+                }
+            }
+
+            renderOfficerList(officers);
+
+            var searchInput = document.getElementById('officer-search');
+            if (searchInput) {
+                searchInput.addEventListener('input', function (e) {
+                    var q = e.target.value.toLowerCase().trim();
+                    var filtered = officers.filter(function (o) {
+                        return o.name.toLowerCase().indexOf(q) !== -1 ||
+                            o.id.toLowerCase().indexOf(q) !== -1 ||
+                            o.dist.toLowerCase().indexOf(q) !== -1 ||
+                            (o.note && o.note.toLowerCase().indexOf(q) !== -1);
+                    });
+                    renderOfficerList(filtered);
+                });
+            }
+
+            document.getElementById('btn-back').addEventListener('click', function () {
+                document.getElementById('detail-view').classList.remove('active');
+                document.getElementById('list-view').style.display = 'block';
+                if (offMap) offMap.setView([25.8, 91.6], 7);
+            });
+        });
     </script>
 </body>
 </html>

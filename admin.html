@@ -18,7 +18,6 @@
             background: rgba(0,255,136,0.06);
         }
         .admin-module.add-user:hover { box-shadow: 0 12px 32px rgba(0,255,136,0.2); }
-        .sys-mon-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 15px; }
         .user-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
         .user-table th, .user-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); }
         .user-table th { color: #8fa3b8; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
@@ -172,11 +171,10 @@
   </div>
 </div>
 
-<!-- Add User modal -->
 <div class="modal-backdrop" id="add-user-modal" aria-hidden="true">
   <div class="modal-card" role="dialog" aria-labelledby="add-user-title">
     <h2 id="add-user-title">Add User</h2>
-    <p class="sub">Create a new staff or field officer account for NER command.</p>
+    <p class="sub">Create a new staff or field officer account for NER command. Field Officers also appear on the Field Officers page.</p>
     <form id="add-user-form" autocomplete="off">
       <div class="form-row">
         <label for="au-name">Full name *</label>
@@ -210,7 +208,7 @@
       </div>
       <div class="form-row">
         <label for="au-officer-id">Badge / Officer ID</label>
-        <input id="au-officer-id" name="officerId" type="text" placeholder="e.g. FO-099 (optional)" />
+        <input id="au-officer-id" name="officerId" type="text" placeholder="e.g. FO-099 (auto if empty for Field Officer)" />
       </div>
       <div class="form-row">
         <label for="au-email">Email</label>
@@ -246,6 +244,20 @@
   ];
 
   var STORAGE_KEY = 'sr_admin_users';
+  var OFFICERS_KEY = 'sr_field_officers';
+
+  var DISTRICT_COORDS = {
+    Guwahati: { lat: 26.1445, lng: 91.7362, label: 'Assam' },
+    Shillong: { lat: 25.5788, lng: 91.8933, label: 'Meghalaya' },
+    Gangtok: { lat: 27.3389, lng: 88.6065, label: 'Sikkim' },
+    Imphal: { lat: 24.8170, lng: 93.9368, label: 'Manipur' },
+    Aizawl: { lat: 23.7271, lng: 92.7176, label: 'Mizoram' },
+    Kohima: { lat: 25.6751, lng: 94.1086, label: 'Nagaland' },
+    Agartala: { lat: 23.8315, lng: 91.2868, label: 'Tripura' },
+    Silchar: { lat: 24.8333, lng: 92.7789, label: 'Assam' },
+    Itanagar: { lat: 27.0844, lng: 93.6053, label: 'Arunachal Pradesh' },
+    Dimapur: { lat: 25.9063, lng: 93.7279, label: 'Nagaland' }
+  };
 
   function loadStoredUsers() {
     try {
@@ -261,6 +273,20 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(extra));
   }
 
+  function loadFieldOfficers() {
+    try {
+      var raw = localStorage.getItem(OFFICERS_KEY);
+      var list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveFieldOfficers(list) {
+    localStorage.setItem(OFFICERS_KEY, JSON.stringify(list));
+  }
+
   function allUsers() {
     return USERS.concat(loadStoredUsers());
   }
@@ -273,6 +299,64 @@
       if (m) max = Math.max(max, parseInt(m[1], 10));
     });
     return 'USR-' + String(max + 1).padStart(3, '0');
+  }
+
+  function nextOfficerId() {
+    var base = [
+      'FO-042', 'FO-015', 'FO-028', 'FO-061', 'FO-033', 'FO-077', 'FO-089', 'FO-055'
+    ];
+    var extra = loadFieldOfficers().map(function (o) { return o.id; });
+    var all = base.concat(extra);
+    var max = 100;
+    all.forEach(function (id) {
+      var m = String(id || '').match(/(\d+)/);
+      if (m) max = Math.max(max, parseInt(m[1], 10));
+    });
+    return 'FO-' + String(max + 1).padStart(3, '0');
+  }
+
+  function initialsFromName(name) {
+    var parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '??';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  function isFieldOfficerRole(role) {
+    var r = String(role || '').toLowerCase();
+    return r.indexOf('field') !== -1 || r === 'field officer';
+  }
+
+  function addToFieldOfficersRoster(row) {
+    if (!isFieldOfficerRole(row.role)) return null;
+
+    var geo = DISTRICT_COORDS[row.dist] || { lat: 25.8, lng: 91.6, label: row.dist };
+    var foId = row.officerId || nextOfficerId();
+    var officer = {
+      id: foId,
+      name: row.name,
+      initials: initialsFromName(row.name),
+      dist: geo.label || row.dist,
+      city: row.dist,
+      lat: geo.lat,
+      lng: geo.lng,
+      status: 'ACTIVE',
+      statusClass: 'badge-active',
+      note: (row.dist || 'NER') + ' sector · assigned via Admin',
+      source: 'admin',
+      userId: row.id
+    };
+
+    var list = loadFieldOfficers();
+    // Replace if same officer id or same name already stored
+    var idx = list.findIndex(function (o) {
+      return o.id === officer.id ||
+        String(o.name || '').toLowerCase() === String(officer.name).toLowerCase();
+    });
+    if (idx >= 0) list[idx] = officer;
+    else list.push(officer);
+    saveFieldOfficers(list);
+    return officer;
   }
 
   function renderUsers() {
@@ -364,6 +448,10 @@
         String(now.getHours()).padStart(2, '0') + ':' +
         String(now.getMinutes()).padStart(2, '0') + ' today';
 
+      if (isFieldOfficerRole(role) && !officerId) {
+        officerId = nextOfficerId();
+      }
+
       var row = {
         id: id,
         name: name,
@@ -379,7 +467,9 @@
       extra.push(row);
       saveStoredUsers(extra);
 
-      // Also register for login if auth module is present
+      // Sync Field Officer into Field Officers page roster
+      var fo = addToFieldOfficersRoster(row);
+
       try {
         if (window.SmartRouteAuth && SmartRouteAuth.registerUser) {
           SmartRouteAuth.registerUser({
@@ -399,8 +489,10 @@
       renderUsers();
       closeAddUserModal();
 
+      var msg = 'User ' + name + ' (' + id + ') added';
+      if (fo) msg += ' · also listed on Field Officers as ' + fo.id;
       if (window.SmartRoute && SmartRoute.showToast) {
-        SmartRoute.showToast('User ' + name + ' (' + id + ') added', 'success', 2800);
+        SmartRoute.showToast(msg, 'success', 3200);
       }
     });
   });
