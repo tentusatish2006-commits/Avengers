@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
     <link rel="stylesheet" href="css/design-system.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/components.css">
@@ -31,7 +30,6 @@
             flex-direction: column !important;
             flex: 1 1 auto !important;
             min-height: 0 !important;
-            height: auto !important;
             gap: 8px;
             padding: 12px 16px 12px !important;
             box-sizing: border-box;
@@ -47,7 +45,7 @@
             align-items: center;
             flex-shrink: 0;
         }
-        .mode-tab, .route-btn {
+        .route-btn {
             padding: 7px 12px;
             border-radius: 8px;
             border: 1px solid rgba(0,212,255,0.25);
@@ -58,7 +56,7 @@
             font-size: 0.8rem;
             font-family: Outfit, sans-serif;
         }
-        .mode-tab.active, .route-btn.active {
+        .route-btn.active {
             background: rgba(0,212,255,0.15);
             color: #00d4ff;
             border-color: #00d4ff;
@@ -78,7 +76,6 @@
         .legend-inline span { display: inline-flex; align-items: center; gap: 5px; }
         .swatch { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
 
-        /* Critical: map stage must take remaining height */
         .map-stage {
             flex: 1 1 auto !important;
             min-height: 360px !important;
@@ -90,7 +87,6 @@
             background: #0a1628;
         }
 
-        /* 2D map fills stage */
         #map-2d {
             position: absolute !important;
             inset: 0 !important;
@@ -98,14 +94,6 @@
             height: 100% !important;
             z-index: 1;
             display: block !important;
-        }
-        #map-3d {
-            position: absolute !important;
-            inset: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            z-index: 1;
-            display: none;
         }
         #map-2d .leaflet-container,
         .leaflet-container {
@@ -165,8 +153,6 @@
                 </div>
 
                 <div class="map-toolbar">
-                    <button type="button" class="mode-tab active" id="tab-2d" onclick="switchViewMode('2d')">🗺 2D Map</button>
-                    <button type="button" class="mode-tab" id="tab-3d" onclick="switchViewMode('3d')">🌐 3D Terrain</button>
                     <button type="button" class="route-btn safe active" id="btn-safe" onclick="setRouteFilter('safe')">✓ Safe</button>
                     <button type="button" class="route-btn alt active" id="btn-alt" onclick="setRouteFilter('alt')">◐ Moderate</button>
                     <button type="button" class="route-btn risk active" id="btn-blocked" onclick="setRouteFilter('blocked')">⛔ Disrupted</button>
@@ -179,9 +165,7 @@
 
                 <div class="map-stage" id="map-stage">
                     <div id="map-status" class="map-status">Loading 2D map…</div>
-                    <!-- 2D Leaflet map (default visible) -->
                     <div id="map-2d"></div>
-                    <div id="map-3d"></div>
                     <div class="tracking-chip" id="tracking-chip">
                         <span class="dot"></span>2D Live Map · <span id="veh-count">0</span> vehicles on routes
                     </div>
@@ -192,9 +176,7 @@
 
     <script src="js/components.js"></script>
     <script src="js/map-engine.js"></script>
-    <script src="js/map-3d-engine.js"></script>
     <script>
-        var scene3D = null;
         var showSafe = true, showAlt = true, showBlocked = true;
         var mapReady = false;
 
@@ -212,13 +194,6 @@
                     subtitle: '2D map · OSRM road routes'
                 });
             }
-            // Ensure 2D is visible
-            document.getElementById('map-2d').style.display = 'block';
-            document.getElementById('map-3d').style.display = 'none';
-            document.getElementById('tab-2d').classList.add('active');
-            document.getElementById('tab-3d').classList.remove('active');
-
-            // Init after layout so container has height
             requestAnimationFrame(function () {
                 setTimeout(init2DMap, 150);
             });
@@ -227,10 +202,6 @@
         function init2DMap() {
             setStatus('Loading 2D satellite map…', true);
 
-            var el = document.getElementById('map-2d');
-            if (!el) return;
-
-            // Force size before Leaflet init
             var stage = document.getElementById('map-stage');
             if (stage && stage.clientHeight < 200) {
                 stage.style.minHeight = '420px';
@@ -242,7 +213,6 @@
                 return;
             }
 
-            // Prefer MapEngine bootstrap (routes + vehicles)
             if (window.MapEngine && typeof MapEngine.bootstrapMap === 'function') {
                 MapEngine.bootstrapMap('map-2d').then(function (map) {
                     mapReady = true;
@@ -256,7 +226,7 @@
                     var vc = document.getElementById('veh-count');
                     if (vc) vc.textContent = String(n);
                     if (window.SmartRoute) {
-                        SmartRoute.showToast('2D map ready — road routes loading', 'success', 2500);
+                        SmartRoute.showToast('2D map ready', 'success', 2500);
                     }
                 }).catch(function (err) {
                     console.error(err);
@@ -265,7 +235,6 @@
                 return;
             }
 
-            // Fallback if MapEngine missing
             fallback2DMap();
         }
 
@@ -275,10 +244,8 @@
                 var map = L.map('map-2d', { zoomControl: true }).setView([25.8, 91.6], 7);
                 L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
                     maxZoom: 18,
-                    attribution: '© Google Satellite | SmartRoute'
+                    attribution: '© Satellite | SmartRoute'
                 }).addTo(map);
-                // Secondary OSM in case google tiles blocked
-                // L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
                 if (window.MapEngine) {
                     MapEngine.map = map;
@@ -329,34 +296,6 @@
                     MapEngine.map.removeLayer(layer);
                 }
             });
-        }
-
-        function init3D() {
-            if (scene3D) return;
-            if (window.MapEngine && typeof MapEngine.create3DScene === 'function') {
-                scene3D = MapEngine.create3DScene('map-3d', { autoRotate: true });
-            }
-        }
-
-        function switchViewMode(mode) {
-            var c2 = document.getElementById('map-2d');
-            var c3 = document.getElementById('map-3d');
-            document.getElementById('tab-2d').classList.toggle('active', mode === '2d');
-            document.getElementById('tab-3d').classList.toggle('active', mode === '3d');
-            if (mode === '3d') {
-                c2.style.display = 'none';
-                c3.style.display = 'block';
-                init3D();
-            } else {
-                // Show 2D map
-                c3.style.display = 'none';
-                c2.style.display = 'block';
-                if (!mapReady) init2DMap();
-                else if (MapEngine && MapEngine.map) {
-                    setTimeout(function () { MapEngine.map.invalidateSize(); }, 100);
-                    setTimeout(function () { MapEngine.map.invalidateSize(); }, 400);
-                }
-            }
         }
 
         window.addEventListener('resize', function () {
