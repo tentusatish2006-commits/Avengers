@@ -208,6 +208,18 @@
             padding: 12px;
             border-radius: 8px;
         }
+
+        .dashboard-body.hidden-until-search { display: none !important; }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            border: 1px dashed rgba(0,212,255,0.25);
+            border-radius: 14px;
+            background: rgba(0,212,255,0.04);
+            color: #8fa3b8;
+        }
+        .empty-state h3 { margin: 0 0 8px 0; color: #e8f4ff; font-size: 1.1rem; }
+        .empty-state p { margin: 0; font-size: 0.9rem; }
     </style>
 </head>
 <body>
@@ -225,13 +237,20 @@
             <div id="search-results" class="search-results" role="listbox"></div>
         </div>
         
+        <!-- Empty until search -->
+        <div id="empty-state" class="empty-state">
+            <h3>Search an officer</h3>
+            <p>Type a name, FO-ID, or district above.<br>Details load only after you select someone.</p>
+        </div>
+
+        <div id="dashboard-body" class="dashboard-body hidden-until-search" style="display:flex; flex-direction:column; gap:20px;">
         <!-- Profile -->
         <div class="glass-card profile-card">
-            <div class="prof-avatar" id="od-avatar">RK</div>
+            <div class="prof-avatar" id="od-avatar">—</div>
             <div class="prof-info">
-                <h2 id="od-name">Ravi Kumar</h2>
-                <p id="od-meta">FO-042 | North-Eastern Command (Assam Sector)</p>
-                <p id="od-status-line" style="color: #00ff88; margin-top:5px;"><span class="status-dot" id="od-status-dot"></span><span id="od-status-text">ONLINE</span></p>
+                <h2 id="od-name">—</h2>
+                <p id="od-meta">—</p>
+                <p id="od-status-line" style="color: #8fa3b8; margin-top:5px;"><span class="status-dot off" id="od-status-dot"></span><span id="od-status-text">—</span></p>
             </div>
         </div>
 
@@ -241,24 +260,23 @@
                 <span style="color:#00d4ff; font-weight:bold;">📍 Current Location (2D Satellite View)</span>
                 <span style="color:#aaa; font-size:0.8rem;">Live GPS Telemetry</span>
             </div>
-            <p id="od-coords" style="margin:5px 0 0 0; font-size:0.95rem; font-family:'JetBrains Mono',monospace; color:#00d4ff;">26.1524° N, 91.7510° E</p>
-            <p id="od-location" style="margin:0; color:#aaa; font-size:0.85rem;">Guwahati Riverfront / Brahmaputra Sector, Assam</p>
+            <p id="od-coords" style="margin:5px 0 0 0; font-size:0.95rem; font-family:'JetBrains Mono',monospace; color:#00d4ff;">—</p>
+            <p id="od-location" style="margin:0; color:#aaa; font-size:0.85rem;">Select an officer to load GPS</p>
             <div id="mini-map" style="height:180px; border-radius:10px; margin-top:10px; border:1px solid rgba(0,212,255,0.3); overflow:hidden;"></div>
         </div>
-
 
         <!-- Stats -->
         <div class="stats-grid">
             <div class="stat-box">
-                <h3 id="od-reports">3</h3>
+                <h3 id="od-reports">—</h3>
                 <p>Reports</p>
             </div>
             <div class="stat-box">
-                <h3 id="od-assigned">2</h3>
+                <h3 id="od-assigned">—</h3>
                 <p>Assigned</p>
             </div>
             <div class="stat-box">
-                <h3 id="od-traveled">127<span style="font-size:0.8rem">km</span></h3>
+                <h3 id="od-traveled">—</h3>
                 <p>Traveled</p>
             </div>
         </div>
@@ -295,13 +313,9 @@
         <div>
             <h3 style="margin-bottom:10px; color:#fff;">Assigned Tasks</h3>
             <div class="task-list" id="od-tasks">
-                <div class="task-card" style="cursor: pointer;" onclick="window.location.href='emergency.html'">
-                    <h4 style="margin:0 0 5px 0;">Verify Landslide on SH-39 ↗</h4>
-                    <p style="margin:0; font-size:0.85rem; color:#aaa;">Dist: 4.2 km • High Priority</p>
-                </div>
-                <div class="task-card" style="border-left-color: #ffd700; cursor: pointer;" onclick="window.location.href='infrastructure.html'">
-                    <h4 style="margin:0 0 5px 0;">Inspect Godavari Culvert ↗</h4>
-                    <p style="margin:0; font-size:0.85rem; color:#aaa;">Dist: 12.5 km • Medium Priority</p>
+                <div class="task-card" style="border-left-color:#8fa3b8;">
+                    <h4 style="margin:0;">No tasks</h4>
+                    <p style="margin:5px 0 0 0; font-size:0.85rem; color:#aaa;">Select an officer first</p>
                 </div>
             </div>
         </div>
@@ -310,15 +324,16 @@
         <div class="glass-card" style="padding: 15px;">
             <h4 style="margin:0 0 10px 0; color:#00d4ff;">Current Conditions</h4>
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="font-size: 2rem;" id="od-weather-icon">🌧</div>
+                <div style="font-size: 2rem;" id="od-weather-icon">—</div>
                 <div style="text-align: right;">
-                    <div style="font-size: 1.2rem; font-weight: bold;" id="od-temp">24°C</div>
-                    <div style="font-size: 0.9rem; color: #aaa;" id="od-weather-desc">Heavy Rain (45mm/hr)</div>
+                    <div style="font-size: 1.2rem; font-weight: bold;" id="od-temp">—</div>
+                    <div style="font-size: 0.9rem; color: #aaa;" id="od-weather-desc">—</div>
                 </div>
             </div>
-            <div id="od-advisory" style="margin-top: 10px; font-size: 0.8rem; color: #ff9500; background: rgba(255,149,0,0.1); padding: 5px; border-radius: 4px;">
-                Advisory: Flash flood risk elevated in your sector.
+            <div id="od-advisory" style="margin-top: 10px; font-size: 0.8rem; color: #8fa3b8; background: rgba(255,255,255,0.05); padding: 5px; border-radius: 4px;">
+                Search and select an officer to load sector weather.
             </div>
+        </div>
         </div>
 
     </div>
@@ -326,7 +341,6 @@
     <script src="js/components.js"></script>
     <script src="js/map-engine.js"></script>
     <script>
-        // Same officer roster as officers.html — single source for search + details
         const OFFICERS = [
             { id: 'FO-042', name: 'Ravi Kumar', initials: 'RK', dist: 'Assam', sector: 'North-Eastern Command (Assam Sector)', lat: 26.1524, lng: 91.7510, status: 'ACTIVE', note: 'Guwahati Riverfront / Brahmaputra Sector, Assam', reports: 3, assigned: 2, traveled: 127, weather: { icon: '🌧', temp: '24°C', desc: 'Heavy Rain (45mm/hr)', advisory: 'Advisory: Flash flood risk elevated in your sector.' }, tasks: [
                 { title: 'Verify Landslide on SH-39', meta: 'Dist: 4.2 km • High Priority', href: 'emergency.html', color: '#ff9500' },
@@ -359,7 +373,7 @@
 
         let miniMap = null;
         let officerMarker = null;
-        let currentOfficer = OFFICERS[0];
+        let currentOfficer = null;
 
         function statusColor(status) {
             if (status === 'ACTIVE') return '#00ff88';
@@ -373,9 +387,20 @@
             return 'OFF DUTY';
         }
 
+        function showDashboard() {
+            var empty = document.getElementById('empty-state');
+            var body = document.getElementById('dashboard-body');
+            if (empty) empty.style.display = 'none';
+            if (body) {
+                body.classList.remove('hidden-until-search');
+                body.style.display = 'flex';
+            }
+        }
+
         function applyOfficer(off) {
             if (!off) return;
             currentOfficer = off;
+            showDashboard();
 
             document.getElementById('od-avatar').textContent = off.initials;
             document.getElementById('od-name').textContent = off.name;
@@ -417,6 +442,8 @@
                 document.getElementById('od-temp').textContent = off.weather.temp;
                 document.getElementById('od-weather-desc').textContent = off.weather.desc;
                 document.getElementById('od-advisory').textContent = off.weather.advisory;
+                document.getElementById('od-advisory').style.color = '#ff9500';
+                document.getElementById('od-advisory').style.background = 'rgba(255,149,0,0.1)';
             }
 
             updateMap(off);
@@ -426,7 +453,26 @@
             }
         }
 
+        function ensureMiniMap() {
+            if (window.__srMapBooted || typeof L === 'undefined') return;
+            var el = document.getElementById('mini-map');
+            if (!el) return;
+            miniMap = L.map('mini-map', {
+                center: [25.8, 91.6],
+                zoom: 6,
+                zoomControl: true,
+                attributionControl: false
+            });
+            L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+                maxZoom: 20,
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+            }).addTo(miniMap);
+            window.__srMapBooted = true;
+            setTimeout(function () { if (miniMap) miniMap.invalidateSize(); }, 150);
+        }
+
         function updateMap(off) {
+            ensureMiniMap();
             if (!miniMap || typeof L === 'undefined') return;
             miniMap.setView([off.lat, off.lng], 11);
 
@@ -495,29 +541,14 @@
                 SmartRoute.initCountUps();
             }
 
-            // Init mini map once
-            if (typeof L !== 'undefined') {
-                miniMap = L.map('mini-map', {
-                    center: [currentOfficer.lat, currentOfficer.lng],
-                    zoom: 11,
-                    zoomControl: true,
-                    attributionControl: false
-                });
-                L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-                    maxZoom: 20,
-                    subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
-                }).addTo(miniMap);
-                setTimeout(function () { miniMap.invalidateSize(); }, 150);
-            }
+            window.__srMapBooted = false;
 
-            applyOfficer(currentOfficer);
-
+            // No default officer — wait for search selection
             var input = document.getElementById('officer-search');
             var results = document.getElementById('search-results');
 
             input.addEventListener('input', function () {
-                var q = input.value;
-                renderSearchResults(filterOfficers(q));
+                renderSearchResults(filterOfficers(input.value));
             });
 
             input.addEventListener('focus', function () {
@@ -544,7 +575,7 @@
                 }
             });
 
-            // Deep-link support: ?officer=FO-015 or ?name=Lakshmi
+            // Deep-link: ?officer=FO-015 or ?name=Lakshmi
             try {
                 var params = new URLSearchParams(window.location.search);
                 var byId = params.get('officer') || params.get('id');
