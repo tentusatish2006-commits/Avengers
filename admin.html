@@ -9,13 +9,120 @@
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/components.css">
     <style>
-        .admin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+        .admin-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+        @media (max-width: 1100px) { .admin-grid { grid-template-columns: repeat(2, 1fr); } }
         .admin-module { display: flex; align-items: center; padding: 20px; gap: 20px; cursor: pointer; transition: transform 0.3s ease, box-shadow 0.3s ease; }
         .admin-module:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,212,255,0.15); }
+        .admin-module.add-user {
+            border: 1px solid rgba(0,255,136,0.35);
+            background: rgba(0,255,136,0.06);
+        }
+        .admin-module.add-user:hover { box-shadow: 0 12px 32px rgba(0,255,136,0.2); }
         .sys-mon-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 15px; }
         .user-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
         .user-table th, .user-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); }
         .user-table th { color: #8fa3b8; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.65);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .modal-backdrop.show { display: flex; }
+        .modal-card {
+            width: 100%;
+            max-width: 480px;
+            background: #07111f;
+            border: 1px solid rgba(0,212,255,0.35);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+        .modal-card h2 { margin: 0 0 6px; color: #00d4ff; font-size: 1.25rem; }
+        .modal-card .sub { margin: 0 0 18px; color: #8fa3b8; font-size: 0.85rem; }
+        .form-row { margin-bottom: 14px; }
+        .form-row label {
+            display: block;
+            font-size: 0.75rem;
+            color: #8fa3b8;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .form-row input, .form-row select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.05);
+            color: #e8f4ff;
+            font-family: Outfit, sans-serif;
+            font-size: 0.95rem;
+        }
+        .form-row input:focus, .form-row select:focus {
+            outline: none;
+            border-color: #00d4ff;
+        }
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .form-actions button {
+            flex: 1;
+            padding: 11px 14px;
+            border-radius: 10px;
+            font-family: Outfit, sans-serif;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-cancel {
+            background: rgba(255,255,255,0.06);
+            color: #c5d4e3;
+            border: 1px solid rgba(255,255,255,0.12) !important;
+        }
+        .btn-save {
+            background: linear-gradient(135deg, #00d4ff, #00ff88);
+            color: #031018;
+        }
+        .form-error {
+            display: none;
+            margin-top: 10px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            background: rgba(255,59,59,0.12);
+            color: #ff6b6b;
+            font-size: 0.85rem;
+        }
+        .form-error.show { display: block; }
+        .table-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .btn-add-inline {
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(0,255,136,0.4);
+            background: rgba(0,255,136,0.12);
+            color: #00ff88;
+            font-family: Outfit, sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .btn-add-inline:hover { background: rgba(0,255,136,0.22); }
     </style>
 </head>
 <body>
@@ -27,17 +134,14 @@
         <p class="page-subtitle">North Eastern Region · user & system management</p>
       </div>
 
-      <div class="glass-card" style="padding:20px;margin-bottom:24px;">
-        <h2 style="margin:0 0 12px;color:#00d4ff;">Active Users — NER Districts</h2>
-        <table class="user-table" id="user-table">
-          <thead>
-            <tr><th>ID</th><th>Name</th><th>Role</th><th>District</th><th>Status</th><th>Last Login</th></tr>
-          </thead>
-          <tbody id="user-tbody"></tbody>
-        </table>
-      </div>
-
       <div class="admin-grid">
+        <div class="glass-card admin-module add-user" id="btn-open-add-user" role="button" tabindex="0">
+          <div style="font-size:2rem;">➕</div>
+          <div>
+            <div style="font-weight:700; color:#00ff88;">Add User</div>
+            <div class="text-muted text-sm">Create officer / staff account</div>
+          </div>
+        </div>
         <div class="glass-card admin-module" onclick="location.href='settings.html'">
           <div style="font-size:2rem;">⚙</div>
           <div><div style="font-weight:700;">Settings</div><div class="text-muted text-sm">Platform configuration</div></div>
@@ -51,12 +155,84 @@
           <div><div style="font-weight:700;">Field Officers</div><div class="text-muted text-sm">NER field teams</div></div>
         </div>
       </div>
+
+      <div class="glass-card" style="padding:20px;margin-bottom:24px;">
+        <div class="table-toolbar">
+          <h2 style="margin:0;color:#00d4ff;">Active Users — NER Districts</h2>
+          <button type="button" class="btn-add-inline" id="btn-add-user-inline">+ Add User</button>
+        </div>
+        <table class="user-table" id="user-table">
+          <thead>
+            <tr><th>ID</th><th>Name</th><th>Role</th><th>District</th><th>Status</th><th>Last Login</th></tr>
+          </thead>
+          <tbody id="user-tbody"></tbody>
+        </table>
+      </div>
     </main>
   </div>
 </div>
+
+<!-- Add User modal -->
+<div class="modal-backdrop" id="add-user-modal" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-labelledby="add-user-title">
+    <h2 id="add-user-title">Add User</h2>
+    <p class="sub">Create a new staff or field officer account for NER command.</p>
+    <form id="add-user-form" autocomplete="off">
+      <div class="form-row">
+        <label for="au-name">Full name *</label>
+        <input id="au-name" name="name" type="text" required placeholder="e.g. Ravi Kumar" />
+      </div>
+      <div class="form-row">
+        <label for="au-role">Role *</label>
+        <select id="au-role" name="role" required>
+          <option value="Field Officer">Field Officer</option>
+          <option value="District Coord">District Coord</option>
+          <option value="Logistics Lead">Logistics Lead</option>
+          <option value="Local Authority">Local Authority</option>
+          <option value="Command HQ">Command HQ</option>
+          <option value="Admin">Admin</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label for="au-district">District *</label>
+        <select id="au-district" name="district" required>
+          <option value="Guwahati">Guwahati</option>
+          <option value="Shillong">Shillong</option>
+          <option value="Gangtok">Gangtok</option>
+          <option value="Imphal">Imphal</option>
+          <option value="Aizawl">Aizawl</option>
+          <option value="Kohima">Kohima</option>
+          <option value="Agartala">Agartala</option>
+          <option value="Silchar">Silchar</option>
+          <option value="Itanagar">Itanagar</option>
+          <option value="Dimapur">Dimapur</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label for="au-officer-id">Badge / Officer ID</label>
+        <input id="au-officer-id" name="officerId" type="text" placeholder="e.g. FO-099 (optional)" />
+      </div>
+      <div class="form-row">
+        <label for="au-email">Email</label>
+        <input id="au-email" name="email" type="email" placeholder="optional@smartroute.gov" />
+      </div>
+      <div class="form-row">
+        <label for="au-password">Login password *</label>
+        <input id="au-password" name="password" type="password" required minlength="4" placeholder="Min 4 characters" />
+      </div>
+      <div class="form-error" id="au-error"></div>
+      <div class="form-actions">
+        <button type="button" class="btn-cancel" id="btn-cancel-add">Cancel</button>
+        <button type="submit" class="btn-save">Save User</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script src="js/components.js"></script>
+<script src="js/auth-users.js"></script>
 <script>
-  const USERS = [
+  var USERS = [
     { id: 'USR-001', name: 'Admin Officer', role: 'Command HQ', dist: 'Guwahati', stat: 'Active', login: '07:50 today' },
     { id: 'USR-002', name: 'Rina Das', role: 'Logistics Lead', dist: 'Shillong', stat: 'Active', login: '08:05 today' },
     { id: 'USR-003', name: 'Tenzing Bhutia', role: 'Field Officer', dist: 'Gangtok', stat: 'Active', login: '08:20 today' },
@@ -69,15 +245,163 @@
     { id: 'USR-010', name: 'Agartala Desk', role: 'Local Authority', dist: 'Agartala', stat: 'Active', login: '08:55 today' }
   ];
 
+  var STORAGE_KEY = 'sr_admin_users';
+
+  function loadStoredUsers() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      var list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveStoredUsers(extra) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(extra));
+  }
+
+  function allUsers() {
+    return USERS.concat(loadStoredUsers());
+  }
+
+  function nextUserId() {
+    var list = allUsers();
+    var max = 0;
+    list.forEach(function (u) {
+      var m = String(u.id || '').match(/(\d+)/);
+      if (m) max = Math.max(max, parseInt(m[1], 10));
+    });
+    return 'USR-' + String(max + 1).padStart(3, '0');
+  }
+
+  function renderUsers() {
+    var tb = document.getElementById('user-tbody');
+    tb.innerHTML = '';
+    allUsers().forEach(function (u) {
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + u.id + '</td>' +
+        '<td>' + u.name + '</td>' +
+        '<td>' + u.role + '</td>' +
+        '<td>' + u.dist + '</td>' +
+        '<td style="color:#00ff88">' + (u.stat || 'Active') + '</td>' +
+        '<td>' + (u.login || 'Just now') + '</td>';
+      tb.appendChild(tr);
+    });
+  }
+
+  function openAddUserModal() {
+    var modal = document.getElementById('add-user-modal');
+    var err = document.getElementById('au-error');
+    err.classList.remove('show');
+    err.textContent = '';
+    document.getElementById('add-user-form').reset();
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+    setTimeout(function () {
+      document.getElementById('au-name').focus();
+    }, 50);
+  }
+
+  function closeAddUserModal() {
+    var modal = document.getElementById('add-user-modal');
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     if (window.SmartRoute) {
       SmartRoute.initSharedComponents({ title: 'Admin Panel', subtitle: 'NER command administration' });
     }
-    var tb = document.getElementById('user-tbody');
-    USERS.forEach(function (u) {
-      var tr = document.createElement('tr');
-      tr.innerHTML = '<td>' + u.id + '</td><td>' + u.name + '</td><td>' + u.role + '</td><td>' + u.dist + '</td><td style="color:#00ff88">' + u.stat + '</td><td>' + u.login + '</td>';
-      tb.appendChild(tr);
+
+    renderUsers();
+
+    document.getElementById('btn-open-add-user').addEventListener('click', openAddUserModal);
+    document.getElementById('btn-open-add-user').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openAddUserModal();
+      }
+    });
+    document.getElementById('btn-add-user-inline').addEventListener('click', openAddUserModal);
+    document.getElementById('btn-cancel-add').addEventListener('click', closeAddUserModal);
+
+    document.getElementById('add-user-modal').addEventListener('click', function (e) {
+      if (e.target === this) closeAddUserModal();
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeAddUserModal();
+    });
+
+    document.getElementById('add-user-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var err = document.getElementById('au-error');
+      err.classList.remove('show');
+
+      var name = document.getElementById('au-name').value.trim();
+      var role = document.getElementById('au-role').value;
+      var dist = document.getElementById('au-district').value;
+      var officerId = document.getElementById('au-officer-id').value.trim();
+      var email = document.getElementById('au-email').value.trim();
+      var password = document.getElementById('au-password').value;
+
+      if (!name) {
+        err.textContent = 'Full name is required.';
+        err.classList.add('show');
+        return;
+      }
+      if (!password || password.length < 4) {
+        err.textContent = 'Password must be at least 4 characters.';
+        err.classList.add('show');
+        return;
+      }
+
+      var id = nextUserId();
+      var now = new Date();
+      var login =
+        String(now.getHours()).padStart(2, '0') + ':' +
+        String(now.getMinutes()).padStart(2, '0') + ' today';
+
+      var row = {
+        id: id,
+        name: name,
+        role: role,
+        dist: dist,
+        stat: 'Active',
+        login: login,
+        officerId: officerId,
+        email: email
+      };
+
+      var extra = loadStoredUsers();
+      extra.push(row);
+      saveStoredUsers(extra);
+
+      // Also register for login if auth module is present
+      try {
+        if (window.SmartRouteAuth && SmartRouteAuth.registerUser) {
+          SmartRouteAuth.registerUser({
+            username: name,
+            officerId: officerId || id,
+            email: email,
+            password: password,
+            role: role,
+            department: role,
+            region: dist
+          });
+        }
+      } catch (regErr) {
+        console.warn('Auth register:', regErr);
+      }
+
+      renderUsers();
+      closeAddUserModal();
+
+      if (window.SmartRoute && SmartRoute.showToast) {
+        SmartRoute.showToast('User ' + name + ' (' + id + ') added', 'success', 2800);
+      }
     });
   });
 </script>
