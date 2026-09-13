@@ -20,7 +20,16 @@
     return String(id || '').trim().toLowerCase();
   }
 
-  function registerUser(user) {
+  /**
+   * Create / update a user account in the registry.
+   * @param {object} user
+   * @param {object} [options]
+   * @param {boolean} [options.startSession=true] - if false, do NOT change the current logged-in user (use when Admin adds another person)
+   */
+  function registerUser(user, options) {
+    options = options || {};
+    var shouldStartSession = options.startSession !== false;
+
     var users = readUsers();
     var username = (user.username || '').trim();
     var officerId = (user.officerId || '').trim();
@@ -49,14 +58,16 @@
     else users.push(record);
     writeUsers(users);
 
-    localStorage.setItem('sr_username', record.username);
-    localStorage.setItem('sr_officer_id', record.officerId);
-    localStorage.setItem('sr_email', record.email);
-    localStorage.setItem('sr_user_role', record.role);
-    localStorage.setItem('sr_department', record.department);
-    localStorage.setItem('sr_region', record.region);
-    localStorage.setItem('sr_logged_in', '1');
+    // Only touch session when this is a real signup/login flow — never when Admin is adding someone else
+    if (shouldStartSession) {
+      startSession(record);
+    }
     return record;
+  }
+
+  /** Admin helper: save account without switching the logged-in profile */
+  function createUserWithoutLogin(user) {
+    return registerUser(user, { startSession: false });
   }
 
   function validateLogin(identifier, password) {
@@ -89,10 +100,24 @@
     localStorage.setItem('sr_logged_in', '1');
   }
 
+  function getSessionUser() {
+    if (localStorage.getItem('sr_logged_in') !== '1') return null;
+    return {
+      username: localStorage.getItem('sr_username') || '',
+      officerId: localStorage.getItem('sr_officer_id') || '',
+      email: localStorage.getItem('sr_email') || '',
+      role: localStorage.getItem('sr_user_role') || '',
+      department: localStorage.getItem('sr_department') || '',
+      region: localStorage.getItem('sr_region') || ''
+    };
+  }
+
   global.SmartRouteAuth = {
     registerUser: registerUser,
+    createUserWithoutLogin: createUserWithoutLogin,
     validateLogin: validateLogin,
     startSession: startSession,
+    getSessionUser: getSessionUser,
     readUsers: readUsers,
     countUsers: function () { return readUsers().length; }
   };
