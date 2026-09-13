@@ -174,7 +174,7 @@
 <div class="modal-backdrop" id="add-user-modal" aria-hidden="true">
   <div class="modal-card" role="dialog" aria-labelledby="add-user-title">
     <h2 id="add-user-title">Add User</h2>
-    <p class="sub">Create a new staff or field officer account for NER command. Field Officers also appear on the Field Officers page.</p>
+    <p class="sub">Create a new staff or field officer account for NER command. Field Officers also appear on the Field Officers page. Your own login profile will not change.</p>
     <form id="add-user-form" autocomplete="off">
       <div class="form-row">
         <label for="au-name">Full name *</label>
@@ -302,9 +302,7 @@
   }
 
   function nextOfficerId() {
-    var base = [
-      'FO-042', 'FO-015', 'FO-028', 'FO-061', 'FO-033', 'FO-077', 'FO-089', 'FO-055'
-    ];
+    var base = ['FO-042', 'FO-015', 'FO-028', 'FO-061', 'FO-033', 'FO-077', 'FO-089', 'FO-055'];
     var extra = loadFieldOfficers().map(function (o) { return o.id; });
     var all = base.concat(extra);
     var max = 100;
@@ -348,7 +346,6 @@
     };
 
     var list = loadFieldOfficers();
-    // Replace if same officer id or same name already stored
     var idx = list.findIndex(function (o) {
       return o.id === officer.id ||
         String(o.name || '').toLowerCase() === String(officer.name).toLowerCase();
@@ -467,12 +464,12 @@
       extra.push(row);
       saveStoredUsers(extra);
 
-      // Sync Field Officer into Field Officers page roster
       var fo = addToFieldOfficersRoster(row);
 
+      // Save login account WITHOUT switching the current logged-in sidebar profile
       try {
-        if (window.SmartRouteAuth && SmartRouteAuth.registerUser) {
-          SmartRouteAuth.registerUser({
+        if (window.SmartRouteAuth) {
+          var payload = {
             username: name,
             officerId: officerId || id,
             email: email,
@@ -480,7 +477,12 @@
             role: role,
             department: role,
             region: dist
-          });
+          };
+          if (SmartRouteAuth.createUserWithoutLogin) {
+            SmartRouteAuth.createUserWithoutLogin(payload);
+          } else if (SmartRouteAuth.registerUser) {
+            SmartRouteAuth.registerUser(payload, { startSession: false });
+          }
         }
       } catch (regErr) {
         console.warn('Auth register:', regErr);
