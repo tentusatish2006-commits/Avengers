@@ -38,7 +38,7 @@
     <main class="page-body" style="padding:12px;">
       <div class="page-header">
         <h1 class="page-title">Live Simulation</h1>
-        <p class="page-subtitle">NER crisis drill · road-network routes · geo-tagged photos · Gemini AI</p>
+        <p class="page-subtitle">NER crisis drill · road routes · problem-matched field photos · Gemini AI</p>
       </div>
 
       <div class="sim-layout">
@@ -58,7 +58,7 @@
             <span><i class="sw" style="background:#00ff88"></i>Safe</span>
             <span><i class="sw" style="background:#ff9500"></i>Alternate</span>
             <span><i class="sw" style="background:#ff3b3b"></i>Critical</span>
-            <span>📷 Geo-photo</span>
+            <span>📷 Problem photos only</span>
           </div>
         </div>
 
@@ -67,7 +67,7 @@
           <div class="sim-side">
             <div class="phase-card" id="phase-card">
               <div id="phase-title" style="font-weight:800;color:#00d4ff;">Ready</div>
-              <div id="phase-desc" style="margin-top:6px;color:#c8d8e8;font-size:0.9rem;">Press PLAY to run the NER live simulation.</div>
+              <div id="phase-desc" style="margin-top:6px;color:#c8d8e8;font-size:0.9rem;">Press PLAY — photos appear only for matching problems (flood, landslide, road damage).</div>
             </div>
             <div class="glass-card" style="padding:10px;">
               <div style="font-weight:700;color:#00d4ff;margin-bottom:6px;">Gemini live analysis</div>
@@ -97,57 +97,51 @@
   var vehicleIdx = 0;
   var moveTimer = null;
 
-  // Geo-tagged field photos (NER)
-  var GEO_PHOTOS = [
-    {
-      id: 'P-TAW-01',
-      lat: 27.58, lng: 91.86,
-      title: 'Tawang Pass rockfall',
-      officer: 'FO-042 Ravi Kumar',
-      time: '2026-09-13 06:42 IST',
-      url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80',
-      note: 'Single-lane blocked · geotag 27.5800°N 91.8600°E'
-    },
-    {
-      id: 'P-GHY-02',
+  // ONLY problem-matched field photos (no decorative / default scenery)
+  var PROBLEM_PHOTOS = {
+    flood: {
+      id: 'P-GHY-FLOOD',
       lat: 26.18, lng: 91.75,
-      title: 'Guwahati riverfront flooding',
+      title: 'Flooded approach road — Guwahati',
+      problem: 'Flood',
       officer: 'FO-018 Ananya Das',
       time: '2026-09-13 07:05 IST',
-      url: 'https://images.unsplash.com/photo-1547683905-f686c993aae5?w=600&q=80',
-      note: 'Water on AH-1 approach · geotag 26.1800°N 91.7500°E'
+      url: 'https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=800&q=80',
+      note: 'Standing water on logistics approach · 26.1800°N 91.7500°E'
     },
-    {
-      id: 'P-SHL-03',
-      lat: 25.57, lng: 91.89,
-      title: 'Shillong bypass clear',
+    landslide: {
+      id: 'P-TAW-SLIDE',
+      lat: 27.58, lng: 91.86,
+      title: 'Landslide / debris on mountain road — Tawang',
+      problem: 'Landslide',
+      officer: 'FO-042 Ravi Kumar',
+      time: '2026-09-13 06:42 IST',
+      url: 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?auto=format&fit=crop&w=800&q=80',
+      note: 'Slope failure debris blocking lane · 27.5800°N 91.8600°E'
+    },
+    road_damage: {
+      id: 'P-SHL-DMG',
+      lat: 25.62, lng: 91.92,
+      title: 'Rain-damaged pavement — Shillong sector',
+      problem: 'Road damage',
       officer: 'FO-031 B. Lyngdoh',
       time: '2026-09-13 07:20 IST',
-      url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=80',
-      note: 'Alternate elevated road open · geotag 25.5700°N 91.8900°E'
-    },
-    {
-      id: 'P-SIL-04',
-      lat: 24.83, lng: 92.78,
-      title: 'Silchar sector drainage',
-      officer: 'FO-027 R. Choudhury',
-      time: '2026-09-13 07:35 IST',
-      url: 'https://images.unsplash.com/photo-1527482797697-8795b05a13fe?w=600&q=80',
-      note: 'Moderate risk · geotag 24.8300°N 92.7800°E'
+      url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=800&q=80',
+      note: 'Surface failure after heavy rain · 25.6200°N 91.9200°E'
     }
-  ];
+  };
 
   var phases = [
     { t: '🌧 HEAVY RAINFALL DETECTED', c: 'warning', d: 'Extreme precipitation — Brahmaputra / Guwahati sector.', fly: [26.15, 91.75], z: 8 },
     { t: '🛣 LOAD NER ROAD NETWORK', c: '', d: 'Drawing safe, alternate and critical routes along real roads (OSRM).', action: 'load_routes' },
-    { t: '🌊 FLOOD RISK ZONE', c: 'warning', d: 'Inundation risk near Guwahati riverfront.', action: 'show_flood' },
-    { t: '⚠ LANDSLIDE INCIDENT', c: 'critical', d: 'NH approach to Tawang Pass disrupted.', action: 'show_incident', fly: [27.58, 91.86], z: 10 },
-    { t: '📷 GEO-TAGGED FIELD PHOTOS', c: '', d: 'Pinning Jio/GPS-tagged officer photos on the map.', action: 'show_photos' },
-    { t: '🚛 CONVOY ON SAFE ROAD', c: 'warning', d: 'MED-Convoy starts on Guwahati–Shillong road geometry.', action: 'show_vehicle' },
-    { t: '🤖 GEMINI LIVE ANALYSIS', c: '', d: 'Calling Gemini API for NER routing advice.', action: 'gemini' },
-    { t: '🟢 SAFEST + ALTERNATE ROUTES', c: 'success', d: 'Highlighting road-following safe & alternate corridors.', action: 'emphasize_routes' },
-    { t: '🔄 VEHICLE FOLLOWS ROAD', c: 'success', d: 'Convoy animates along OSRM polyline (not a straight line).', action: 'move_vehicle' },
-    { t: '📷 VISION PHOTO REVIEW', c: '', d: 'Gemini reviews geotagged landslide photo description.', action: 'gemini_photo' },
+    { t: '🌊 FLOOD RISK ZONE', c: 'warning', d: 'Inundation near Guwahati — matching flood field photo pinned.', action: 'show_flood', fly: [26.18, 91.75], z: 11 },
+    { t: '⚠ LANDSLIDE INCIDENT', c: 'critical', d: 'Tawang approach disrupted — matching landslide field photo pinned.', action: 'show_incident', fly: [27.58, 91.86], z: 11 },
+    { t: '📷 ROAD DAMAGE EVIDENCE', c: 'warning', d: 'Shillong sector rain damage — matching road-damage photo.', action: 'photo_road', fly: [25.62, 91.92], z: 11 },
+    { t: '🚛 CONVOY ON SAFE ROAD', c: 'warning', d: 'MED-Convoy on Guwahati–Shillong road geometry.', action: 'show_vehicle' },
+    { t: '🤖 GEMINI LIVE ANALYSIS', c: '', d: 'Gemini advice for flood + landslide + road damage in NER.', action: 'gemini' },
+    { t: '🟢 SAFEST + ALTERNATE ROUTES', c: 'success', d: 'Highlight road-following safe & alternate corridors.', action: 'emphasize_routes' },
+    { t: '🔄 VEHICLE FOLLOWS ROAD', c: 'success', d: 'Convoy animates along OSRM polyline.', action: 'move_vehicle' },
+    { t: '🤖 GEMINI PHOTO REVIEW', c: '', d: 'Gemini reviews the landslide field photo context.', action: 'gemini_photo' },
     { t: '✅ SIMULATION STABILIZED', c: 'success', d: 'Critical segment isolated; traffic on safe NER roads.', action: 'resolve' }
   ];
 
@@ -159,10 +153,34 @@
   function photoIcon() {
     return L.divIcon({
       className: '',
-      html: '<div style="width:28px;height:28px;border-radius:8px;background:#0a1628;border:2px solid #00d4ff;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 12px rgba(0,212,255,0.6);">📷</div>',
+      html: '<div style="width:28px;height:28px;border-radius:8px;background:#0a1628;border:2px solid #ff9500;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 12px rgba(255,149,0,0.5);">📷</div>',
       iconSize: [28, 28],
       iconAnchor: [14, 14]
     });
+  }
+
+  function clearPhotos() {
+    photoMarkers.forEach(function (m) { try { map.removeLayer(m); } catch (e) {} });
+    photoMarkers = [];
+  }
+
+  function showProblemPhoto(kind) {
+    var p = PROBLEM_PHOTOS[kind];
+    if (!p || !map) return;
+    var html =
+      '<div style="min-width:220px;max-width:260px">' +
+      '<div style="font-size:10px;color:#ff9500;font-weight:700;letter-spacing:0.06em">FIELD PHOTO · ' + p.problem.toUpperCase() + '</div>' +
+      '<div style="font-weight:700;color:#00d4ff;margin-top:4px">' + p.title + '</div>' +
+      '<img src="' + p.url + '" alt="' + p.problem + ' field evidence" style="width:100%;height:130px;object-fit:cover;border-radius:8px;margin:8px 0;border:1px solid rgba(255,149,0,0.4)" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'block\';"/>' +
+      '<div style="display:none;padding:20px;background:#1a1020;color:#ff9500;font-size:12px;border-radius:8px;margin:8px 0">Photo: ' + p.problem + ' evidence (geotagged)</div>' +
+      '<div style="font-size:11px;color:#8fa3b8">' + p.officer + '<br>' + p.time + '</div>' +
+      '<div style="font-size:11px;margin-top:4px;color:#c8d8e8">' + p.note + '</div>' +
+      '<div style="font-size:10px;color:#00ff88;margin-top:6px">GPS/Jio tagged · ' + p.id + '</div></div>';
+    var m = L.marker([p.lat, p.lng], { icon: photoIcon() }).addTo(map).bindPopup(html, { maxWidth: 280 });
+    photoMarkers.push(m);
+    m.openPopup();
+    map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 10), { duration: 0.9 / speed });
+    log('Problem photo: ' + p.problem + ' — ' + p.title);
   }
 
   async function osrmLine(waypoints) {
@@ -172,7 +190,6 @@
         if (coords && coords.length > 2) return coords;
       } catch (e) { console.warn(e); }
     }
-    // fallback chain via public OSRM
     try {
       var path = waypoints.map(function (p) { return p[1] + ',' + p[0]; }).join(';');
       var url = 'https://router.project-osrm.org/route/v1/driving/' + path + '?overview=full&geometries=geojson';
@@ -186,53 +203,20 @@
   }
 
   async function drawRoadRoutes() {
-    // Guwahati -> Shillong (safe)
     var safeWp = [[26.1445, 91.7362], [25.90, 91.88], [25.5788, 91.8933]];
-    // Guwahati -> Silchar (alternate)
     var altWp = [[26.1445, 91.7362], [25.5, 92.3], [24.8333, 92.7789]];
-    // approach Tawang (critical)
     var critWp = [[26.1445, 91.7362], [26.8, 92.1], [27.58, 91.86]];
-
     var safe = await osrmLine(safeWp);
     var alt = await osrmLine(altWp);
     var crit = await osrmLine(critWp);
-
     if (layers.safe) map.removeLayer(layers.safe);
     if (layers.alt) map.removeLayer(layers.alt);
     if (layers.critical) map.removeLayer(layers.critical);
-
-    layers.critical = L.polyline(crit, { color: '#ff3b3b', weight: 5, opacity: 0.85 }).addTo(map)
-      .bindPopup('Critical / disrupted corridor toward Tawang');
-    layers.alt = L.polyline(alt, { color: '#ff9500', weight: 5, opacity: 0.9, dashArray: '10,8' }).addTo(map)
-      .bindPopup('Alternate route via Silchar sector');
-    layers.safe = L.polyline(safe, { color: '#00ff88', weight: 6, opacity: 0.95 }).addTo(map)
-      .bindPopup('Safest route: Guwahati → Shillong (road network)');
-
+    layers.critical = L.polyline(crit, { color: '#ff3b3b', weight: 5, opacity: 0.85 }).addTo(map);
+    layers.alt = L.polyline(alt, { color: '#ff9500', weight: 5, opacity: 0.9, dashArray: '10,8' }).addTo(map);
+    layers.safe = L.polyline(safe, { color: '#00ff88', weight: 6, opacity: 0.95 }).addTo(map);
     vehiclePath = safe;
-    log('OSRM road routes drawn (safe / alternate / critical)');
-  }
-
-  function clearPhotos() {
-    photoMarkers.forEach(function (m) { try { map.removeLayer(m); } catch (e) {} });
-    photoMarkers = [];
-  }
-
-  function showGeoPhotos() {
-    clearPhotos();
-    GEO_PHOTOS.forEach(function (p) {
-      var html =
-        '<div style="min-width:200px">' +
-        '<div style="font-weight:700;color:#00d4ff">' + p.title + '</div>' +
-        '<img src="' + p.url + '" alt="geo photo" style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin:8px 0"/>' +
-        '<div style="font-size:11px;color:#8fa3b8">' + p.officer + '<br>' + p.time + '</div>' +
-        '<div style="font-size:11px;margin-top:4px">' + p.note + '</div>' +
-        '<div style="font-size:10px;color:#00ff88;margin-top:4px">ID ' + p.id + ' · GPS tagged</div></div>';
-      var m = L.marker([p.lat, p.lng], { icon: photoIcon() }).addTo(map).bindPopup(html);
-      photoMarkers.push(m);
-    });
-    // open first photo
-    if (photoMarkers[0]) photoMarkers[0].openPopup();
-    log('Geo-tagged photos pinned on map (' + GEO_PHOTOS.length + ')');
+    log('OSRM road routes drawn');
   }
 
   function animateAlongPath() {
@@ -241,11 +225,7 @@
     vehicleIdx = 0;
     moveTimer = setInterval(function () {
       vehicleIdx++;
-      if (vehicleIdx >= vehiclePath.length) {
-        clearInterval(moveTimer);
-        moveTimer = null;
-        return;
-      }
+      if (vehicleIdx >= vehiclePath.length) { clearInterval(moveTimer); moveTimer = null; return; }
       vehicleMarker.setLatLng(vehiclePath[vehicleIdx]);
     }, Math.max(20, 40 / speed));
   }
@@ -259,7 +239,6 @@
     document.getElementById('phase-title').textContent = p.t;
     document.getElementById('phase-desc').textContent = p.d;
     log(p.t);
-
     if (p.fly) map.flyTo(p.fly, p.z || map.getZoom(), { duration: 1.2 / speed });
 
     if (p.action === 'load_routes') await drawRoadRoutes();
@@ -270,6 +249,7 @@
         [[26.18, 91.70], [26.24, 91.82], [26.14, 91.85], [26.11, 91.72]],
         { color: '#00d4ff', fillColor: '#00d4ff', fillOpacity: 0.35, dashArray: '6,6' }
       ).addTo(map);
+      showProblemPhoto('flood');
     }
 
     if (p.action === 'show_incident') {
@@ -280,10 +260,11 @@
           html: '<div style="width:32px;height:32px;background:#ff3b3b;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;">⚠</div>',
           iconSize: [32, 32], iconAnchor: [16, 16]
         })
-      }).addTo(map).bindPopup('Critical landslide · Tawang approach');
+      }).addTo(map).bindPopup('Critical landslide · Tawang');
+      showProblemPhoto('landslide');
     }
 
-    if (p.action === 'show_photos') showGeoPhotos();
+    if (p.action === 'photo_road') showProblemPhoto('road_damage');
 
     if (p.action === 'show_vehicle') {
       if (vehicleMarker) map.removeLayer(vehicleMarker);
@@ -294,22 +275,21 @@
           html: '<div style="font-size:22px;filter:drop-shadow(0 0 6px #00d4ff)">🚛</div>',
           iconSize: [28, 28], iconAnchor: [14, 14]
         })
-      }).addTo(map).bindPopup('MED-Convoy-NE1');
+      }).addTo(map);
     }
 
     if (p.action === 'gemini' && window.SmartRouteGemini) {
       document.getElementById('gemini-out').textContent = 'Calling Gemini…';
       var r = await SmartRouteGemini.analyzeNERSituation(
-        'Simulation: flood near Guwahati, landslide near Tawang, convoy needs safest road to Shillong.'
+        'NER simulation: flood at Guwahati, landslide at Tawang, road damage near Shillong. Advise safest routing.'
       );
       document.getElementById('gemini-out').textContent = r.text || 'No response';
-      log(r.offline ? 'Gemini offline fallback' : 'Gemini live response');
     }
 
     if (p.action === 'emphasize_routes') {
       if (layers.safe) layers.safe.setStyle({ weight: 8 });
       if (layers.alt) layers.alt.setStyle({ weight: 6 });
-      map.fitBounds(layers.safe ? layers.safe.getBounds() : map.getBounds(), { padding: [30, 30] });
+      if (layers.safe) map.fitBounds(layers.safe.getBounds(), { padding: [30, 30] });
     }
 
     if (p.action === 'move_vehicle') animateAlongPath();
@@ -317,10 +297,10 @@
     if (p.action === 'gemini_photo' && window.SmartRouteGemini) {
       document.getElementById('gemini-out').textContent = 'Gemini photo review…';
       var r2 = await SmartRouteGemini.analyzeFieldPhoto(
-        'Geo-tagged photo P-TAW-01 at 27.58N 91.86E: mountain rockfall blocking single lane.'
+        'Geo-tagged landslide photo at Tawang 27.58N 91.86E: debris blocking mountain road.'
       );
       document.getElementById('gemini-out').textContent = r2.text || 'No response';
-      if (photoMarkers[0]) photoMarkers[0].openPopup();
+      if (photoMarkers.length) photoMarkers[photoMarkers.length - 1].openPopup();
     }
 
     if (p.action === 'resolve') {
@@ -369,18 +349,17 @@
     if (incidentMarker) { map.removeLayer(incidentMarker); incidentMarker = null; }
     clearPhotos();
     document.getElementById('phase-title').textContent = 'Ready';
-    document.getElementById('phase-desc').textContent = 'Press PLAY to run the NER live simulation.';
+    document.getElementById('phase-desc').textContent = 'Press PLAY — photos only for matching problems.';
     document.getElementById('gemini-out').textContent = 'Waiting for phase…';
     document.getElementById('sim-log').innerHTML = '';
     map.setView([26.2, 92.0], 7);
-    log('Simulation reset');
   }
 
   document.addEventListener('DOMContentLoaded', async function () {
     if (window.SmartRoute) {
       SmartRoute.initSharedComponents({
         title: 'Live Simulation',
-        subtitle: 'NER road routes · geo photos · Gemini'
+        subtitle: 'Problem-matched photos · OSRM routes · Gemini'
       });
     }
     if (window.MapEngine && MapEngine.initMap) {
@@ -389,11 +368,8 @@
       map = L.map('map').setView([26.2, 92.0], 7);
       L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18 }).addTo(map);
     }
-    // preload road routes so user sees them immediately
     await drawRoadRoutes();
-    if (window.location.search.indexOf('autoplay') >= 0) {
-      setTimeout(togglePlay, 600);
-    }
+    if (window.location.search.indexOf('autoplay') >= 0) setTimeout(togglePlay, 600);
   });
 </script>
 </body>
