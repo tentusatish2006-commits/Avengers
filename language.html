@@ -25,6 +25,11 @@
             background: rgba(0,212,255,0.1);
             border: 1px solid rgba(0,212,255,0.35);
             margin-bottom: 18px;
+            transition: border-color 0.25s, background 0.25s;
+        }
+        .active-bar.flash {
+            border-color: #00ff88;
+            background: rgba(0,255,136,0.12);
         }
         .active-bar .flag { font-size: 2rem; }
         .active-bar .meta { flex: 1; }
@@ -50,8 +55,9 @@
         .btn-apply {
             padding: 12px 22px; border: none; border-radius: 10px; cursor: pointer;
             font-weight: 800; font-size: 0.95rem; font-family: inherit;
-            background: linear-gradient(135deg, #00ff88, #00b894); color: #030810;
+            background: linear-gradient(135deg, #00d4ff, #0099cc); color: #031018;
         }
+        .btn-apply:disabled { opacity: 0.6; cursor: wait; }
         .btn-reset {
             padding: 12px 18px; border-radius: 10px; cursor: pointer; font-weight: 700;
             font-family: inherit; background: rgba(255,255,255,0.06);
@@ -78,6 +84,14 @@
             color: #e8f4ff; font-size: 1.05rem; line-height: 1.6;
         }
         .preview strong { color: #00d4ff; }
+        .status-line {
+            margin-top: 12px;
+            font-size: 0.9rem;
+            color: #00ff88;
+            min-height: 1.2em;
+            font-weight: 600;
+        }
+        .status-line.err { color: #ff6b6b; }
     </style>
 </head>
 <body>
@@ -86,14 +100,14 @@
             <main class="page-body lang-page">
                 <div class="page-header" style="margin-bottom:16px;">
                     <h1 class="page-title" data-i18n="nav_language">Language & Region</h1>
-                    <p class="page-subtitle">Select → Apply → site language updates</p>
+                    <p class="page-subtitle">Select a language, then click APPLY LANGUAGE</p>
                 </div>
 
                 <div class="lang-card">
                     <h2>Interface Language</h2>
-                    <p>Pick a language, then click <strong>APPLY LANGUAGE</strong>. Selecting alone does not change the site.</p>
+                    <p>Choose a language below, then press <strong>APPLY LANGUAGE</strong> to activate it across the site.</p>
 
-                    <div class="active-bar">
+                    <div class="active-bar" id="active-bar">
                         <div class="flag" id="active-flag">🇬🇧</div>
                         <div class="meta">
                             <div class="name" id="active-name">English (English)</div>
@@ -102,7 +116,7 @@
                         <div class="badge" id="active-badge">ACTIVE</div>
                     </div>
 
-                    <label class="field" for="lang-select">Interface Language (Dropdown)</label>
+                    <label class="field" for="lang-select">Interface Language</label>
                     <select id="lang-select">
                         <option value="en">🇬🇧 English</option>
                         <option value="hi">🇮🇳 Hindi — हिन्दी</option>
@@ -126,7 +140,9 @@
                         <button type="button" class="btn-reset" id="btn-reset">Reset to English</button>
                     </div>
 
-                    <div class="hint">After Apply, open Dashboard or Live Map — the left menu must show the new language.</div>
+                    <div class="status-line" id="status-line"></div>
+
+                    <div class="hint">After Apply, the bar above becomes ACTIVE and the left menu switches to the new language.</div>
 
                     <div class="preview">
                         <strong>Preview:</strong> <span id="preview-text">Dashboard · Live Map · Incidents · Alerts</span>
@@ -173,23 +189,44 @@
         }
 
         function getSaved() {
-            try { return localStorage.getItem('sr_language') || 'en'; } catch (e) { return 'en'; }
+            try {
+                var s = localStorage.getItem('sr_language');
+                return s || 'en';
+            } catch (e) {
+                return 'en';
+            }
+        }
+
+        function setStatus(msg, isErr) {
+            var el = document.getElementById('status-line');
+            if (!el) return;
+            el.textContent = msg || '';
+            el.className = 'status-line' + (isErr ? ' err' : '');
         }
 
         function setBar(code, isPending) {
             var i = info(code);
             document.getElementById('active-flag').textContent = i.flag;
             document.getElementById('active-name').textContent = i.name + ' (' + i.native + ')';
-            document.getElementById('active-sub').textContent = i.region + (isPending ? ' • Not applied yet' : ' • Currently active');
+            document.getElementById('active-sub').textContent =
+                i.region + (isPending ? ' • Selected — click APPLY LANGUAGE' : ' • Currently active');
             var badge = document.getElementById('active-badge');
             badge.textContent = isPending ? 'PENDING' : 'ACTIVE';
             badge.className = 'badge' + (isPending ? ' pending' : '');
 
+            // Preview nav labels in that language
             var keys = ['nav_dashboard', 'nav_map', 'nav_incidents', 'nav_alerts'];
             var parts = keys.map(function (k) {
-                return window.SmartRouteI18n ? SmartRouteI18n.t(k, code) : k;
+                if (window.SmartRouteI18n && SmartRouteI18n.t) {
+                    return SmartRouteI18n.t(k, code);
+                }
+                return k;
             });
             document.getElementById('preview-text').textContent = parts.join(' · ');
+
+            // Keep dropdown + chips in sync
+            var sel = document.getElementById('lang-select');
+            if (sel && sel.value !== code) sel.value = code;
         }
 
         function paintGrid() {
@@ -198,93 +235,156 @@
             LANGS.forEach(function (l) {
                 var d = document.createElement('div');
                 d.className = 'lang-chip' + (l.code === pending ? ' selected' : '');
-                d.innerHTML = '<div class="f">' + l.flag + '</div><div class="n">' + l.name + '</div><div class="nat">' + l.native + '</div>';
+                d.innerHTML =
+                    '<div class="f">' + l.flag + '</div>' +
+                    '<div class="n">' + l.name + '</div>' +
+                    '<div class="nat">' + l.native + '</div>';
                 d.onclick = function () {
                     pending = l.code;
                     document.getElementById('lang-select').value = l.code;
                     setBar(l.code, l.code !== getSaved());
                     paintGrid();
+                    setStatus(
+                        l.code === getSaved()
+                            ? l.name + ' is already active.'
+                            : l.name + ' selected — click APPLY LANGUAGE to activate.'
+                    );
                 };
                 grid.appendChild(d);
             });
         }
 
+        function rewriteNav(code) {
+            if (!window.SmartRouteI18n) return;
+            document.querySelectorAll('[data-i18n]').forEach(function (el) {
+                var key = el.getAttribute('data-i18n');
+                var tr = SmartRouteI18n.t(key, code);
+                if (tr && tr !== key) el.textContent = tr;
+            });
+            var map = {
+                'dashboard.html': 'nav_dashboard', 'map.html': 'nav_map',
+                'incidents.html': 'nav_incidents', 'alerts.html': 'nav_alerts',
+                'emergency.html': 'nav_emergency', 'route-prediction.html': 'nav_route_prediction',
+                'alternate-routes.html': 'nav_alternate_routes', 'ai-command.html': 'nav_ai_command',
+                'photo-analysis.html': 'nav_photo_analysis', 'weather.html': 'nav_weather',
+                'vehicle-tracking.html': 'nav_vehicle_tracking', 'deliveries.html': 'nav_deliveries',
+                'corridors.html': 'nav_corridors', 'districts.html': 'nav_districts',
+                'infrastructure.html': 'nav_infrastructure', 'officers.html': 'nav_officers',
+                'reports.html': 'nav_reports', 'analytics.html': 'nav_analytics',
+                'simulation.html': 'nav_simulation', 'field-report.html': 'nav_field_report',
+                'officer-dashboard.html': 'nav_officer_dashboard', 'language.html': 'nav_language',
+                'admin.html': 'nav_admin', 'settings.html': 'nav_settings', 'login.html': 'sign_out'
+            };
+            document.querySelectorAll('a.nav-item, .nav-item').forEach(function (a) {
+                var href = (a.getAttribute('href') || '').split('/').pop();
+                var key = map[href];
+                if (!key) return;
+                var lab = a.querySelector('.nav-label');
+                if (!lab) return;
+                var tr = SmartRouteI18n.t(key, code);
+                if (tr && tr !== key) lab.textContent = tr;
+            });
+            document.querySelectorAll('.sidebar-section-label').forEach(function (el) {
+                var key = el.getAttribute('data-i18n');
+                if (!key) return;
+                var tr = SmartRouteI18n.t(key, code);
+                if (tr && tr !== key) el.textContent = tr;
+            });
+        }
+
         function applyLanguage(code) {
-            code = (code || 'en').toLowerCase();
+            code = String(code || 'en').toLowerCase().trim();
+            var i = info(code);
             pending = code;
 
-            // Persist FIRST so every later sidebar build reads the right language
-            try { localStorage.setItem('sr_language', code); } catch (e) {}
+            var btn = document.getElementById('btn-apply');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Applying…';
+            }
+
+            // 1) Save immediately — source of truth for all pages
+            try {
+                localStorage.setItem('sr_language', code);
+            } catch (e) {
+                setStatus('Could not save language (storage blocked).', true);
+            }
             document.documentElement.lang = code;
 
-            if (window.SmartRouteI18n) {
-                SmartRouteI18n._currentLang = code;
-                try {
-                    if (SmartRouteI18n.setLanguage) SmartRouteI18n.setLanguage(code);
-                    else if (SmartRouteI18n.applyLanguage) SmartRouteI18n.applyLanguage(code);
-                } catch (e) {}
-            }
-
-            // Runtime: force all data-i18n + nav labels
-            if (window.SmartRouteI18nRuntime) {
-                SmartRouteI18nRuntime.setLang(code);
-            }
-            if (window.SmartRouteForceI18n) {
-                try { SmartRouteForceI18n.apply(code); } catch (e) {}
-            }
-            if (window.SmartRoute && SmartRoute.refreshLanguage) {
-                try { SmartRoute.refreshLanguage(code); } catch (e) {}
-            }
-
-            // Direct DOM pass (most reliable)
-            function rewrite() {
-                if (!window.SmartRouteI18n) return;
-                document.querySelectorAll('[data-i18n]').forEach(function (el) {
-                    var key = el.getAttribute('data-i18n');
-                    var tr = SmartRouteI18n.t(key, code);
-                    if (tr && tr !== key) el.textContent = tr;
-                });
-                var map = {
-                    'dashboard.html': 'nav_dashboard', 'map.html': 'nav_map',
-                    'incidents.html': 'nav_incidents', 'alerts.html': 'nav_alerts',
-                    'emergency.html': 'nav_emergency', 'route-prediction.html': 'nav_route_prediction',
-                    'alternate-routes.html': 'nav_alternate_routes', 'ai-command.html': 'nav_ai_command',
-                    'photo-analysis.html': 'nav_photo_analysis', 'weather.html': 'nav_weather',
-                    'vehicle-tracking.html': 'nav_vehicle_tracking', 'deliveries.html': 'nav_deliveries',
-                    'corridors.html': 'nav_corridors', 'districts.html': 'nav_districts',
-                    'infrastructure.html': 'nav_infrastructure', 'officers.html': 'nav_officers',
-                    'reports.html': 'nav_reports', 'analytics.html': 'nav_analytics',
-                    'simulation.html': 'nav_simulation', 'field-report.html': 'nav_field_report',
-                    'officer-dashboard.html': 'nav_officer_dashboard', 'language.html': 'nav_language',
-                    'admin.html': 'nav_admin', 'settings.html': 'nav_settings', 'login.html': 'sign_out'
-                };
-                document.querySelectorAll('a.nav-item').forEach(function (a) {
-                    var href = (a.getAttribute('href') || '').split('/').pop();
-                    var key = map[href];
-                    if (!key) return;
-                    var lab = a.querySelector('.nav-label');
-                    if (!lab) return;
-                    var tr = SmartRouteI18n.t(key, code);
-                    if (tr && tr !== key) lab.textContent = tr;
-                });
-            }
-            rewrite();
-            [100, 300, 700, 1500].forEach(function (ms) {
-                setTimeout(rewrite, ms);
-            });
-
+            // 2) Update this page UI FIRST so user sees the change
             setBar(code, false);
             paintGrid();
 
-            var i = info(code);
-            if (window.SmartRoute && SmartRoute.showToast) {
-                SmartRoute.showToast('Language set to ' + i.name + ' (' + i.native + ')', 'success', 4000);
+            var bar = document.getElementById('active-bar');
+            if (bar) {
+                bar.classList.add('flash');
+                setTimeout(function () { bar.classList.remove('flash'); }, 900);
             }
 
-            // Debug proof in console
-            console.log('[SmartRoute i18n] applied', code,
-                'localStorage=', localStorage.getItem('sr_language'),
-                'sample=', window.SmartRouteI18n ? SmartRouteI18n.t('nav_dashboard', code) : '?');
+            // 3) Drive i18n engines
+            try {
+                if (window.SmartRouteI18n) {
+                    SmartRouteI18n._currentLang = code;
+                    if (typeof SmartRouteI18n.setLanguage === 'function') {
+                        SmartRouteI18n.setLanguage(code);
+                    } else if (typeof SmartRouteI18n.applyLanguage === 'function') {
+                        SmartRouteI18n.applyLanguage(code);
+                    }
+                }
+            } catch (e1) {
+                console.warn(e1);
+            }
+
+            try {
+                if (window.SmartRouteI18nRuntime && SmartRouteI18nRuntime.setLang) {
+                    SmartRouteI18nRuntime.setLang(code);
+                }
+            } catch (e2) {}
+
+            try {
+                if (window.SmartRouteForceI18n && SmartRouteForceI18n.apply) {
+                    SmartRouteForceI18n.apply(code);
+                }
+            } catch (e3) {}
+
+            try {
+                if (window.SmartRoute && SmartRoute.refreshLanguage) {
+                    SmartRoute.refreshLanguage(code);
+                }
+            } catch (e4) {}
+
+            // 4) Direct DOM rewrite + delayed passes (sidebar may mount late)
+            rewriteNav(code);
+            [80, 200, 500, 1000, 2000].forEach(function (ms) {
+                setTimeout(function () {
+                    // Re-read saved lang in case something else wrote storage
+                    var saved = getSaved();
+                    if (saved !== code) {
+                        try { localStorage.setItem('sr_language', code); } catch (e) {}
+                    }
+                    rewriteNav(code);
+                    setBar(code, false);
+                }, ms);
+            });
+
+            // 5) Broadcast
+            try {
+                window.dispatchEvent(new CustomEvent('smartroute:language-changed', {
+                    detail: { language: code, info: i }
+                }));
+            } catch (e5) {}
+
+            setStatus('✓ Language set to ' + i.name + ' (' + i.native + '). Active now.');
+            if (window.SmartRoute && SmartRoute.showToast) {
+                SmartRoute.showToast('Language: ' + i.name + ' (' + i.native + ')', 'success', 3500);
+            }
+
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '✓ APPLY LANGUAGE';
+            }
+
+            console.log('[SmartRoute] language applied', code, 'stored=', localStorage.getItem('sr_language'));
         }
 
         document.addEventListener('DOMContentLoaded', function () {
@@ -300,19 +400,25 @@
             document.getElementById('lang-select').value = saved;
             setBar(saved, false);
             paintGrid();
+            setStatus('Current language: ' + info(saved).name);
 
-            if (saved !== 'en') {
-                setTimeout(function () { applyLanguage(saved); }, 500);
-            }
+            // Re-apply saved language after sidebar builds
+            setTimeout(function () { applyLanguage(saved); }, 400);
 
             document.getElementById('lang-select').addEventListener('change', function () {
                 pending = this.value;
                 setBar(pending, pending !== getSaved());
                 paintGrid();
+                setStatus(
+                    pending === getSaved()
+                        ? info(pending).name + ' is already active.'
+                        : info(pending).name + ' selected — click APPLY LANGUAGE to activate.'
+                );
             });
 
             document.getElementById('btn-apply').addEventListener('click', function () {
-                applyLanguage(document.getElementById('lang-select').value || pending);
+                var code = document.getElementById('lang-select').value || pending || 'en';
+                applyLanguage(code);
             });
 
             document.getElementById('btn-reset').addEventListener('click', function () {
