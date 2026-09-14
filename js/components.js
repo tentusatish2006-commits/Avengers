@@ -3,7 +3,11 @@ const SR_PUBLIC_PAGES = ['index.html', 'login.html', 'signup.html', ''];
 
 function isLoggedIn() {
   try {
-    return !!(localStorage.getItem('sr_user') || sessionStorage.getItem('sr_user'));
+    if (window.SmartRouteAuth && SmartRouteAuth.isLoggedIn) return SmartRouteAuth.isLoggedIn();
+    return localStorage.getItem('sr_logged_in') === '1' ||
+      !!localStorage.getItem('sr_user') ||
+      !!sessionStorage.getItem('sr_user') ||
+      !!localStorage.getItem('sr_username');
   } catch (e) {
     return false;
   }
@@ -18,18 +22,15 @@ function requireAuth() {
   var page = currentPage();
   if (SR_PUBLIC_PAGES.indexOf(page) >= 0) return true;
   if (!isLoggedIn()) {
-    location.href = 'login.html';
+    try { localStorage.setItem('sr_return_to', page); } catch (e) {}
+    location.replace('login.html');
     return false;
   }
   return true;
 }
 
 function currentLang() {
-  try {
-    return localStorage.getItem('sr_language') || 'en';
-  } catch (e) {
-    return 'en';
-  }
+  try { return localStorage.getItem('sr_language') || 'en'; } catch (e) { return 'en'; }
 }
 
 function showToast(msg, type, ms) {
@@ -112,40 +113,36 @@ function initSharedComponents(opts) {
   var so = document.getElementById('sr-signout');
   if (so) {
     so.onclick = function () {
+      if (window.SmartRouteAuth && SmartRouteAuth.clearSession) SmartRouteAuth.clearSession();
       try {
         localStorage.removeItem('sr_user');
         sessionStorage.removeItem('sr_user');
+        localStorage.removeItem('sr_logged_in');
+        localStorage.removeItem('sr_username');
       } catch (e) {}
       location.href = 'login.html';
     };
   }
 
   var menu = document.getElementById('sr-menu');
-  if (menu) {
-    menu.onclick = function () {
-      document.body.classList.toggle('sidebar-open');
-    };
-  }
+  if (menu) menu.onclick = function () { document.body.classList.toggle('sidebar-open'); };
 
   function tick() {
     var el = document.getElementById('sr-clock');
-    if (!el) return;
-    var d = new Date();
-    el.textContent = d.toLocaleTimeString();
+    if (el) el.textContent = new Date().toLocaleTimeString();
   }
   tick();
   setInterval(tick, 1000);
-
   ensureI18n();
 }
 
 function loadScript(src, next) {
-  if (document.querySelector('script[src="' + src + '"]')) {
+  if (document.querySelector('script[src*="' + src.split('?')[0] + '"]')) {
     if (next) next();
     return;
   }
   var s = document.createElement('script');
-  s.src = src + (src.indexOf('?') >= 0 ? '&' : '?') + 'v=perf1';
+  s.src = src + (src.indexOf('?') >= 0 ? '&' : '?') + 'v=auth2';
   s.async = true;
   s.onload = function () { if (next) next(); };
   s.onerror = function () { if (next) next(); };
@@ -155,18 +152,12 @@ function loadScript(src, next) {
 function ensureI18n(cb) {
   function afterI18n() {
     var left = 3;
-    function doneOne() {
-      left--;
-      if (left <= 0 && cb) cb();
-    }
+    function doneOne() { left--; if (left <= 0 && cb) cb(); }
     loadScript('js/i18n-enhance.js', doneOne);
     loadScript('js/force-i18n.js', doneOne);
     loadScript('js/i18n-runtime.js', doneOne);
   }
-  if (window.SmartRouteI18n) {
-    afterI18n();
-    return;
-  }
+  if (window.SmartRouteI18n) { afterI18n(); return; }
   loadScript('js/i18n.js', afterI18n);
 }
 
@@ -188,12 +179,3 @@ window.SmartRoute = {
   tr: tr,
   currentLang: currentLang
 };
-
-// Auto-init if shell present
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', function () {
-    if (document.querySelector('.app-shell') && !document.getElementById('sidebar')) {
-      /* pages call initSharedComponents themselves */
-    }
-  });
-}

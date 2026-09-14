@@ -1,4 +1,4 @@
-/* SmartRoute — all app pages require Login or Sign Up first */
+/* SmartRoute — protected pages require login */
 (function () {
   var PUBLIC = ['index.html', 'login.html', 'signup.html', ''];
 
@@ -7,8 +7,12 @@
   }
 
   function isLoggedIn() {
+    if (window.SmartRouteAuth && SmartRouteAuth.isLoggedIn) return SmartRouteAuth.isLoggedIn();
     try {
-      return localStorage.getItem('sr_logged_in') === '1' || !!localStorage.getItem('sr_username');
+      return localStorage.getItem('sr_logged_in') === '1' ||
+        !!localStorage.getItem('sr_user') ||
+        !!sessionStorage.getItem('sr_user') ||
+        !!localStorage.getItem('sr_username');
     } catch (e) {
       return false;
     }
@@ -20,14 +24,13 @@
       return false;
     }
     try { localStorage.setItem('sr_return_to', target); } catch (e) {}
-    alert('Please Login or Sign Up to access the Command Center.');
     window.location.href = 'login.html';
     return false;
   }
 
   window.requireAuthNav = requireAuthNav;
+  window.SmartRouteIsLoggedIn = isLoggedIn;
 
-  // Block protected pages if not logged in
   document.addEventListener('DOMContentLoaded', function () {
     var path = pathName();
     if (PUBLIC.indexOf(path) !== -1) return;

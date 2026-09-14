@@ -1,4 +1,4 @@
-/* SmartRoute user registry */
+/* SmartRoute user registry + session */
 (function (global) {
   var KEY = 'sr_users';
 
@@ -20,12 +20,41 @@
     return String(id || '').trim().toLowerCase();
   }
 
-  /**
-   * Create / update a user account in the registry.
-   * @param {object} user
-   * @param {object} [options]
-   * @param {boolean} [options.startSession=true] - if false, do NOT change the current logged-in user (use when Admin adds another person)
-   */
+  function startSession(user) {
+    user = user || {};
+    var username = user.username || user.officerId || user.email || '';
+    var payload = {
+      username: username,
+      officerId: user.officerId || '',
+      email: user.email || '',
+      role: user.role || '',
+      department: user.department || '',
+      region: user.region || ''
+    };
+    try {
+      localStorage.setItem('sr_username', payload.username);
+      localStorage.setItem('sr_officer_id', payload.officerId);
+      localStorage.setItem('sr_email', payload.email);
+      localStorage.setItem('sr_user_role', payload.role);
+      localStorage.setItem('sr_department', payload.department);
+      localStorage.setItem('sr_region', payload.region);
+      localStorage.setItem('sr_logged_in', '1');
+      // components.js checks sr_user — keep in sync
+      localStorage.setItem('sr_user', JSON.stringify(payload));
+      sessionStorage.setItem('sr_user', JSON.stringify(payload));
+      sessionStorage.setItem('sr_logged_in', '1');
+    } catch (e) {}
+  }
+
+  function clearSession() {
+    try {
+      ['sr_username', 'sr_officer_id', 'sr_email', 'sr_user_role', 'sr_department', 'sr_region', 'sr_logged_in', 'sr_user'].forEach(function (k) {
+        localStorage.removeItem(k);
+        sessionStorage.removeItem(k);
+      });
+    } catch (e) {}
+  }
+
   function registerUser(user, options) {
     options = options || {};
     var shouldStartSession = options.startSession !== false;
@@ -58,14 +87,10 @@
     else users.push(record);
     writeUsers(users);
 
-    // Only touch session when this is a real signup/login flow — never when Admin is adding someone else
-    if (shouldStartSession) {
-      startSession(record);
-    }
+    if (shouldStartSession) startSession(record);
     return record;
   }
 
-  /** Admin helper: save account without switching the logged-in profile */
   function createUserWithoutLogin(user) {
     return registerUser(user, { startSession: false });
   }
@@ -75,9 +100,7 @@
     var pass = String(password || '');
     var users = readUsers();
 
-    if (!users.length) {
-      return { ok: false, reason: 'no_users' };
-    }
+    if (!users.length) return { ok: false, reason: 'no_users' };
 
     var match = users.find(function (u) {
       return normalizeId(u.username) === id ||
@@ -90,26 +113,33 @@
     return { ok: true, user: match };
   }
 
-  function startSession(user) {
-    localStorage.setItem('sr_username', user.username || user.officerId || '');
-    localStorage.setItem('sr_officer_id', user.officerId || '');
-    localStorage.setItem('sr_email', user.email || '');
-    localStorage.setItem('sr_user_role', user.role || '');
-    localStorage.setItem('sr_department', user.department || '');
-    localStorage.setItem('sr_region', user.region || '');
-    localStorage.setItem('sr_logged_in', '1');
+  function getSessionUser() {
+    try {
+      if (localStorage.getItem('sr_logged_in') === '1' || localStorage.getItem('sr_user')) {
+        var raw = localStorage.getItem('sr_user');
+        if (raw) return JSON.parse(raw);
+        return {
+          username: localStorage.getItem('sr_username') || '',
+          officerId: localStorage.getItem('sr_officer_id') || '',
+          email: localStorage.getItem('sr_email') || '',
+          role: localStorage.getItem('sr_user_role') || '',
+          department: localStorage.getItem('sr_department') || '',
+          region: localStorage.getItem('sr_region') || ''
+        };
+      }
+    } catch (e) {}
+    return null;
   }
 
-  function getSessionUser() {
-    if (localStorage.getItem('sr_logged_in') !== '1') return null;
-    return {
-      username: localStorage.getItem('sr_username') || '',
-      officerId: localStorage.getItem('sr_officer_id') || '',
-      email: localStorage.getItem('sr_email') || '',
-      role: localStorage.getItem('sr_user_role') || '',
-      department: localStorage.getItem('sr_department') || '',
-      region: localStorage.getItem('sr_region') || ''
-    };
+  function isLoggedIn() {
+    try {
+      return localStorage.getItem('sr_logged_in') === '1' ||
+        !!localStorage.getItem('sr_user') ||
+        !!sessionStorage.getItem('sr_user') ||
+        !!localStorage.getItem('sr_username');
+    } catch (e) {
+      return false;
+    }
   }
 
   global.SmartRouteAuth = {
@@ -117,7 +147,9 @@
     createUserWithoutLogin: createUserWithoutLogin,
     validateLogin: validateLogin,
     startSession: startSession,
+    clearSession: clearSession,
     getSessionUser: getSessionUser,
+    isLoggedIn: isLoggedIn,
     readUsers: readUsers,
     countUsers: function () { return readUsers().length; }
   };
