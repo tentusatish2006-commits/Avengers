@@ -11,23 +11,19 @@
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/components.css">
     <style>
-      .ai-layout { display:grid; grid-template-columns:280px 1fr 320px; gap:12px; height:calc(100vh - 120px); }
+      .ai-layout { display:grid; grid-template-columns:280px 1fr 340px; gap:12px; height:calc(100vh - 120px); }
       #ai-map { height:100%; min-height:320px; border-radius:12px; border:1px solid rgba(0,212,255,0.25); }
-      .chat-log { flex:1; overflow:auto; font-size:0.85rem; min-height:140px; max-height:240px; }
-      .chat-bubble { margin-bottom:10px; padding:8px 10px; border-radius:8px; background:rgba(0,0,0,0.25); }
+      .chat-log { flex:1; overflow:auto; font-size:0.85rem; min-height:180px; max-height:320px; }
+      .chat-bubble { margin-bottom:10px; padding:8px 10px; border-radius:8px; background:rgba(0,0,0,0.25); line-height:1.45; }
       .chat-bubble.ai { border-left:3px solid #00ff88; }
       .chat-bubble.you { border-left:3px solid #00d4ff; }
+      .quick-btns { display:flex; flex-wrap:wrap; gap:6px; }
+      .quick-btns button {
+        font-size:0.72rem; padding:6px 8px; border-radius:8px; cursor:pointer;
+        border:1px solid rgba(0,212,255,0.3); background:rgba(0,212,255,0.08); color:#c8d8e8;
+      }
+      .quick-btns button:hover { border-color:#00d4ff; color:#00d4ff; }
       .api-badge { font-size:0.72rem; color:#00ff88; }
-      .api-badge.off { color:#ff9500; }
-      .key-row { display:flex; gap:6px; margin-bottom:8px; }
-      .key-row input {
-        flex:1; padding:8px; border-radius:8px; border:1px solid rgba(0,212,255,0.3);
-        background:#061018; color:#fff; font-size:0.8rem;
-      }
-      .key-row button {
-        padding:8px 10px; border-radius:8px; border:1px solid rgba(0,212,255,0.35);
-        background:rgba(0,212,255,0.15); color:#00d4ff; font-weight:700; cursor:pointer;
-      }
       @media (max-width: 1000px) {
         .ai-layout { grid-template-columns:1fr; height:auto; }
         #ai-map { min-height:280px; }
@@ -40,33 +36,32 @@
     <main class="page-body" style="padding:16px;">
       <div class="page-header">
         <h1 class="page-title">AI Command Center</h1>
-        <p class="page-subtitle">North Eastern Region · <span id="api-status" class="api-badge off">Gemini API · key required</span></p>
+        <p class="page-subtitle">North Eastern Region · <span class="api-badge">SmartRoute AI Assistant (no key needed)</span></p>
       </div>
       <div class="ai-layout">
         <div class="glass-card" style="padding:12px;overflow:auto;">
-          <h3 style="margin:0 0 10px;color:#00d4ff;">Insights</h3>
-          <div style="margin-bottom:8px;padding:10px;background:rgba(0,0,0,0.25);border-radius:8px;">🌧 Landslide risk near Tawang corridor</div>
-          <div style="margin-bottom:8px;padding:10px;background:rgba(0,0,0,0.25);border-radius:8px;">🚛 Monitor Guwahati–Shillong delays</div>
-          <div style="padding:10px;background:rgba(0,0,0,0.25);border-radius:8px;">✅ Silchar–Aizawl alternate available</div>
+          <h3 style="margin:0 0 10px;color:#00d4ff;">Live insights</h3>
+          <div id="insight-box" style="font-size:0.85rem;color:#c8d8e8;white-space:pre-wrap;"></div>
           <h3 style="margin:16px 0 8px;color:#00d4ff;">Focus districts</h3>
-          <div>Guwahati · Shillong · Imphal</div>
-          <div>Kohima · Tawang · Silchar</div>
-          <button class="btn-primary" style="margin-top:14px;width:100%;" onclick="refreshInsights()">Refresh AI insights</button>
+          <div style="color:#8fa3b8;font-size:0.9rem;line-height:1.6;">
+            Guwahati · Shillong · Silchar<br>
+            Imphal · Kohima · Tawang<br>
+            Aizawl · Agartala · Dimapur
+          </div>
+          <button class="btn-primary" style="margin-top:14px;width:100%;" onclick="refreshInsights()">Refresh insights</button>
         </div>
         <div id="ai-map"></div>
         <div class="glass-card" style="padding:12px;display:flex;flex-direction:column;gap:8px;">
-          <h3 style="margin:0;color:#00d4ff;">Ask Gemini AI</h3>
-          <div class="key-row">
-            <input id="api-key-input" type="password" placeholder="Paste Gemini API key here" autocomplete="off">
-            <button type="button" onclick="saveApiKey()">Save</button>
+          <h3 style="margin:0;color:#00d4ff;">SmartRoute AI Assistant</h3>
+          <div class="quick-btns">
+            <button type="button" onclick="askAI('Safest route from Guwahati to Shillong')">Safest routes</button>
+            <button type="button" onclick="askAI('Show alternate routes')">Alternates</button>
+            <button type="button" onclick="askAI('Landslide and flood incidents')">Incidents</button>
+            <button type="button" onclick="askAI('Convoy plan for medicine supply')">Convoy plan</button>
           </div>
-          <div style="font-size:0.7rem;color:#6a8ea8;">Key is stored only in this browser (localStorage), not in the repo.</div>
-          <div class="chat-log" id="chat-log">
-            <div class="chat-bubble you"><strong>You:</strong> What is the safest route from Guwahati to Shillong?</div>
-            <div class="chat-bubble ai" id="starter-ai"><strong>AI:</strong> Save your Gemini API key above, then ask a question.</div>
-          </div>
+          <div class="chat-log" id="chat-log"></div>
           <input id="ai-q" placeholder="Ask about NER routes, weather, incidents…" style="padding:10px;border-radius:8px;border:1px solid rgba(0,212,255,0.3);background:#061018;color:#fff;" onkeydown="if(event.key==='Enter')askAI()">
-          <button class="btn-primary" onclick="askAI()">Send to Gemini</button>
+          <button class="btn-primary" onclick="askAI()">Ask Assistant</button>
         </div>
       </div>
     </main>
@@ -75,33 +70,8 @@
 
 <script src="js/components.js"></script>
 <script src="js/map-engine.js"></script>
-<script src="js/gemini-api.js"></script>
+<script src="js/ai-assistant.js"></script>
 <script>
-  function setStatus(live) {
-    var el = document.getElementById('api-status');
-    if (live) {
-      el.textContent = 'Gemini API · live';
-      el.className = 'api-badge';
-    } else {
-      el.textContent = 'Gemini API · key required';
-      el.className = 'api-badge off';
-    }
-  }
-
-  function saveApiKey() {
-    var v = (document.getElementById('api-key-input').value || '').trim();
-    if (!v) {
-      if (window.SmartRoute) SmartRoute.showToast('Paste an API key first', 'warn', 2500);
-      return;
-    }
-    if (window.SmartRouteGemini) SmartRouteGemini.setKey(v);
-    document.getElementById('api-key-input').value = '';
-    setStatus(true);
-    if (window.SmartRoute) SmartRoute.showToast('Gemini API key saved in this browser', 'success', 2500);
-    // quick live test
-    askAI('Confirm API is working and give one NER routing tip.');
-  }
-
   function appendChat(role, text) {
     var log = document.getElementById('chat-log');
     var div = document.createElement('div');
@@ -116,52 +86,35 @@
   async function askAI(preset) {
     var input = document.getElementById('ai-q');
     var q = (preset || (input && input.value) || '').trim();
-    if (!q) q = 'What is the safest logistics route in the North Eastern Region right now?';
+    if (!q) q = 'What is the safest route in the North Eastern Region?';
     if (input && !preset) input.value = '';
     appendChat('you', q);
-    var pending = appendChat('ai', 'Thinking with Gemini…');
+    var pending = appendChat('ai', 'Analyzing NER network…');
 
-    if (!window.SmartRouteGemini) {
-      pending.innerHTML = '<strong>AI:</strong> Gemini module not loaded.';
+    var engine = window.SmartRouteAI || window.SmartRouteGemini;
+    if (!engine) {
+      pending.innerHTML = '<strong>AI:</strong> Assistant module not loaded.';
       return;
     }
-    if (!SmartRouteGemini.hasKey()) {
-      pending.innerHTML = '<strong>AI:</strong> Paste your Gemini API key above and click Save.';
-      setStatus(false);
-      return;
-    }
-
-    var r = await SmartRouteGemini.askCommand(q);
+    var r = await engine.askCommand(q);
     pending.innerHTML = '<strong>AI:</strong> ' +
-      String(r.text || 'No response').replace(/</g, '&lt;').replace(/\n/g, '<br>');
-    setStatus(!!r.ok);
+      String(r.text || '—').replace(/</g, '&lt;').replace(/\n/g, '<br>');
   }
 
   async function refreshInsights() {
-    if (!window.SmartRouteGemini || !SmartRouteGemini.hasKey()) {
-      if (window.SmartRoute) SmartRoute.showToast('Save Gemini API key first', 'warn', 2500);
-      return;
-    }
-    if (window.SmartRoute) SmartRoute.showToast('Refreshing Gemini insights…', 'info', 2000);
-    var r = await SmartRouteGemini.analyzeNERSituation(
-      'Command center refresh: safest Guwahati-Shillong corridor, Tawang landslide risk, Silchar-Aizawl alternate.'
-    );
-    appendChat('ai', 'Insights:\n' + (r.text || '—'));
-    setStatus(!!r.ok);
+    var engine = window.SmartRouteAI || window.SmartRouteGemini;
+    if (!engine) return;
+    var r = await engine.analyzeNERSituation('overview safest routes and incidents');
+    document.getElementById('insight-box').textContent = r.text || '—';
+    if (window.SmartRoute) SmartRoute.showToast('Insights updated', 'success', 2000);
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
+  document.addEventListener('DOMContentLoaded', async function () {
     if (window.SmartRoute) {
       SmartRoute.initSharedComponents({
         title: 'AI Command Center',
-        subtitle: 'NER · Gemini live API'
+        subtitle: 'Built-in NER AI Assistant'
       });
-    }
-
-    if (window.SmartRouteGemini && SmartRouteGemini.hasKey()) {
-      setStatus(true);
-      document.getElementById('starter-ai').innerHTML =
-        '<strong>AI:</strong> API key found. Ask a NER routing question or click Refresh AI insights.';
     }
 
     if (window.MapEngine && MapEngine.initMap) {
@@ -171,6 +124,9 @@
     } else if (window.L) {
       L.map('ai-map').setView([26.14, 91.73], 7);
     }
+
+    await refreshInsights();
+    appendChat('ai', 'Hello. I am SmartRoute AI for the North Eastern Region. Ask about safest routes, alternates, landslides, floods, or convoy planning — no API key needed.');
   });
 </script>
 </body>
