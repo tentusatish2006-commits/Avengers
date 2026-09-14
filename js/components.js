@@ -1,4 +1,4 @@
-/* SmartRoute shared UI + auth + i18n */
+/* SmartRoute shared UI + auth + i18n — full sidebar with page logos */
 const SR_PUBLIC_PAGES = ['index.html', 'login.html', 'signup.html', ''];
 
 function isLoggedIn() {
@@ -14,8 +14,7 @@ function isLoggedIn() {
 }
 
 function currentPage() {
-  var p = (location.pathname || '').split('/').pop() || 'index.html';
-  return p;
+  return (location.pathname || '').split('/').pop() || 'index.html';
 }
 
 function requireAuth() {
@@ -62,34 +61,92 @@ function tr(key, fallback) {
   return fallback || key;
 }
 
+/** Brand logo mark used in sidebar, login, signup */
+function brandLogoHtml(size) {
+  size = size || 36;
+  return '<div class="sr-logo-mark" style="width:' + size + 'px;height:' + size + 'px;border-radius:10px;background:linear-gradient(135deg,#00d4ff,#00ff88);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:' + Math.round(size * 0.38) + 'px;color:#031018;box-shadow:0 0 16px rgba(0,212,255,0.45);flex-shrink:0;letter-spacing:-0.02em;">SR</div>';
+}
+
 function buildSidebar(active) {
-  var items = [
-    { href: 'dashboard.html', key: 'nav_dashboard', label: 'Dashboard', icon: '▣' },
-    { href: 'map.html', key: 'nav_map', label: 'Live Map', icon: '◎' },
-    { href: 'incidents.html', key: 'nav_incidents', label: 'Incidents', icon: '⚠' },
-    { href: 'alerts.html', key: 'nav_alerts', label: 'Alerts', icon: '🔔' },
-    { href: 'emergency.html', key: 'nav_emergency', label: 'Emergency Response', icon: '🚨' },
-    { href: 'route-prediction.html', key: 'nav_route_prediction', label: 'AI Route Prediction', icon: '🤖' },
-    { href: 'alternate-routes.html', key: 'nav_alternate_routes', label: 'Alternate Routes', icon: '⇄' },
-    { href: 'ai-command.html', key: 'nav_ai_command', label: 'AI Command Center', icon: '🧠' },
-    { href: 'photo-analysis.html', key: 'nav_photo_analysis', label: 'AI Photo Analysis', icon: '📷' },
-    { href: 'weather.html', key: 'nav_weather', label: 'Weather', icon: '☁' },
-    { href: 'vehicle-tracking.html', key: 'nav_vehicle_tracking', label: 'Vehicle Tracking', icon: '🚛' },
-    { href: 'deliveries.html', key: 'nav_deliveries', label: 'Deliveries', icon: '📦' },
-    { href: 'simulation.html', key: 'nav_simulation', label: 'Live Simulation', icon: '▶' },
-    { href: 'field-report.html', key: 'nav_field_report', label: 'Field Report', icon: '📋' },
-    { href: 'officer-dashboard.html', key: 'nav_officer_dashboard', label: 'Officer Dashboard', icon: '👤' },
-    { href: 'language.html', key: 'nav_language', label: 'Language', icon: '🌐' },
-    { href: 'admin.html', key: 'nav_admin', label: 'Admin', icon: '⚙' },
-    { href: 'settings.html', key: 'nav_settings', label: 'Settings', icon: '🔧' }
+  // ALL app pages on left sidebar only — with logos/icons
+  var sections = [
+    {
+      label: 'Command',
+      items: [
+        { href: 'dashboard.html', key: 'nav_dashboard', label: 'Dashboard', icon: '▣' },
+        { href: 'map.html', key: 'nav_map', label: 'Live Map', icon: '🗺' },
+        { href: 'emergency.html', key: 'nav_emergency', label: 'Emergency Response', icon: '🚨' },
+        { href: 'ai-command.html', key: 'nav_ai_command', label: 'AI Command Center', icon: '🧠' }
+      ]
+    },
+    {
+      label: 'Operations',
+      items: [
+        { href: 'incidents.html', key: 'nav_incidents', label: 'Incidents', icon: '⚠' },
+        { href: 'alerts.html', key: 'nav_alerts', label: 'Alerts', icon: '🔔' },
+        { href: 'vehicle-tracking.html', key: 'nav_vehicle_tracking', label: 'Vehicle Tracking', icon: '🚛' },
+        { href: 'deliveries.html', key: 'nav_deliveries', label: 'Deliveries', icon: '📦' },
+        { href: 'simulation.html', key: 'nav_simulation', label: 'Live Simulation', icon: '▶' },
+        { href: 'field-report.html', key: 'nav_field_report', label: 'Field Report', icon: '📋' }
+      ]
+    },
+    {
+      label: 'Intelligence',
+      items: [
+        { href: 'route-prediction.html', key: 'nav_route_prediction', label: 'AI Route Prediction', icon: '🤖' },
+        { href: 'alternate-routes.html', key: 'nav_alternate_routes', label: 'Alternate Routes', icon: '⇄' },
+        { href: 'photo-analysis.html', key: 'nav_photo_analysis', label: 'AI Photo Analysis', icon: '📷' },
+        { href: 'weather.html', key: 'nav_weather', label: 'Weather', icon: '☁' },
+        { href: 'analytics.html', key: 'nav_analytics', label: 'Analytics', icon: '📊' },
+        { href: 'reports.html', key: 'nav_reports', label: 'Reports', icon: '📑' }
+      ]
+    },
+    {
+      label: 'Network',
+      items: [
+        { href: 'corridors.html', key: 'nav_corridors', label: 'Corridors', icon: '🛣' },
+        { href: 'districts.html', key: 'nav_districts', label: 'Districts', icon: '🏙' },
+        { href: 'infrastructure.html', key: 'nav_infrastructure', label: 'Infrastructure', icon: '🏗' },
+        { href: 'officers.html', key: 'nav_officers', label: 'Officers', icon: '👮' },
+        { href: 'officer-dashboard.html', key: 'nav_officer_dashboard', label: 'Officer Dashboard', icon: '👤' }
+      ]
+    },
+    {
+      label: 'System',
+      items: [
+        { href: 'language.html', key: 'nav_language', label: 'Language & Region', icon: '🌐' },
+        { href: 'admin.html', key: 'nav_admin', label: 'Admin Panel', icon: '🛡' },
+        { href: 'settings.html', key: 'nav_settings', label: 'Settings', icon: '⚙' }
+      ]
+    }
   ];
+
   var page = currentPage();
-  var html = '<aside class="sidebar" id="sidebar"><div class="sidebar-brand"><div class="brand-mark">SR</div><div><div class="brand-title">SmartRoute</div><div class="brand-sub">EMERGENCY MGMT</div></div></div><nav class="sidebar-nav">';
-  items.forEach(function (it) {
-    var on = page === it.href || active === it.href;
-    html += '<a class="nav-item' + (on ? ' active' : '') + '" href="' + it.href + '"><span class="nav-ico">' + it.icon + '</span><span class="nav-label" data-i18n="' + it.key + '">' + tr(it.key, it.label) + '</span></a>';
+  var html = '';
+  html += '<aside class="sidebar" id="sidebar">';
+  html += '<div class="sidebar-brand" style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid rgba(0,212,255,0.15);">';
+  html += brandLogoHtml(36);
+  html += '<div><div class="brand-title" style="font-weight:800;font-size:0.95rem;color:#e8f4ff;">SmartRoute</div>';
+  html += '<div class="brand-sub" style="font-size:9px;letter-spacing:0.1em;color:#6a8ea8;text-transform:uppercase;">NER Command</div></div></div>';
+  html += '<nav class="sidebar-nav" style="flex:1;overflow-y:auto;padding:8px 0 12px;">';
+
+  sections.forEach(function (sec) {
+    html += '<div class="nav-section-label" style="font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#6a8ea8;padding:10px 16px 4px;opacity:0.85;">' + sec.label + '</div>';
+    sec.items.forEach(function (it) {
+      var on = page === it.href || active === it.href;
+      html += '<a class="nav-item' + (on ? ' active' : '') + '" href="' + it.href + '" title="' + it.label + '">';
+      html += '<span class="nav-ico" style="width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);font-size:14px;flex-shrink:0;">' + it.icon + '</span>';
+      html += '<span class="nav-label" data-i18n="' + it.key + '">' + tr(it.key, it.label) + '</span>';
+      html += '</a>';
+    });
   });
-  html += '</nav><div class="sidebar-footer"><button type="button" class="nav-item" id="sr-signout"><span class="nav-ico">⏻</span><span class="nav-label">Sign Out</span></button></div></aside>';
+
+  html += '</nav>';
+  html += '<div class="sidebar-footer" style="border-top:1px solid rgba(0,212,255,0.15);padding:10px 8px;">';
+  html += '<button type="button" class="nav-item" id="sr-signout" style="width:100%;border:none;background:transparent;cursor:pointer;text-align:left;">';
+  html += '<span class="nav-ico" style="width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,59,59,0.12);border:1px solid rgba(255,59,59,0.3);font-size:14px;">⏻</span>';
+  html += '<span class="nav-label">Sign Out</span></button></div>';
+  html += '</aside>';
   return html;
 }
 
@@ -142,7 +199,7 @@ function loadScript(src, next) {
     return;
   }
   var s = document.createElement('script');
-  s.src = src + (src.indexOf('?') >= 0 ? '&' : '?') + 'v=auth2';
+  s.src = src + (src.indexOf('?') >= 0 ? '&' : '?') + 'v=nav3';
   s.async = true;
   s.onload = function () { if (next) next(); };
   s.onerror = function () { if (next) next(); };
@@ -177,5 +234,7 @@ window.SmartRoute = {
   requireAuth: requireAuth,
   applyFullLanguage: applyFullLanguage,
   tr: tr,
-  currentLang: currentLang
+  currentLang: currentLang,
+  brandLogoHtml: brandLogoHtml,
+  buildSidebar: buildSidebar
 };

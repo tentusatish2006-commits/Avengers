@@ -1,173 +1,147 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartRoute - Officer Registration</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
-    <link rel="stylesheet" href="css/design-system.css">
-    <link rel="stylesheet" href="css/animations.css">
-    <link rel="stylesheet" href="css/components.css">
-    <style>
-        body, html { margin:0; padding:0; width:100%; height:100%; font-family:'Outfit',sans-serif; background:#030810; color:#fff; overflow-x:hidden; }
-        #bg-map { position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; filter:brightness(0.38) contrast(1.25); }
-        .particles { position:fixed; top:0; left:0; width:100%; height:100%; z-index:1; pointer-events:none;
-            background-image:radial-gradient(circle,rgba(0,212,255,0.08) 1px,transparent 1px); background-size:45px 45px; }
-        .signup-wrapper { position:relative; z-index:2; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:40px 20px; box-sizing:border-box; }
-        .signup-card { width:100%; max-width:580px; padding:36px 40px; border-radius:24px; display:flex; flex-direction:column; align-items:center;
-            background:rgba(4,11,26,0.78); backdrop-filter:blur(28px); border:1px solid rgba(100,200,255,0.22);
-            box-shadow:0 24px 60px rgba(0,0,0,0.75),0 0 35px rgba(0,212,255,0.15); }
-        #logo-3d-wrap { position:relative; width:120px; height:120px; margin-bottom:12px; }
-        #logo-3d { width:120px; height:120px; }
-        .badge-enroll { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:16px;
-            background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.35); font-size:10px; font-weight:700;
-            letter-spacing:0.1em; text-transform:uppercase; color:#00d4ff; margin-bottom:10px; }
-        .badge-dot { width:6px; height:6px; border-radius:50%; background:#00ff88; box-shadow:0 0 8px #00ff88; }
-        h2 { margin:0; font-size:2rem; background:linear-gradient(90deg,#fff,#00d4ff,#00ff88); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-weight:800; text-align:center; }
-        .subtitle { color:#8fa3b0; font-size:0.88rem; margin:4px 0 24px; text-align:center; }
-        .role-selector { display:flex; gap:10px; width:100%; margin-bottom:22px; }
-        .role-card { flex:1; background:rgba(255,255,255,0.03); border:1px solid rgba(100,200,255,0.12); border-radius:12px; padding:12px 6px; text-align:center; cursor:pointer; transition:0.3s; }
-        .role-card:hover { border-color:#00d4ff; }
-        .role-card.active { background:rgba(0,212,255,0.12); border-color:#00d4ff; box-shadow:0 0 20px rgba(0,212,255,0.3); }
-        .role-icon { font-size:1.3rem; }
-        .role-title { font-size:0.78rem; font-weight:700; }
-        .role-desc { font-size:0.62rem; color:#8fa3b0; margin-top:3px; }
-        .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; width:100%; margin-bottom:14px; }
-        .form-group { width:100%; margin-bottom:14px; display:flex; flex-direction:column; gap:5px; }
-        .form-label { font-size:0.75rem; font-weight:700; letter-spacing:0.08em; color:#8fa3b8; text-transform:uppercase; }
-        .form-control { width:100%; background:rgba(3,10,22,0.7); border:1px solid rgba(100,200,255,0.2); padding:12px 14px; border-radius:8px; color:#fff; font-family:Outfit,sans-serif; font-size:0.95rem; outline:none; box-sizing:border-box; }
-        .form-control:focus { border-color:#00d4ff; box-shadow:0 0 12px rgba(0,212,255,0.25); }
-        select.form-control option { background:#071326; color:#fff; }
-        .checkbox-group { display:flex; align-items:center; gap:10px; width:100%; margin:8px 0 20px; font-size:0.82rem; color:#9cb3c8; }
-        .btn-signup { width:100%; padding:14px; background:linear-gradient(90deg,#00d4ff,#00ff88); border:none; border-radius:8px; color:#030810; font-weight:800; font-size:1rem; cursor:pointer; text-transform:uppercase; letter-spacing:1px; }
-        .btn-signup:hover { transform:translateY(-2px); box-shadow:0 6px 24px rgba(0,212,255,0.5); }
-        .login-links { margin-top:20px; text-align:center; font-size:0.88rem; color:#8fa3b0; }
-        .login-links a { color:#00d4ff; text-decoration:none; font-weight:700; margin-left:6px; }
-        .loading-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(3,8,16,0.92); z-index:100; display:none; flex-direction:column; align-items:center; justify-content:center; }
-        .spinner-3d { width:75px; height:75px; border:4px solid rgba(0,212,255,0.15); border-left-color:#00d4ff; border-radius:50%; animation:spin 1s linear infinite; }
-        .loading-text { margin-top:20px; color:#00d4ff; font-size:1.1rem; letter-spacing:2px; font-weight:700; }
-        @keyframes spin { 100% { transform:rotate(360deg); } }
-        @media (max-width:600px) { .form-grid { grid-template-columns:1fr; } }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>SmartRoute - Officer Registration</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    body, html { margin:0; padding:0; width:100%; height:100%; font-family:Outfit,sans-serif; background:#030810; color:#fff; }
+    #bg-map { position:fixed; inset:0; z-index:0; filter:brightness(0.4) contrast(1.2); }
+    .wrap { position:relative; z-index:2; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:32px 16px; }
+    .card { width:100%; max-width:560px; padding:32px; border-radius:20px;
+      background:rgba(4,11,26,0.88); border:1px solid rgba(100,200,255,0.25);
+      box-shadow:0 24px 60px rgba(0,0,0,0.7); }
+    .logo-wrap { display:flex; flex-direction:column; align-items:center; gap:8px; margin-bottom:16px; text-align:center; }
+    .logo-mark { width:56px; height:56px; border-radius:14px;
+      background:linear-gradient(135deg,#00d4ff,#00ff88); display:flex; align-items:center; justify-content:center;
+      font-weight:900; font-size:22px; color:#031018; box-shadow:0 0 24px rgba(0,212,255,0.5); }
+    .logo-title { font-size:1.5rem; font-weight:800; background:linear-gradient(90deg,#fff,#00d4ff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .logo-sub { font-size:0.82rem; color:#8fa3b8; }
+    .roles { display:flex; gap:8px; margin:16px 0; }
+    .role-card { flex:1; text-align:center; padding:10px 6px; border-radius:10px; cursor:pointer;
+      border:1px solid rgba(0,212,255,0.2); background:rgba(255,255,255,0.03); font-size:0.72rem; }
+    .role-card.active { border-color:#00d4ff; background:rgba(0,212,255,0.12); }
+    .role-title { font-weight:800; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    label { display:block; font-size:0.72rem; color:#8fa3b8; margin:0 0 4px; text-transform:uppercase; }
+    input, select { width:100%; box-sizing:border-box; padding:11px; border-radius:8px;
+      border:1px solid rgba(0,212,255,0.25); background:#061018; color:#fff; font-family:inherit; }
+    .full { grid-column:1 / -1; }
+    .btn { width:100%; margin-top:16px; padding:14px; border:none; border-radius:8px; font-weight:800;
+      cursor:pointer; background:linear-gradient(90deg,#00d4ff,#00ff88); color:#031018; }
+    .links { margin-top:14px; text-align:center; color:#8fa3b8; font-size:0.88rem; }
+    .links a { color:#00d4ff; font-weight:700; text-decoration:none; }
+    #loading { display:none; position:fixed; inset:0; background:rgba(3,8,16,0.92); z-index:100;
+      align-items:center; justify-content:center; flex-direction:column; color:#00d4ff; font-weight:700; gap:10px; }
+    @media(max-width:600px){ .grid{ grid-template-columns:1fr; } }
+  </style>
 </head>
 <body>
-    <div id="bg-map"></div>
-    <div class="particles"></div>
-    <div class="signup-wrapper">
-        <div class="signup-card">
-            <div id="logo-3d-wrap"><div id="logo-3d"></div></div>
-            <div class="badge-enroll"><span class="badge-dot"></span> North-Eastern Regional Command Portal</div>
-            <h2>OFFICER REGISTRATION</h2>
-            <div class="subtitle">Enroll in SmartRoute Emergency Transport &amp; Corridor Management</div>
-            <div class="role-selector">
-                <div class="role-card active" onclick="selectRole(this)"><div class="role-icon">🔧</div><div class="role-title">ADMINISTRATOR</div><div class="role-desc">HQ Command Staff</div></div>
-                <div class="role-card" onclick="selectRole(this)"><div class="role-icon">📍</div><div class="role-title">FIELD OFFICER</div><div class="role-desc">Relief &amp; Convoy Units</div></div>
-                <div class="role-card" onclick="selectRole(this)"><div class="role-icon">🏛</div><div class="role-title">LOCAL AUTHORITY</div><div class="role-desc">District Disaster Cell</div></div>
-            </div>
-            <form id="signup-form" onsubmit="event.preventDefault(); doSignup(); return false;" style="width:100%;">
-                <div class="form-grid">
-                    <div class="form-group"><label class="form-label" for="full-name">Full Name</label><input type="text" id="full-name" class="form-control" placeholder="e.g. Capt. Rajesh Barman" required></div>
-                    <div class="form-group"><label class="form-label" for="badge-id">Service / Badge ID</label><input type="text" id="badge-id" class="form-control" placeholder="e.g. NE-CMD-904" required></div>
-                </div>
-                <div class="form-grid">
-                    <div class="form-group"><label class="form-label" for="department">Assigned Agency</label>
-                        <select id="department" class="form-control" required>
-                            <option>National Disaster Response Force (NDRF)</option>
-                            <option>Border Roads Organisation (BRO)</option>
-                            <option>Assam State Disaster Mgmt (ASDMA)</option>
-                            <option>Emergency Medical Logistics</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label class="form-label" for="region">North-East Region</label>
-                        <select id="region" class="form-control" required>
-                            <option>Assam (Guwahati)</option>
-                            <option>Arunachal Pradesh (Itanagar)</option>
-                            <option>Meghalaya (Shillong)</option>
-                            <option>Nagaland (Kohima)</option>
-                            <option>Manipur (Imphal)</option>
-                            <option>Mizoram (Aizawl)</option>
-                            <option>Tripura (Agartala)</option>
-                            <option>Sikkim (Gangtok)</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group"><label class="form-label" for="email">Official Email</label><input type="email" id="email" class="form-control" placeholder="officer@nic.in" required></div>
-                <div class="form-grid">
-                    <div class="form-group"><label class="form-label" for="password">Security Passcode</label><input type="password" id="password" class="form-control" required></div>
-                    <div class="form-group"><label class="form-label" for="confirm-password">Confirm Passcode</label><input type="password" id="confirm-password" class="form-control" required></div>
-                </div>
-                <div class="checkbox-group"><input type="checkbox" id="terms" required checked><label for="terms">I verify official deployment under National Disaster Response protocol</label></div>
-                <button type="submit" class="btn-signup">REGISTER &amp; ACCESS COMMAND CENTER</button>
-            </form>
-            <div class="login-links">Already registered? <a href="login.html">Login Here →</a></div>
-            <div style="margin-top:14px;text-align:center;"><a href="index.html" style="color:#6a8ea8;font-size:0.82rem;text-decoration:none;">← Return to Main Gateway</a></div>
+  <div id="bg-map"></div>
+  <div class="wrap">
+    <div class="card">
+      <div class="logo-wrap">
+        <div class="logo-mark">SR</div>
+        <div class="logo-title">SmartRoute</div>
+        <div class="logo-sub">NER Officer Registration</div>
+      </div>
+      <div class="roles" id="roles">
+        <div class="role-card active" data-role="ADMINISTRATOR"><div class="role-title">ADMINISTRATOR</div></div>
+        <div class="role-card" data-role="FIELD OFFICER"><div class="role-title">FIELD OFFICER</div></div>
+        <div class="role-card" data-role="LOCAL AUTHORITY"><div class="role-title">LOCAL AUTHORITY</div></div>
+      </div>
+      <form id="signup-form">
+        <div class="grid">
+          <div><label for="full-name">Full Name</label><input id="full-name" required placeholder="Capt. Rajesh Barman"></div>
+          <div><label for="badge-id">Badge ID</label><input id="badge-id" required placeholder="NE-CMD-904"></div>
+          <div><label for="department">Agency</label>
+            <select id="department">
+              <option>National Disaster Response Force (NDRF)</option>
+              <option>Border Roads Organisation (BRO)</option>
+              <option>Assam State Disaster Mgmt (ASDMA)</option>
+              <option>Emergency Medical Logistics</option>
+            </select>
+          </div>
+          <div><label for="region">North-East Region</label>
+            <select id="region">
+              <option>Assam (Guwahati)</option>
+              <option>Arunachal Pradesh (Itanagar)</option>
+              <option>Meghalaya (Shillong)</option>
+              <option>Nagaland (Kohima)</option>
+              <option>Manipur (Imphal)</option>
+              <option>Mizoram (Aizawl)</option>
+              <option>Tripura (Agartala)</option>
+              <option>Sikkim (Gangtok)</option>
+            </select>
+          </div>
+          <div class="full"><label for="email">Official Email</label><input id="email" type="email" required placeholder="officer@nic.in"></div>
+          <div><label for="password">Passcode</label><input id="password" type="password" required></div>
+          <div><label for="confirm-password">Confirm</label><input id="confirm-password" type="password" required></div>
         </div>
+        <button type="submit" class="btn" id="btn-signup">REGISTER &amp; ACCESS COMMAND CENTER</button>
+      </form>
+      <div class="links">Already registered? <a href="login.html">Login</a> · <a href="index.html">Home</a></div>
     </div>
-    <div class="loading-overlay" id="loading"><div class="spinner-3d"></div><div class="loading-text">ENROLLING OFFICER…</div></div>
-
-    <script src="js/auth-users.js?v=auth3"></script>
-    <script src="js/map-engine.js?v=auth3"></script>
-    <script>
-        function selectRole(el) {
-            document.querySelectorAll('.role-card').forEach(function (c) { c.classList.remove('active'); });
-            el.classList.add('active');
+  </div>
+  <div id="loading"><div>Registration successful</div><div>Opening dashboard…</div></div>
+  <script src="js/auth-users.js?v=nav3"></script>
+  <script src="js/map-engine.js?v=nav3"></script>
+  <script>
+  (function () {
+    var role = 'ADMINISTRATOR';
+    document.getElementById('roles').addEventListener('click', function (e) {
+      var card = e.target.closest('.role-card');
+      if (!card) return;
+      document.querySelectorAll('.role-card').forEach(function (c) { c.classList.remove('active'); });
+      card.classList.add('active');
+      role = card.getAttribute('data-role') || 'ADMINISTRATOR';
+    });
+    function doSignup(e) {
+      if (e) e.preventDefault();
+      var pass = document.getElementById('password').value;
+      var confirmPass = document.getElementById('confirm-password').value;
+      if (pass !== confirmPass) { alert('Passcodes do not match.'); return; }
+      var name = document.getElementById('full-name').value.trim();
+      var badge = document.getElementById('badge-id').value.trim();
+      var email = document.getElementById('email').value.trim();
+      var dept = document.getElementById('department').value;
+      var region = document.getElementById('region').value;
+      try {
+        if (window.SmartRouteAuth && SmartRouteAuth.registerUser) {
+          SmartRouteAuth.registerUser({ username: name, officerId: badge, email: email, password: pass, role: role, department: dept, region: region });
+        } else {
+          var payload = { username: name, officerId: badge, email: email, role: role };
+          localStorage.setItem('sr_logged_in', '1');
+          localStorage.setItem('sr_username', name);
+          localStorage.setItem('sr_user', JSON.stringify(payload));
+          sessionStorage.setItem('sr_user', JSON.stringify(payload));
         }
-        function doSignup() {
-            var pass = document.getElementById('password').value;
-            var confirmPass = document.getElementById('confirm-password').value;
-            if (pass !== confirmPass) { alert('Passcodes do not match.'); return; }
-            if (!pass) { alert('Enter a passcode.'); return; }
-            var activeRole = document.querySelector('.role-card.active .role-title');
-            var role = activeRole ? activeRole.innerText.trim() : 'ADMINISTRATOR';
-            var name = document.getElementById('full-name').value.trim();
-            var badge = document.getElementById('badge-id').value.trim();
-            var dept = document.getElementById('department').value;
-            var region = document.getElementById('region').value;
-            var email = document.getElementById('email').value.trim();
-            if (!name || !badge || !email) { alert('Fill name, badge, and email.'); return; }
-            try {
-                if (window.SmartRouteAuth && SmartRouteAuth.registerUser) {
-                    SmartRouteAuth.registerUser({ username: name, officerId: badge, email: email, password: pass, role: role, department: dept, region: region });
-                } else {
-                    var payload = { username: name, officerId: badge, email: email, role: role, department: dept, region: region };
-                    localStorage.setItem('sr_username', name);
-                    localStorage.setItem('sr_officer_id', badge);
-                    localStorage.setItem('sr_email', email);
-                    localStorage.setItem('sr_user_role', role);
-                    localStorage.setItem('sr_department', dept);
-                    localStorage.setItem('sr_region', region);
-                    localStorage.setItem('sr_logged_in', '1');
-                    localStorage.setItem('sr_user', JSON.stringify(payload));
-                    sessionStorage.setItem('sr_user', JSON.stringify(payload));
-                    sessionStorage.setItem('sr_logged_in', '1');
-                }
-            } catch (err) {
-                alert('Registration failed: ' + (err.message || err));
-                return;
-            }
-            document.getElementById('loading').style.display = 'flex';
-            setTimeout(function () {
-                try { window.location.replace('dashboard.html'); } catch (e) {}
-                window.location.href = 'dashboard.html';
-            }, 500);
+      } catch (err) {
+        alert('Registration failed: ' + (err.message || err));
+        return;
+      }
+      document.getElementById('loading').style.display = 'flex';
+      setTimeout(function () {
+        try { window.location.replace('dashboard.html'); } catch (e) {}
+        window.location.href = 'dashboard.html';
+      }, 400);
+    }
+    document.getElementById('signup-form').addEventListener('submit', doSignup);
+    document.addEventListener('DOMContentLoaded', function () {
+      try {
+        if (window.MapEngine && MapEngine.initMap) {
+          MapEngine.initMap('bg-map', { center: [26.15, 92.8], zoom: 7 });
+        } else if (window.L) {
+          var map = L.map('bg-map', { zoomControl: false, dragging: false, scrollWheelZoom: false }).setView([26.15, 92.8], 7);
+          L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}').addTo(map);
         }
-        document.addEventListener('DOMContentLoaded', function () {
-            try {
-                if (window.MapEngine && MapEngine.initMap) {
-                    MapEngine.initMap('bg-map', { center: [26.15, 92.8], zoom: 7 });
-                    if (MapEngine.map) {
-                        MapEngine.map.dragging.disable();
-                        MapEngine.map.scrollWheelZoom.disable();
-                    }
-                } else if (window.L) {
-                    var map = L.map('bg-map', { zoomControl: false, dragging: false, scrollWheelZoom: false }).setView([26.15, 92.8], 7);
-                    L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}').addTo(map);
-                }
-            } catch (e) {}
-        });
-    </script>
+      } catch (e) {}
+    });
+  })();
+  </script>
 </body>
 </html>

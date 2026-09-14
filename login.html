@@ -7,24 +7,29 @@
   <title>SmartRoute - Login</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/design-system.css">
-  <link rel="stylesheet" href="css/components.css">
   <style>
     body { margin:0; min-height:100vh; font-family:Outfit,sans-serif; background:#030810; color:#fff;
       display:flex; align-items:center; justify-content:center; }
     .card { width:min(420px,92vw); padding:32px; border-radius:16px;
       background:rgba(8,18,36,0.92); border:1px solid rgba(0,212,255,0.3);
-      box-shadow:0 20px 50px rgba(0,0,0,0.5); }
-    h1 { margin:0 0 6px; font-size:1.5rem; }
-    .sub { color:#8fa3b8; font-size:0.9rem; margin-bottom:20px; }
-    label { display:block; font-size:0.75rem; color:#8fa3b8; margin:12px 0 6px; text-transform:uppercase; letter-spacing:0.06em; }
+      box-shadow:0 20px 50px rgba(0,0,0,0.5); text-align:center; }
+    .logo-wrap { display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:18px; }
+    .logo-mark { width:56px; height:56px; border-radius:14px;
+      background:linear-gradient(135deg,#00d4ff,#00ff88); display:flex; align-items:center; justify-content:center;
+      font-weight:900; font-size:22px; color:#031018; box-shadow:0 0 24px rgba(0,212,255,0.5); }
+    .logo-title { font-size:1.35rem; font-weight:800; letter-spacing:0.02em; }
+    .logo-sub { font-size:0.78rem; color:#8fa3b8; }
+    h1 { margin:0 0 6px; font-size:1.25rem; text-align:left; }
+    .sub { color:#8fa3b8; font-size:0.88rem; margin-bottom:16px; text-align:left; }
+    label { display:block; font-size:0.72rem; color:#8fa3b8; margin:12px 0 6px; text-transform:uppercase; letter-spacing:0.06em; text-align:left; }
     input { width:100%; box-sizing:border-box; padding:12px; border-radius:8px;
       border:1px solid rgba(0,212,255,0.25); background:#061018; color:#fff; font-family:inherit; }
     .btn-login { width:100%; margin-top:18px; padding:14px; border:none; border-radius:8px;
       font-weight:800; cursor:pointer; background:linear-gradient(90deg,#00d4ff,#00ff88); color:#031018; }
     .err { display:none; margin-top:12px; padding:10px; border-radius:8px; background:rgba(255,59,59,0.15);
-      border:1px solid #ff3b3b; color:#ff8a8a; font-size:0.88rem; }
+      border:1px solid #ff3b3b; color:#ff8a8a; font-size:0.88rem; text-align:left; }
     .err a { color:#00d4ff; }
-    .links { margin-top:16px; text-align:center; color:#8fa3b8; font-size:0.88rem; }
+    .links { margin-top:16px; color:#8fa3b8; font-size:0.88rem; }
     .links a { color:#00d4ff; font-weight:700; text-decoration:none; }
     #loading { display:none; position:fixed; inset:0; background:rgba(3,8,16,0.9); z-index:50;
       align-items:center; justify-content:center; flex-direction:column; color:#00d4ff; font-weight:700; }
@@ -32,8 +37,13 @@
 </head>
 <body>
   <div class="card">
+    <div class="logo-wrap">
+      <div class="logo-mark">SR</div>
+      <div class="logo-title">SmartRoute</div>
+      <div class="logo-sub">NER Emergency Logistics Command</div>
+    </div>
     <h1>Command Login</h1>
-    <div class="sub">Enter the same Name / Badge / Email and passcode from Sign Up</div>
+    <div class="sub">Use Name / Badge / Email and passcode from Sign Up</div>
     <form id="login-form">
       <label for="login-user">Officer ID / Name / Email</label>
       <input id="login-user" type="text" autocomplete="username" required placeholder="Badge or email">
@@ -42,22 +52,19 @@
       <button type="submit" class="btn-login" id="btn-login">Access Command Center</button>
       <div class="err" id="login-error"></div>
     </form>
-    <div class="links">No account? <a href="signup.html">Sign Up first</a> · <a href="index.html">Home</a></div>
+    <div class="links">No account? <a href="signup.html">Sign Up</a> · <a href="index.html">Home</a></div>
   </div>
   <div id="loading">Signing in…</div>
-
-  <script src="js/auth-users.js?v=auth2"></script>
+  <script src="js/auth-users.js?v=nav3"></script>
   <script>
   (function () {
     function showError(html) {
       var box = document.getElementById('login-error');
-      box.innerHTML = html;
-      box.style.display = 'block';
+      box.innerHTML = html; box.style.display = 'block';
     }
     function hideError() {
       var box = document.getElementById('login-error');
-      box.style.display = 'none';
-      box.innerHTML = '';
+      box.style.display = 'none'; box.innerHTML = '';
     }
     function goDashboard() {
       var ret = 'dashboard.html';
@@ -68,41 +75,27 @@
       } catch (e) {}
       window.location.replace(ret);
     }
-
     function doLogin(e) {
       if (e) { e.preventDefault(); e.stopPropagation(); }
       hideError();
       var user = (document.getElementById('login-user').value || '').trim();
       var pass = (document.getElementById('login-pass').value || '').trim();
-      if (!user || !pass) {
-        showError('Enter Officer ID / Name / Email and passcode.');
-        return false;
-      }
-      if (!window.SmartRouteAuth) {
-        showError('Auth loading… try again in a moment.');
-        return false;
-      }
+      if (!user || !pass) { showError('Enter ID and passcode.'); return false; }
+      if (!window.SmartRouteAuth) { showError('Auth loading… try again.'); return false; }
       var result = SmartRouteAuth.validateLogin(user, pass);
       if (!result.ok) {
-        if (result.reason === 'no_users') {
-          showError('No officers registered. <a href="signup.html">Sign Up first</a>.');
-        } else if (result.reason === 'not_found') {
-          showError('Officer not found. <a href="signup.html">Sign Up</a> or check details.');
-        } else if (result.reason === 'bad_password') {
-          showError('Wrong passcode. Try again or <a href="signup.html">Sign Up</a>.');
-        } else {
-          showError('Invalid details. <a href="signup.html">Sign Up first</a>.');
-        }
+        if (result.reason === 'no_users') showError('No officers yet. <a href="signup.html">Sign Up first</a>.');
+        else if (result.reason === 'not_found') showError('Not found. <a href="signup.html">Sign Up</a>.');
+        else if (result.reason === 'bad_password') showError('Wrong passcode.');
+        else showError('Invalid details.');
         return false;
       }
-      // Start full session (sets sr_logged_in + sr_user)
       SmartRouteAuth.startSession(result.user);
       document.getElementById('loading').style.display = 'flex';
       document.getElementById('btn-login').disabled = true;
       setTimeout(goDashboard, 300);
       return false;
     }
-
     document.getElementById('login-form').addEventListener('submit', doLogin);
     document.getElementById('btn-login').addEventListener('click', doLogin);
   })();
