@@ -61,7 +61,7 @@
     <main class="page-body" style="padding:16px;">
       <div class="page-header">
         <h1 class="page-title">AI Photo Analysis</h1>
-        <p class="page-subtitle">CV v5 · Only Landslide · Pothole · Flood — unknowns rejected</p>
+        <p class="page-subtitle">CV v6 · Landslide · Pothole · Flood</p>
       </div>
       <div class="photo-layout">
         <div class="left-panel">
@@ -78,8 +78,8 @@
             <img id="preview-img" alt="preview">
             <div class="upload-hint" id="upload-hint">
               Click or drop a field photo<br>
-              <strong style="color:#00d4ff">Landslide · Pothole · Flood only</strong>
-              <div class="accept-note">Unknown / software screenshots = Invalid Photo</div>
+              <strong style="color:#00d4ff">Landslide · Pothole · Flood</strong>
+              <div class="accept-note">Real road hazard photos accepted · software UI rejected</div>
             </div>
             <input type="file" id="file-input" accept="image/*" style="display:none">
           </div>
@@ -87,10 +87,10 @@
         </div>
         <div class="right-panel">
           <div class="result-panel" id="result-panel">
-            <div id="invalid-banner" class="invalid-banner">⛔ INVALID PHOTO — not a landslide, pothole, or flood</div>
+            <div id="invalid-banner" class="invalid-banner">⛔ INVALID PHOTO</div>
             <div id="initial-msg" style="color:#8fa3b8;line-height:1.6;">
               Upload a clear photo of a <strong>landslide</strong>, <strong>pothole</strong>, or <strong>flooded road</strong>.
-              Ansys / CAD / selfies / random images will show <strong style="color:#ff6b6b">Invalid Photo</strong> — no damage score.
+              Software screenshots (Ansys/CAD) and selfies are rejected. Field photos of debris or water are accepted.
             </div>
             <div id="result-content" style="display:none;flex-direction:column;gap:12px;">
               <div style="display:flex;gap:12px;align-items:flex-start;">
@@ -127,9 +127,9 @@
   </div>
 </div>
 
-<script src="js/components.js?v=photo5"></script>
-<script src="js/map-engine.js?v=photo5"></script>
-<script src="js/photo-cv.js?v=photo5"></script>
+<script src="js/components.js?v=photo6"></script>
+<script src="js/map-engine.js?v=photo6"></script>
+<script src="js/photo-cv.js?v=photo6"></script>
 <script>
 (function () {
   'use strict';
@@ -163,7 +163,7 @@
   if (window.SmartRoute) {
     SmartRoute.initSharedComponents({
       title: 'AI Photo Analysis',
-      subtitle: 'CV v5 · Landslide · Pothole · Flood only'
+      subtitle: 'CV v6 · Landslide · Pothole · Flood'
     });
   }
 
@@ -182,7 +182,7 @@
 
   function showInvalid(activeUrl, meta) {
     invalidBanner.style.display = 'block';
-    invalidBanner.textContent = '⛔ INVALID PHOTO — unknown image (not landslide / pothole / flood)';
+    invalidBanner.textContent = '⛔ INVALID PHOTO — not landslide / pothole / flood';
     resPhoto.src = activeUrl;
     resCaption.textContent = '📷 ' + (customFilename || 'Upload') + ' — REJECTED';
     resBoxTag.textContent = 'INVALID PHOTO';
@@ -197,10 +197,10 @@
     resProgress.style.width = '0%';
     resIssues.innerHTML =
       '<li><strong>Accepted only:</strong> Landslide, Pothole, Flood</li>' +
-      '<li>Your image looks unknown (software UI, screenshot, selfie, or unrelated).</li>' +
-      '<li>No confidence score is assigned for invalid photos.</li>';
+      '<li>This image did not match road hazard patterns.</li>' +
+      '<li>Tip: use a clear photo of debris, holes, or water on the road.</li>';
     resAction.textContent = (meta && meta.recommended_action) ||
-      'Upload a real field photo of landslide, pothole, or flood only.';
+      'Upload a real field photo of landslide, pothole, or flood.';
     initialMsg.style.display = 'none';
     resultContent.style.display = 'flex';
     resultContent.style.flexDirection = 'column';
@@ -233,7 +233,7 @@
       '<li>Debris volume: <strong>' + meta.debris_volume_m3 + ' m³</strong></li>' +
       '<li>Affected zone: <strong>' + meta.affected_meters + ' m</strong></li>' +
       '<li>Damage: <strong>' + meta.damage_pct + '%</strong></li>' +
-      '<li>CV — water ' + (f.water || 0) + '% · earth ' + (f.earth || 0) + '% · dark ' + (f.dark || 0) + '%</li>';
+      '<li>CV — earth ' + (f.earth || 0) + '% · mud ' + (f.mud || 0) + '% · dark ' + (f.dark || 0) + '% · water ' + (f.water || 0) + '%</li>';
     resAction.textContent = meta.recommended_action;
     initialMsg.style.display = 'none';
     resultContent.style.display = 'flex';
@@ -283,11 +283,11 @@
   btnAnalyze.addEventListener('click', function () {
     if (isScanning) return;
     if (!customUrl) {
-      if (window.SmartRoute) SmartRoute.showToast('Upload landslide, pothole, or flood photo first', 'warn', 2500);
+      if (window.SmartRoute) SmartRoute.showToast('Upload a landslide, pothole, or flood photo first', 'warn', 2500);
       return;
     }
     if (!window.SmartRoutePhotoCV || !SmartRoutePhotoCV.classify) {
-      if (window.SmartRoute) SmartRoute.showToast('CV module missing — hard refresh the page', 'danger', 3000);
+      if (window.SmartRoute) SmartRoute.showToast('CV module missing — hard refresh (Ctrl+Shift+R)', 'danger', 3000);
       return;
     }
     isScanning = true;
@@ -297,7 +297,7 @@
     scanBar.style.display = 'block';
     scanGridEl.style.display = 'block';
     initialMsg.style.display = 'block';
-    initialMsg.textContent = '🔬 Checking if photo is landslide, pothole, or flood...';
+    initialMsg.textContent = '🔬 Analyzing field photo (landslide / pothole / flood)...';
     resultContent.style.display = 'none';
     invalidBanner.style.display = 'none';
     mapPhotoImg.src = activeUrl;
@@ -305,11 +305,10 @@
     mapPhotoOverlay.style.display = 'block';
 
     SmartRoutePhotoCV.classify(activeUrl, customFilename).then(function (meta) {
-      return new Promise(function (r) { setTimeout(function () { r(meta); }, 700); });
+      return new Promise(function (r) { setTimeout(function () { r(meta); }, 600); });
     }).then(function (meta) {
       scanBar.style.display = 'none';
       scanGridEl.style.display = 'none';
-      // NEVER show a damage score for unknown photos
       if (!meta || meta.class === 'invalid' || meta.hazard_type === 'Invalid Photo') {
         showInvalid(activeUrl, meta || {});
       } else {
@@ -329,7 +328,7 @@
   });
 
   document.getElementById('btn-mark-risk').addEventListener('click', function () {
-    if (window.SmartRoute) SmartRoute.showToast('Marked high risk (valid hazards only)', 'danger');
+    if (window.SmartRoute) SmartRoute.showToast('Marked high risk', 'danger');
   });
   document.getElementById('btn-schedule').addEventListener('click', function () {
     if (window.SmartRoute) SmartRoute.showToast('Repair scheduled', 'success');
