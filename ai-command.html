@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>AI Command Center - SmartRoute NER</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -23,7 +24,11 @@
         border:1px solid rgba(0,212,255,0.3); background:rgba(0,212,255,0.08); color:#c8d8e8;
       }
       .quick-btns button:hover { border-color:#00d4ff; color:#00d4ff; }
-      .api-badge { font-size:0.72rem; color:#00ff88; }
+      .status-pill { font-size:0.72rem; color:#00ff88; font-weight:700; }
+      #ai-q, #ai-q:focus {
+        padding:10px; border-radius:8px; border:1px solid rgba(0,212,255,0.3);
+        background:#061018; color:#fff; width:100%; box-sizing:border-box;
+      }
       @media (max-width: 1000px) {
         .ai-layout { grid-template-columns:1fr; height:auto; }
         #ai-map { min-height:280px; }
@@ -36,44 +41,103 @@
     <main class="page-body" style="padding:16px;">
       <div class="page-header">
         <h1 class="page-title">AI Command Center</h1>
-        <p class="page-subtitle">North Eastern Region · <span class="api-badge">SmartRoute AI Assistant (no key needed)</span></p>
+        <p class="page-subtitle">North Eastern Region · <span class="status-pill">SmartRoute AI Assistant</span></p>
       </div>
       <div class="ai-layout">
         <div class="glass-card" style="padding:12px;overflow:auto;">
           <h3 style="margin:0 0 10px;color:#00d4ff;">Live insights</h3>
-          <div id="insight-box" style="font-size:0.85rem;color:#c8d8e8;white-space:pre-wrap;"></div>
+          <div id="insight-box" style="font-size:0.85rem;color:#c8d8e8;white-space:pre-wrap;line-height:1.5;">Loading…</div>
           <h3 style="margin:16px 0 8px;color:#00d4ff;">Focus districts</h3>
           <div style="color:#8fa3b8;font-size:0.9rem;line-height:1.6;">
             Guwahati · Shillong · Silchar<br>
             Imphal · Kohima · Tawang<br>
             Aizawl · Agartala · Dimapur
           </div>
-          <button class="btn-primary" style="margin-top:14px;width:100%;" onclick="refreshInsights()">Refresh insights</button>
+          <button type="button" class="btn-primary" style="margin-top:14px;width:100%;" id="btn-insights">Refresh insights</button>
         </div>
         <div id="ai-map"></div>
         <div class="glass-card" style="padding:12px;display:flex;flex-direction:column;gap:8px;">
           <h3 style="margin:0;color:#00d4ff;">SmartRoute AI Assistant</h3>
           <div class="quick-btns">
-            <button type="button" onclick="askAI('Safest route from Guwahati to Shillong')">Safest routes</button>
-            <button type="button" onclick="askAI('Show alternate routes')">Alternates</button>
-            <button type="button" onclick="askAI('Landslide and flood incidents')">Incidents</button>
-            <button type="button" onclick="askAI('Convoy plan for medicine supply')">Convoy plan</button>
+            <button type="button" data-q="Safest route from Guwahati to Shillong">Safest routes</button>
+            <button type="button" data-q="Show alternate routes">Alternates</button>
+            <button type="button" data-q="Landslide and flood incidents">Incidents</button>
+            <button type="button" data-q="Convoy plan for medicine supply">Convoy plan</button>
           </div>
           <div class="chat-log" id="chat-log"></div>
-          <input id="ai-q" placeholder="Ask about NER routes, weather, incidents…" style="padding:10px;border-radius:8px;border:1px solid rgba(0,212,255,0.3);background:#061018;color:#fff;" onkeydown="if(event.key==='Enter')askAI()">
-          <button class="btn-primary" onclick="askAI()">Ask Assistant</button>
+          <input id="ai-q" type="text" placeholder="Ask about NER routes, weather, incidents…" autocomplete="off">
+          <button type="button" class="btn-primary" id="btn-ask">Ask Assistant</button>
         </div>
       </div>
     </main>
   </div>
 </div>
 
-<script src="js/components.js"></script>
-<script src="js/map-engine.js"></script>
-<script src="js/ai-assistant.js"></script>
+<script src="js/components.js?v=ai2"></script>
+<script src="js/map-engine.js?v=ai2"></script>
+<script src="js/ai-assistant.js?v=ai2"></script>
 <script>
+(function () {
+  // Inline fallback assistant if js/ai-assistant.js fails to load
+  function localRespond(question) {
+    var q = String(question || '').toLowerCase();
+    if (/safest|safe route|best route|guwahati.*shillong|shillong.*guwahati/.test(q)) {
+      return 'Safest active corridors in NER:\n' +
+        '• Guwahati → Shillong (NH-6) — risk 28/100, ETA ~3h 15m. Primary logistics spine.\n' +
+        '• Agartala → Silchar — risk 35/100, generally clear.\n\n' +
+        'Recommendation: Use Guwahati–Shillong for medicine and priority cargo unless HQ issues a hold.';
+    }
+    if (/alternate|detour|bypass|reroute|aizawl|silchar/.test(q)) {
+      return 'Alternate routes when primary is disrupted:\n' +
+        '• Silchar → Aizawl — moderate risk, south-east detour.\n' +
+        '• Agartala → Silchar — safer southern link.\n' +
+        '• Guwahati → Dimapur (hold Kohima segment if slope alerts active).\n\n' +
+        'Avoid Shillong → Tawang until landslide clearance is confirmed.';
+    }
+    if (/landslide|flood|incident|blocked|tawang|rockfall|pothole|damage/.test(q)) {
+      return 'NER incident summary:\n' +
+        '• [Critical] Landslide @ Tawang — hold non-essential convoys; clear debris first.\n' +
+        '• [High] Flood watch @ Guwahati riverfront — avoid low approaches.\n' +
+        '• [High] Slope instability @ Dimapur–Kohima — stagger trucks, prefer daylight.\n' +
+        '• [Moderate] Road damage @ Shillong — reduce speed on hill sections.';
+    }
+    if (/weather|rain|monsoon|fog/.test(q)) {
+      return 'Weather guidance (NER):\n' +
+        '• Monsoon → higher landslide risk on Himalayan approaches (Tawang).\n' +
+        '• Brahmaputra sector → flood watch near Guwahati.\n' +
+        '• Hill roads → fog and surface damage; reduce speed.\n' +
+        'Prefer green corridors on Live Map; use orange alternates when red activates.';
+    }
+    if (/convoy|medicine|ambulance|supply|delivery|truck/.test(q)) {
+      return 'Convoy playbook:\n' +
+        '1) Assign cargo to Guwahati–Shillong (safest).\n' +
+        '2) If blocked, switch to Silchar–Aizawl or Agartala–Silchar.\n' +
+        '3) Never push critical medical loads onto red critical segments.\n' +
+        '4) Update ETA and notify receiving PHC after each reroute.';
+    }
+    if (/help|hello|hi\b|who are you/.test(q)) {
+      return 'I am SmartRoute AI for the North Eastern Region. Ask about safest routes, alternates, landslides, floods, weather, or convoy planning. No API key needed.';
+    }
+    return 'NER logistics summary:\n' +
+      '• Primary safe spine: Guwahati → Shillong (NH-6).\n' +
+      '• Alternates: Silchar–Aizawl, Agartala–Silchar.\n' +
+      '• Avoid critical mountain approaches (Tawang) until cleared.\n\n' +
+      'Try: “Safest route Guwahati to Shillong” or “Landslide incidents”.';
+  }
+
+  function engineAsk(q) {
+    var eng = window.SmartRouteAI || window.SmartRouteGemini;
+    if (eng && typeof eng.askCommand === 'function') {
+      return Promise.resolve(eng.askCommand(q)).then(function (r) {
+        return (r && r.text) ? r.text : localRespond(q);
+      }).catch(function () { return localRespond(q); });
+    }
+    return Promise.resolve(localRespond(q));
+  }
+
   function appendChat(role, text) {
     var log = document.getElementById('chat-log');
+    if (!log) return null;
     var div = document.createElement('div');
     div.className = 'chat-bubble ' + (role === 'you' ? 'you' : 'ai');
     div.innerHTML = '<strong>' + (role === 'you' ? 'You' : 'AI') + ':</strong> ' +
@@ -83,51 +147,76 @@
     return div;
   }
 
-  async function askAI(preset) {
+  function askAI(preset) {
     var input = document.getElementById('ai-q');
     var q = (preset || (input && input.value) || '').trim();
     if (!q) q = 'What is the safest route in the North Eastern Region?';
     if (input && !preset) input.value = '';
     appendChat('you', q);
     var pending = appendChat('ai', 'Analyzing NER network…');
-
-    var engine = window.SmartRouteAI || window.SmartRouteGemini;
-    if (!engine) {
-      pending.innerHTML = '<strong>AI:</strong> Assistant module not loaded.';
-      return;
-    }
-    var r = await engine.askCommand(q);
-    pending.innerHTML = '<strong>AI:</strong> ' +
-      String(r.text || '—').replace(/</g, '&lt;').replace(/\n/g, '<br>');
+    engineAsk(q).then(function (text) {
+      if (pending) {
+        pending.innerHTML = '<strong>AI:</strong> ' +
+          String(text || '—').replace(/</g, '&lt;').replace(/\n/g, '<br>');
+      }
+    });
   }
 
-  async function refreshInsights() {
-    var engine = window.SmartRouteAI || window.SmartRouteGemini;
-    if (!engine) return;
-    var r = await engine.analyzeNERSituation('overview safest routes and incidents');
-    document.getElementById('insight-box').textContent = r.text || '—';
-    if (window.SmartRoute) SmartRoute.showToast('Insights updated', 'success', 2000);
+  function refreshInsights() {
+    var box = document.getElementById('insight-box');
+    engineAsk('overview safest routes and incidents').then(function (text) {
+      if (box) box.textContent = text;
+      if (window.SmartRoute && SmartRoute.showToast) {
+        SmartRoute.showToast('Insights updated', 'success', 2000);
+      }
+    });
   }
 
-  document.addEventListener('DOMContentLoaded', async function () {
-    if (window.SmartRoute) {
+  // Expose for any leftover inline handlers
+  window.askAI = askAI;
+  window.refreshInsights = refreshInsights;
+
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.SmartRoute && SmartRoute.initSharedComponents) {
       SmartRoute.initSharedComponents({
         title: 'AI Command Center',
-        subtitle: 'Built-in NER AI Assistant'
+        subtitle: 'SmartRoute AI Assistant · NER'
       });
     }
 
-    if (window.MapEngine && MapEngine.initMap) {
-      window.aiMap = MapEngine.initMap('ai-map', { center: [26.14, 91.73], zoom: 7 });
-      if (MapEngine.addRoads) MapEngine.addRoads(window.aiMap);
-      if (MapEngine.addIncidents) MapEngine.addIncidents(window.aiMap);
-    } else if (window.L) {
-      L.map('ai-map').setView([26.14, 91.73], 7);
+    var askBtn = document.getElementById('btn-ask');
+    var insightsBtn = document.getElementById('btn-insights');
+    var input = document.getElementById('ai-q');
+    if (askBtn) askBtn.addEventListener('click', function () { askAI(); });
+    if (insightsBtn) insightsBtn.addEventListener('click', refreshInsights);
+    if (input) {
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') askAI();
+      });
+    }
+    document.querySelectorAll('.quick-btns button').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        askAI(btn.getAttribute('data-q'));
+      });
+    });
+
+    try {
+      if (window.MapEngine && MapEngine.initMap) {
+        window.aiMap = MapEngine.initMap('ai-map', { center: [26.14, 91.73], zoom: 7 });
+        if (MapEngine.addRoads) MapEngine.addRoads(window.aiMap);
+        if (MapEngine.addIncidents) MapEngine.addIncidents(window.aiMap);
+      } else if (window.L) {
+        var map = L.map('ai-map').setView([26.14, 91.73], 7);
+        L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18 }).addTo(map);
+      }
+    } catch (e) {
+      console.warn('Map init', e);
     }
 
-    await refreshInsights();
-    appendChat('ai', 'Hello. I am SmartRoute AI for the North Eastern Region. Ask about safest routes, alternates, landslides, floods, or convoy planning — no API key needed.');
+    refreshInsights();
+    appendChat('ai', 'Hello — I am SmartRoute AI for the North Eastern Region. No API key needed. Ask about safest routes, alternates, landslides, floods, or convoy planning.');
   });
+})();
 </script>
 </body>
 </html>
