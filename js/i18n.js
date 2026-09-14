@@ -1,35 +1,35 @@
 /* SmartRoute i18n loader */
 (function () {
   "use strict";
-  window.__SR_I18N_B64 = window.__SR_I18N_B64 || [];
-  var NEED = 4;
-  function b64ToUtf8(b64) {
-    var bin = atob(b64);
-    var bytes = new Uint8Array(bin.length);
-    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return new TextDecoder("utf-8").decode(bytes);
-  }
-  window.__SR_I18N_TRY = function () {
-    var p = window.__SR_I18N_B64;
-    var ready = 0;
-    for (var i = 0; i < NEED; i++) if (p[i]) ready++;
-    if (ready < NEED || window.__SR_I18N_DONE) return;
-    window.__SR_I18N_DONE = true;
-    try {
-      var code = "";
-      for (var j = 0; j < NEED; j++) code += b64ToUtf8(p[j]);
-      (0, eval)(code);
-      console.log("[SmartRoute i18n] OK", window.SmartRouteI18n && window.SmartRouteI18n.t("nav_dashboard", "te"));
-    } catch (e) {
-      console.error("[SmartRoute i18n] fail", e);
+  function loadScript(src, cb) {
+    if (document.querySelector('script[src="' + src + '"]')) {
+      if (cb) cb();
+      return;
     }
-  };
-  function loadPart(i) {
-    var s = document.createElement("script");
-    s.src = "js/i18n-p" + i + ".js";
+    var s = document.createElement('script');
+    s.src = src;
     s.async = false;
-    s.onload = function () { window.__SR_I18N_TRY(); };
+    s.onload = function () { if (cb) cb(); };
+    s.onerror = function () { console.warn('[i18n] failed', src); if (cb) cb(); };
     document.head.appendChild(s);
   }
-  for (var i = 0; i < NEED; i++) loadPart(i);
+  // Load dictionary first, then enhance + force layers
+  loadScript('js/i18n-dict.js', function () {
+    loadScript('js/i18n-enhance.js', function () {
+      loadScript('js/force-i18n.js', function () {
+        loadScript('js/i18n-runtime.js', function () {
+          var code = 'en';
+          try { code = localStorage.getItem('sr_language') || 'en'; } catch (e) {}
+          if (window.SmartRouteI18n) {
+            SmartRouteI18n._currentLang = code;
+            if (typeof SmartRouteI18n.applyLanguage === 'function') SmartRouteI18n.applyLanguage(code);
+          }
+          if (window.SmartRouteForceI18n && SmartRouteForceI18n.apply) {
+            try { SmartRouteForceI18n.apply(code); } catch (e) {}
+          }
+          console.log('[SmartRoute i18n] stack ready', code);
+        });
+      });
+    });
+  });
 })();
