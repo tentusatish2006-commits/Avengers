@@ -1,603 +1,218 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Officer Dashboard - SmartRoute</title>
-    
-    <!-- CDNs -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
-
-    <!-- Local Assets -->
-        <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/design-system.css">
-    <link rel="stylesheet" href="css/animations.css">
-    <link rel="stylesheet" href="css/components.css">
-    
-    <style>
-        body {
-            background: #030810;
-            display: flex;
-            justify-content: center;
-        }
-        .mobile-container {
-            width: 100%;
-            max-width: 480px;
-            background: rgba(3, 8, 16, 0.95);
-            min-height: 100vh;
-            border-left: 1px solid rgba(255,255,255,0.05);
-            border-right: 1px solid rgba(255,255,255,0.05);
-            padding: 20px;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .search-wrap {
-            position: relative;
-            width: 100%;
-        }
-        .officer-search {
-            width: 100%;
-            box-sizing: border-box;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(0,212,255,0.25);
-            border-radius: 10px;
-            padding: 12px 14px;
-            color: #e8f4ff;
-            font-family: 'Outfit', sans-serif;
-            font-size: 0.95rem;
-        }
-        .officer-search:focus {
-            outline: none;
-            border-color: #00d4ff;
-            box-shadow: 0 0 0 2px rgba(0,212,255,0.15);
-        }
-        .officer-search::placeholder { color: #6a7a8c; }
-        .search-results {
-            position: absolute;
-            top: calc(100% + 6px);
-            left: 0;
-            right: 0;
-            z-index: 50;
-            background: rgba(5, 12, 28, 0.98);
-            border: 1px solid rgba(0,212,255,0.3);
-            border-radius: 10px;
-            max-height: 220px;
-            overflow-y: auto;
-            display: none;
-            box-shadow: 0 12px 28px rgba(0,0,0,0.45);
-        }
-        .search-results.show { display: block; }
-        .search-item {
-            padding: 10px 14px;
-            cursor: pointer;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 8px;
-        }
-        .search-item:last-child { border-bottom: none; }
-        .search-item:hover, .search-item.active {
-            background: rgba(0,212,255,0.12);
-        }
-        .search-item .name { font-weight: 600; color: #e8f4ff; }
-        .search-item .meta { font-size: 0.75rem; color: #8fa3b8; }
-        .search-empty {
-            padding: 12px 14px;
-            color: #8fa3b8;
-            font-size: 0.85rem;
-        }
-        
-        .profile-card {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 15px;
-        }
-        .prof-avatar {
-            width: 60px; height: 60px;
-            border-radius: 50%;
-            background: #00d4ff;
-            color: #000;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 1.5rem; font-weight: bold;
-            flex-shrink: 0;
-        }
-        .prof-info h2 { margin: 0; font-size: 1.2rem; }
-        .prof-info p { margin: 2px 0 0 0; color: #aaa; font-size: 0.9rem; }
-        .status-dot {
-            display: inline-block;
-            width: 10px; height: 10px;
-            background: #00ff88;
-            border-radius: 50%;
-            box-shadow: 0 0 8px #00ff88;
-            margin-right: 5px;
-        }
-        .status-dot.off {
-            background: #8fa3b8;
-            box-shadow: none;
-        }
-        .status-dot.reporting {
-            background: #00d4ff;
-            box-shadow: 0 0 8px #00d4ff;
-        }
-        
-        .gps-card {
-            padding: 15px;
-            position: relative;
-        }
-        #mini-map {
-            width: 100%;
-            height: 150px;
-            border-radius: 8px;
-            margin-top: 10px;
-            background: #111;
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-        }
-        .stat-box {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(0,212,255,0.2);
-            padding: 10px;
-            border-radius: 12px;
-            text-align: center;
-        }
-        .stat-box h3 { margin: 0; font-size: 1.5rem; color: #00d4ff; }
-        .stat-box p { margin: 5px 0 0 0; font-size: 0.8rem; color: #aaa; }
-        
-        .action-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-        .action-btn {
-            background: rgba(0,212,255,0.1);
-            border: 1px solid rgba(0,212,255,0.3);
-            color: #fff;
-            height: 80px;
-            border-radius: 16px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            font-family: 'Outfit', sans-serif;
-            font-weight: bold;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .action-btn:hover {
-            background: rgba(0,212,255,0.2);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,212,255,0.2);
-        }
-        .btn-red {
-            background: rgba(255,59,59,0.1);
-            border-color: rgba(255,59,59,0.5);
-            color: #ff3b3b;
-        }
-        .btn-red:hover {
-            background: rgba(255,59,59,0.2);
-            box-shadow: 0 5px 15px rgba(255,59,59,0.3);
-        }
-        
-        .task-list { display: flex; flex-direction: column; gap: 10px; }
-        .task-card {
-            background: rgba(255,255,255,0.03);
-            border-left: 4px solid #ff9500;
-            padding: 12px;
-            border-radius: 8px;
-        }
-
-        .dashboard-body.hidden-until-search { display: none !important; }
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            border: 1px dashed rgba(0,212,255,0.25);
-            border-radius: 14px;
-            background: rgba(0,212,255,0.04);
-            color: #8fa3b8;
-        }
-        .empty-state h3 { margin: 0 0 8px 0; color: #e8f4ff; font-size: 1.1rem; }
-        .empty-state p { margin: 0; font-size: 0.9rem; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Officer Dashboard - SmartRoute</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    .page-body { padding: 16px; }
+    .profile-card { display:flex; align-items:center; gap:14px; padding:16px; border-radius:12px; background:rgba(8,18,36,0.85); border:1px solid rgba(0,212,255,0.2); margin-bottom:14px; }
+    .avatar { width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg,#00d4ff,#00ff88); color:#031018; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.2rem; }
+    .action-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:16px 0; }
+    .action-btn { background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.35); color:#e8f4ff; min-height:88px; border-radius:14px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:6px; font-weight:700; cursor:pointer; font-family:inherit; font-size:0.85rem; }
+    .action-btn:hover { background:rgba(0,212,255,0.2); }
+    .action-btn.red { background:rgba(255,59,59,0.12); border-color:rgba(255,59,59,0.45); color:#ff6b6b; }
+    .action-btn.orange { background:rgba(255,149,0,0.12); border-color:rgba(255,149,0,0.45); color:#ff9500; }
+    #mini-map { height:200px; border-radius:10px; border:1px solid rgba(0,212,255,0.3); margin-top:8px; }
+    .task-card { background:rgba(255,255,255,0.04); border-left:4px solid #ff9500; padding:12px; border-radius:8px; margin-bottom:8px; }
+    .modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:500; align-items:center; justify-content:center; padding:16px; }
+    .modal-bg.show { display:flex; }
+    .modal { width:min(420px,100%); background:#0a1628; border:1px solid rgba(0,212,255,0.35); border-radius:14px; padding:20px; }
+    .modal h3 { margin:0 0 12px; color:#00d4ff; }
+    .modal select, .modal input, .modal textarea { width:100%; box-sizing:border-box; margin:6px 0 12px; padding:10px; border-radius:8px; border:1px solid rgba(0,212,255,0.25); background:#061018; color:#fff; font-family:inherit; }
+    .modal .row { display:flex; gap:8px; justify-content:flex-end; }
+    .modal button { padding:10px 14px; border-radius:8px; border:none; font-weight:700; cursor:pointer; }
+    .btn-ok { background:linear-gradient(90deg,#00d4ff,#00ff88); color:#031018; }
+    .btn-cancel { background:rgba(255,255,255,0.08); color:#e8f4ff; }
+    @media(max-width:700px){ .action-grid{ grid-template-columns:1fr 1fr; } }
+  </style>
 </head>
 <body>
-    
-    <div class="mobile-container">
-        
-        <div class="top-bar">
-            <h3 style="margin:0; background: linear-gradient(90deg, #00d4ff, #00ff88); -webkit-background-clip: text; color: transparent;">SmartRoute</h3>
-            <div style="font-size: 1.5rem; cursor: pointer;">≡</div>
-        </div>
+<div class="app-shell">
+  <div class="main-content" id="main-content">
+    <main class="page-body">
+      <div class="page-header" style="margin-bottom:12px;">
+        <h1 class="page-title" style="margin:0;">Field Officer</h1>
+        <p class="page-subtitle" style="margin:4px 0 0;color:#8fa3b8;">Assign incidents · view reports · track location</p>
+      </div>
 
-        <!-- Officer search -->
-        <div class="search-wrap">
-            <input type="text" id="officer-search" class="officer-search" placeholder="Search officer by name, ID or district..." autocomplete="off" />
-            <div id="search-results" class="search-results" role="listbox"></div>
-        </div>
-        
-        <!-- Empty until search -->
-        <div id="empty-state" class="empty-state">
-            <h3>Search an officer</h3>
-            <p>Type a name, FO-ID, or district above.<br>Details load only after you select someone.</p>
-        </div>
-
-        <div id="dashboard-body" class="dashboard-body hidden-until-search" style="display:flex; flex-direction:column; gap:20px;">
-        <!-- Profile -->
-        <div class="glass-card profile-card">
-            <div class="prof-avatar" id="od-avatar">—</div>
-            <div class="prof-info">
-                <h2 id="od-name">—</h2>
-                <p id="od-meta">—</p>
-                <p id="od-status-line" style="color: #8fa3b8; margin-top:5px;"><span class="status-dot off" id="od-status-dot"></span><span id="od-status-text">—</span></p>
-            </div>
-        </div>
-
-        <!-- GPS -->
-        <div class="glass-card gps-card">
-            <div style="display: flex; justify-content: space-between;">
-                <span style="color:#00d4ff; font-weight:bold;">📍 Current Location (2D Satellite View)</span>
-                <span style="color:#aaa; font-size:0.8rem;">Live GPS Telemetry</span>
-            </div>
-            <p id="od-coords" style="margin:5px 0 0 0; font-size:0.95rem; font-family:'JetBrains Mono',monospace; color:#00d4ff;">—</p>
-            <p id="od-location" style="margin:0; color:#aaa; font-size:0.85rem;">Select an officer to load GPS</p>
-            <div id="mini-map" style="height:180px; border-radius:10px; margin-top:10px; border:1px solid rgba(0,212,255,0.3); overflow:hidden;"></div>
-        </div>
-
-        <!-- Stats -->
-        <div class="stats-grid">
-            <div class="stat-box">
-                <h3 id="od-reports">—</h3>
-                <p>Reports</p>
-            </div>
-            <div class="stat-box">
-                <h3 id="od-assigned">—</h3>
-                <p>Assigned</p>
-            </div>
-            <div class="stat-box">
-                <h3 id="od-traveled">—</h3>
-                <p>Traveled</p>
-            </div>
-        </div>
-
-        <!-- Actions -->
-        <div class="action-grid">
-            <button class="action-btn" onclick="window.location.href='field-report.html'">
-                <span style="font-size: 1.5rem;">📍</span>
-                REPORT INCIDENT
-            </button>
-            <button class="action-btn" onclick="window.location.href='photo-analysis.html'">
-                <span style="font-size: 1.5rem;">📷</span>
-                UPLOAD PHOTO
-            </button>
-            <button class="action-btn btn-red" onclick="window.location.href='emergency.html'">
-                <span style="font-size: 1.5rem;">🚨</span>
-                EMERGENCY
-            </button>
-            <button class="action-btn" onclick="window.location.href='map.html'">
-                <span style="font-size: 1.5rem;">🗺</span>
-                VIEW MAP
-            </button>
-            <button class="action-btn" onclick="window.location.href='vehicle-tracking.html'">
-                <span style="font-size: 1.5rem;">🚛</span>
-                TRACK VEHICLE
-            </button>
-            <button class="action-btn" onclick="window.location.href='reports.html'">
-                <span style="font-size: 1.5rem;">📋</span>
-                MY REPORTS
-            </button>
-        </div>
-
-        <!-- Assigned Tasks -->
+      <div class="profile-card">
+        <div class="avatar" id="od-avatar">FO</div>
         <div>
-            <h3 style="margin-bottom:10px; color:#fff;">Assigned Tasks</h3>
-            <div class="task-list" id="od-tasks">
-                <div class="task-card" style="border-left-color:#8fa3b8;">
-                    <h4 style="margin:0;">No tasks</h4>
-                    <p style="margin:5px 0 0 0; font-size:0.85rem; color:#aaa;">Select an officer first</p>
-                </div>
-            </div>
+          <div id="od-name" style="font-weight:800;font-size:1.15rem;">—</div>
+          <div id="od-meta" style="color:#8fa3b8;font-size:0.9rem;">—</div>
+          <div style="color:#00ff88;font-size:0.85rem;margin-top:4px;" id="od-status">● ACTIVE</div>
         </div>
+      </div>
 
-        <!-- Weather -->
-        <div class="glass-card" style="padding: 15px;">
-            <h4 style="margin:0 0 10px 0; color:#00d4ff;">Current Conditions</h4>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="font-size: 2rem;" id="od-weather-icon">—</div>
-                <div style="text-align: right;">
-                    <div style="font-size: 1.2rem; font-weight: bold;" id="od-temp">—</div>
-                    <div style="font-size: 0.9rem; color: #aaa;" id="od-weather-desc">—</div>
-                </div>
-            </div>
-            <div id="od-advisory" style="margin-top: 10px; font-size: 0.8rem; color: #8fa3b8; background: rgba(255,255,255,0.05); padding: 5px; border-radius: 4px;">
-                Search and select an officer to load sector weather.
-            </div>
+      <div class="glass-card" style="padding:14px;border-radius:12px;border:1px solid rgba(0,212,255,0.2);background:rgba(8,18,36,0.7);margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <strong style="color:#00d4ff;">📍 Track Location</strong>
+          <button type="button" class="action-btn" style="min-height:auto;padding:8px 12px;" onclick="trackLocation()">Refresh GPS</button>
         </div>
-        </div>
+        <p id="od-coords" style="font-family:JetBrains Mono,monospace;color:#00d4ff;margin:8px 0 0;">26.1445° N, 91.7362° E</p>
+        <p id="od-location" style="color:#8fa3b8;margin:4px 0 0;font-size:0.88rem;">Guwahati Sector · Assam</p>
+        <div id="mini-map"></div>
+      </div>
 
+      <div class="action-grid">
+        <button type="button" class="action-btn orange" onclick="openAssignModal()">
+          <span style="font-size:1.4rem;">📌</span> ASSIGN INCIDENT
+        </button>
+        <button type="button" class="action-btn" onclick="viewReports()">
+          <span style="font-size:1.4rem;">📋</span> VIEW REPORTS
+        </button>
+        <button type="button" class="action-btn" onclick="trackLocation()">
+          <span style="font-size:1.4rem;">📡</span> TRACK LOCATION
+        </button>
+        <button type="button" class="action-btn" onclick="location.href='field-report.html'">
+          <span style="font-size:1.4rem;">📍</span> REPORT INCIDENT
+        </button>
+        <button type="button" class="action-btn" onclick="location.href='photo-analysis.html'">
+          <span style="font-size:1.4rem;">📷</span> UPLOAD PHOTO
+        </button>
+        <button type="button" class="action-btn red" onclick="location.href='emergency.html'">
+          <span style="font-size:1.4rem;">🚨</span> EMERGENCY
+        </button>
+      </div>
+
+      <h3 style="color:#e8f4ff;margin:8px 0;">Assigned Tasks</h3>
+      <div id="od-tasks">
+        <div class="task-card">
+          <div style="font-weight:700;">Verify Landslide on NH-13</div>
+          <div style="font-size:0.85rem;color:#8fa3b8;margin-top:4px;">Tawang Pass · High Priority</div>
+        </div>
+        <div class="task-card" style="border-left-color:#00d4ff;">
+          <div style="font-weight:700;">Medicine convoy escort</div>
+          <div style="font-size:0.85rem;color:#8fa3b8;margin-top:4px;">Guwahati → Kohima · Medium</div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="modal-bg" id="assign-modal">
+  <div class="modal">
+    <h3>Assign Incident</h3>
+    <label style="font-size:0.75rem;color:#8fa3b8;">Incident type</label>
+    <select id="as-type">
+      <option>Landslide</option>
+      <option>Flood</option>
+      <option>Road Damage / Pothole</option>
+      <option>Bridge Warning</option>
+      <option>Medical Logistics</option>
+    </select>
+    <label style="font-size:0.75rem;color:#8fa3b8;">Location (NER)</label>
+    <input id="as-loc" value="Tawang Pass, Arunachal Pradesh">
+    <label style="font-size:0.75rem;color:#8fa3b8;">Priority</label>
+    <select id="as-pri">
+      <option>Critical</option>
+      <option selected>High</option>
+      <option>Medium</option>
+      <option>Low</option>
+    </select>
+    <label style="font-size:0.75rem;color:#8fa3b8;">Notes</label>
+    <textarea id="as-notes" rows="3" placeholder="Assignment notes..."></textarea>
+    <div class="row">
+      <button type="button" class="btn-cancel" onclick="closeAssignModal()">Cancel</button>
+      <button type="button" class="btn-ok" onclick="confirmAssign()">Assign</button>
     </div>
+  </div>
+</div>
 
-    <script src="js/components.js"></script>
-    <script src="js/map-engine.js"></script>
-    <script>
-        const OFFICERS = [
-            { id: 'FO-042', name: 'Ravi Kumar', initials: 'RK', dist: 'Assam', sector: 'North-Eastern Command (Assam Sector)', lat: 26.1524, lng: 91.7510, status: 'ACTIVE', note: 'Guwahati Riverfront / Brahmaputra Sector, Assam', reports: 3, assigned: 2, traveled: 127, weather: { icon: '🌧', temp: '24°C', desc: 'Heavy Rain (45mm/hr)', advisory: 'Advisory: Flash flood risk elevated in your sector.' }, tasks: [
-                { title: 'Verify Landslide on SH-39', meta: 'Dist: 4.2 km • High Priority', href: 'emergency.html', color: '#ff9500' },
-                { title: 'Inspect Godavari Culvert', meta: 'Dist: 12.5 km • Medium Priority', href: 'infrastructure.html', color: '#ffd700' }
-            ]},
-            { id: 'FO-015', name: 'Lakshmi Devi', initials: 'LD', dist: 'Arunachal Pradesh', sector: 'North-Eastern Command (Arunachal Sector)', lat: 27.5840, lng: 91.8620, status: 'ACTIVE', note: 'NH-13 Tawang Pass sector', reports: 5, assigned: 1, traveled: 89, weather: { icon: '🌨', temp: '8°C', desc: 'Snow / low visibility', advisory: 'Advisory: High-altitude pass — reduce convoy speed.' }, tasks: [
-                { title: 'Assess NH-13 ice patch', meta: 'Dist: 2.1 km • High Priority', href: 'emergency.html', color: '#ff3b3b' },
-                { title: 'Relay weather to convoy', meta: 'Dist: 0.5 km • Medium Priority', href: 'field-report.html', color: '#ffd700' }
-            ]},
-            { id: 'FO-028', name: 'Suresh Rao', initials: 'SR', dist: 'Nagaland', sector: 'North-Eastern Command (Nagaland Sector)', lat: 25.6700, lng: 94.1000, status: 'REPORTING', note: 'Kohima pass incident report', reports: 4, assigned: 3, traveled: 64, weather: { icon: '☁', temp: '19°C', desc: 'Overcast, light drizzle', advisory: 'Advisory: Landslide watch on Kohima approach.' }, tasks: [
-                { title: 'File Kohima pass report', meta: 'Dist: 1.0 km • High Priority', href: 'field-report.html', color: '#ff9500' },
-                { title: 'Photo analysis — rockfall', meta: 'Dist: 3.4 km • High Priority', href: 'photo-analysis.html', color: '#ff3b3b' }
-            ]},
-            { id: 'FO-061', name: 'Anand Babu', initials: 'AB', dist: 'Meghalaya', sector: 'North-Eastern Command (Meghalaya Sector)', lat: 25.5700, lng: 91.8900, status: 'ACTIVE', note: 'Shillong Plateau Corridor', reports: 2, assigned: 1, traveled: 101, weather: { icon: '🌦', temp: '21°C', desc: 'Partly cloudy', advisory: 'Advisory: Wet roads on plateau corridor.' }, tasks: [
-                { title: 'Plateau corridor check', meta: 'Dist: 6.0 km • Medium Priority', href: 'infrastructure.html', color: '#ffd700' }
-            ]},
-            { id: 'FO-033', name: 'Priya Singh', initials: 'PS', dist: 'Sikkim', sector: 'North-Eastern Command (Sikkim Sector)', lat: 27.3300, lng: 88.6100, status: 'OFF DUTY', note: 'Gangtok command depot', reports: 1, assigned: 0, traveled: 42, weather: { icon: '🌫', temp: '14°C', desc: 'Fog in valleys', advisory: 'Advisory: Off duty — standby only.' }, tasks: [] },
-            { id: 'FO-077', name: 'Mohan Rao', initials: 'MR', dist: 'Tripura', sector: 'North-Eastern Command (Tripura Sector)', lat: 23.8300, lng: 91.2800, status: 'ACTIVE', note: 'Agartala corridor patrol', reports: 6, assigned: 2, traveled: 156, weather: { icon: '☀', temp: '29°C', desc: 'Clear, humid', advisory: 'Advisory: Heat stress risk for long patrols.' }, tasks: [
-                { title: 'Agartala corridor sweep', meta: 'Dist: 8.2 km • Medium Priority', href: 'map.html', color: '#00d4ff' },
-                { title: 'Bridge abutment inspect', meta: 'Dist: 11.0 km • Low Priority', href: 'infrastructure.html', color: '#ffd700' }
-            ]},
-            { id: 'FO-089', name: 'Kavitha Reddy', initials: 'KR', dist: 'Mizoram', sector: 'North-Eastern Command (Mizoram Sector)', lat: 23.7300, lng: 92.7100, status: 'ACTIVE', note: 'Aizawl high pass assessment', reports: 3, assigned: 2, traveled: 78, weather: { icon: '🌧', temp: '22°C', desc: 'Rain on high passes', advisory: 'Advisory: Slippery grades on Aizawl approach.' }, tasks: [
-                { title: 'High pass assessment', meta: 'Dist: 5.5 km • High Priority', href: 'emergency.html', color: '#ff9500' }
-            ]},
-            { id: 'FO-055', name: 'Rajesh Varma', initials: 'RV', dist: 'Manipur', sector: 'North-Eastern Command (Manipur Sector)', lat: 24.8170, lng: 93.9360, status: 'ACTIVE', note: 'Imphal valley causeway inspection', reports: 4, assigned: 1, traveled: 93, weather: { icon: '☁', temp: '26°C', desc: 'Cloudy', advisory: 'Advisory: Causeway water levels normal.' }, tasks: [
-                { title: 'Imphal causeway inspect', meta: 'Dist: 3.8 km • Medium Priority', href: 'infrastructure.html', color: '#ffd700' },
-                { title: 'Valley route photo set', meta: 'Dist: 2.0 km • Low Priority', href: 'photo-analysis.html', color: '#00d4ff' }
-            ]}
-        ];
+<script src="js/auth-users.js?v=nav7"></script>
+<script src="js/components.js?v=nav7"></script>
+<script src="js/map-engine.js?v=nav7"></script>
+<script>
+(function () {
+  var miniMap = null, marker = null;
+  var lat = 26.1445, lng = 91.7362;
 
-        let miniMap = null;
-        let officerMarker = null;
-        let currentOfficer = null;
+  function loadUser() {
+    var u = null;
+    try {
+      if (window.SmartRouteAuth) u = SmartRouteAuth.getSessionUser();
+      if (!u) {
+        u = {
+          username: localStorage.getItem('sr_username') || 'Field Officer',
+          officerId: localStorage.getItem('sr_officer_id') || 'FO-001',
+          role: localStorage.getItem('sr_user_role') || 'FIELD OFFICER',
+          region: localStorage.getItem('sr_region') || 'Assam (Guwahati)'
+        };
+      }
+    } catch (e) { u = { username: 'Field Officer', officerId: 'FO-001', role: 'FIELD OFFICER', region: 'Assam' }; }
 
-        function statusColor(status) {
-            if (status === 'ACTIVE') return '#00ff88';
-            if (status === 'REPORTING') return '#00d4ff';
-            return '#8fa3b8';
-        }
+    var name = u.username || 'Field Officer';
+    var initials = name.split(/\s+/).map(function (p) { return p[0]; }).join('').slice(0, 2).toUpperCase() || 'FO';
+    document.getElementById('od-avatar').textContent = initials;
+    document.getElementById('od-name').textContent = name;
+    document.getElementById('od-meta').textContent = (u.officerId || '') + ' · ' + (u.role || '') + ' · ' + (u.region || '');
+  }
 
-        function statusLabel(status) {
-            if (status === 'ACTIVE') return 'ONLINE';
-            if (status === 'REPORTING') return 'REPORTING';
-            return 'OFF DUTY';
-        }
+  window.openAssignModal = function () {
+    document.getElementById('assign-modal').classList.add('show');
+  };
+  window.closeAssignModal = function () {
+    document.getElementById('assign-modal').classList.remove('show');
+  };
+  window.confirmAssign = function () {
+    var type = document.getElementById('as-type').value;
+    var loc = document.getElementById('as-loc').value;
+    var pri = document.getElementById('as-pri').value;
+    var notes = document.getElementById('as-notes').value;
+    var card = document.createElement('div');
+    card.className = 'task-card';
+    card.innerHTML = '<div style="font-weight:700;">' + type + ' — Assigned</div>' +
+      '<div style="font-size:0.85rem;color:#8fa3b8;margin-top:4px;">' + loc + ' · ' + pri +
+      (notes ? '<br>' + notes : '') + '</div>';
+    document.getElementById('od-tasks').insertBefore(card, document.getElementById('od-tasks').firstChild);
+    closeAssignModal();
+    if (window.SmartRoute) SmartRoute.showToast('Incident assigned: ' + type, 'success');
+  };
 
-        function showDashboard() {
-            var empty = document.getElementById('empty-state');
-            var body = document.getElementById('dashboard-body');
-            if (empty) empty.style.display = 'none';
-            if (body) {
-                body.classList.remove('hidden-until-search');
-                body.style.display = 'flex';
-            }
-        }
+  window.viewReports = function () {
+    location.href = 'reports.html';
+  };
 
-        function applyOfficer(off) {
-            if (!off) return;
-            currentOfficer = off;
-            showDashboard();
+  window.trackLocation = function () {
+    function setPos(la, ln, label) {
+      lat = la; lng = ln;
+      document.getElementById('od-coords').textContent = la.toFixed(4) + '° N, ' + ln.toFixed(4) + '° E';
+      document.getElementById('od-location').textContent = label || 'Live GPS position';
+      if (miniMap) {
+        miniMap.setView([la, ln], 12);
+        if (marker) marker.setLatLng([la, ln]);
+        else marker = L.marker([la, ln]).addTo(miniMap);
+      }
+      if (window.SmartRoute) SmartRoute.showToast('Location updated', 'success');
+    }
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        function (pos) { setPos(pos.coords.latitude, pos.coords.longitude, 'Device GPS'); },
+        function () { setPos(26.1445, 91.7362, 'Guwahati Sector · Assam (fallback)'); },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    } else {
+      setPos(26.1445, 91.7362, 'Guwahati Sector · Assam');
+    }
+  };
 
-            document.getElementById('od-avatar').textContent = off.initials;
-            document.getElementById('od-name').textContent = off.name;
-            document.getElementById('od-meta').textContent = off.id + ' | ' + off.sector;
-
-            var statusText = statusLabel(off.status);
-            var color = statusColor(off.status);
-            document.getElementById('od-status-text').textContent = statusText;
-            document.getElementById('od-status-line').style.color = color;
-            var dot = document.getElementById('od-status-dot');
-            dot.className = 'status-dot';
-            if (off.status === 'OFF DUTY') dot.classList.add('off');
-            else if (off.status === 'REPORTING') dot.classList.add('reporting');
-            dot.style.background = color;
-            dot.style.boxShadow = off.status === 'OFF DUTY' ? 'none' : ('0 0 8px ' + color);
-
-            document.getElementById('od-coords').textContent =
-                off.lat.toFixed(4) + '° N, ' + off.lng.toFixed(4) + '° E';
-            document.getElementById('od-location').textContent = off.note;
-
-            document.getElementById('od-reports').textContent = String(off.reports);
-            document.getElementById('od-assigned').textContent = String(off.assigned);
-            document.getElementById('od-traveled').innerHTML =
-                String(off.traveled) + '<span style="font-size:0.8rem">km</span>';
-
-            var tasksEl = document.getElementById('od-tasks');
-            if (!off.tasks || !off.tasks.length) {
-                tasksEl.innerHTML = '<div class="task-card" style="border-left-color:#8fa3b8;"><h4 style="margin:0;">No assigned tasks</h4><p style="margin:5px 0 0 0; font-size:0.85rem; color:#aaa;">Standby / off duty</p></div>';
-            } else {
-                tasksEl.innerHTML = off.tasks.map(function (t) {
-                    return '<div class="task-card" style="cursor:pointer;border-left-color:' + (t.color || '#ff9500') + ';" onclick="window.location.href=\'' + t.href + '\'">' +
-                        '<h4 style="margin:0 0 5px 0;">' + t.title + ' ↗</h4>' +
-                        '<p style="margin:0; font-size:0.85rem; color:#aaa;">' + t.meta + '</p></div>';
-                }).join('');
-            }
-
-            if (off.weather) {
-                document.getElementById('od-weather-icon').textContent = off.weather.icon;
-                document.getElementById('od-temp').textContent = off.weather.temp;
-                document.getElementById('od-weather-desc').textContent = off.weather.desc;
-                document.getElementById('od-advisory').textContent = off.weather.advisory;
-                document.getElementById('od-advisory').style.color = '#ff9500';
-                document.getElementById('od-advisory').style.background = 'rgba(255,149,0,0.1)';
-            }
-
-            updateMap(off);
-
-            if (window.SmartRoute && SmartRoute.showToast) {
-                SmartRoute.showToast('Loaded dashboard for ' + off.name + ' (' + off.id + ')', 'success', 2200);
-            }
-        }
-
-        function ensureMiniMap() {
-            if (window.__srMapBooted || typeof L === 'undefined') return;
-            var el = document.getElementById('mini-map');
-            if (!el) return;
-            miniMap = L.map('mini-map', {
-                center: [25.8, 91.6],
-                zoom: 6,
-                zoomControl: true,
-                attributionControl: false
-            });
-            L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-                maxZoom: 20,
-                subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
-            }).addTo(miniMap);
-            window.__srMapBooted = true;
-            setTimeout(function () { if (miniMap) miniMap.invalidateSize(); }, 150);
-        }
-
-        function updateMap(off) {
-            ensureMiniMap();
-            if (!miniMap || typeof L === 'undefined') return;
-            miniMap.setView([off.lat, off.lng], 11);
-
-            if (officerMarker) {
-                miniMap.removeLayer(officerMarker);
-                officerMarker = null;
-            }
-
-            var color = statusColor(off.status);
-            var icon = L.divIcon({
-                className: '',
-                html: '<div style="position:relative; width:34px; height:34px; display:flex; align-items:center; justify-content:center; transform:translate(-50%, -50%);">' +
-                    '<div style="position:absolute; inset:0; border-radius:50%; background:rgba(0,212,255,0.45); animation:ripple 2s infinite ease-out;"></div>' +
-                    '<div style="width:16px; height:16px; border-radius:50%; background:' + color + '; border:2.5px solid #fff; box-shadow:0 0 16px ' + color + '; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:900; color:#000;">' + off.initials + '</div></div>',
-                iconSize: [1, 1],
-                iconAnchor: [0, 0]
-            });
-
-            officerMarker = L.marker([off.lat, off.lng], { icon: icon }).addTo(miniMap)
-                .bindPopup('<b style="color:#00d4ff;">Officer ' + off.name + ' (' + off.id + ')</b><br>' + off.note + '<br><span style="color:' + color + '; font-size:11px;">● ' + statusLabel(off.status) + ' · GPS SYNCED</span>')
-                .openPopup();
-
-            setTimeout(function () { miniMap.invalidateSize(); }, 100);
-        }
-
-        function filterOfficers(q) {
-            q = (q || '').toLowerCase().trim();
-            if (!q) return OFFICERS.slice();
-            return OFFICERS.filter(function (o) {
-                return o.name.toLowerCase().indexOf(q) !== -1 ||
-                    o.id.toLowerCase().indexOf(q) !== -1 ||
-                    o.dist.toLowerCase().indexOf(q) !== -1 ||
-                    (o.sector && o.sector.toLowerCase().indexOf(q) !== -1);
-            });
-        }
-
-        function renderSearchResults(list) {
-            var box = document.getElementById('search-results');
-            if (!list.length) {
-                box.innerHTML = '<div class="search-empty">No officer matched. Try name, FO-ID, or district.</div>';
-                box.classList.add('show');
-                return;
-            }
-            box.innerHTML = list.map(function (o) {
-                return '<div class="search-item" data-id="' + o.id + '" role="option">' +
-                    '<div><div class="name">' + o.name + '</div><div class="meta">' + o.id + ' · ' + o.dist + '</div></div>' +
-                    '<span class="meta" style="color:' + statusColor(o.status) + ';">' + o.status + '</span></div>';
-            }).join('');
-            box.classList.add('show');
-
-            Array.prototype.forEach.call(box.querySelectorAll('.search-item'), function (el) {
-                el.addEventListener('click', function () {
-                    var id = el.getAttribute('data-id');
-                    var off = OFFICERS.find(function (x) { return x.id === id; });
-                    if (off) {
-                        document.getElementById('officer-search').value = off.name;
-                        box.classList.remove('show');
-                        applyOfficer(off);
-                    }
-                });
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            if (window.SmartRoute && window.SmartRoute.initCountUps) {
-                SmartRoute.initCountUps();
-            }
-
-            window.__srMapBooted = false;
-
-            // No default officer — wait for search selection
-            var input = document.getElementById('officer-search');
-            var results = document.getElementById('search-results');
-
-            input.addEventListener('input', function () {
-                renderSearchResults(filterOfficers(input.value));
-            });
-
-            input.addEventListener('focus', function () {
-                renderSearchResults(filterOfficers(input.value));
-            });
-
-            input.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    var matches = filterOfficers(input.value);
-                    if (matches.length) {
-                        input.value = matches[0].name;
-                        results.classList.remove('show');
-                        applyOfficer(matches[0]);
-                    }
-                } else if (e.key === 'Escape') {
-                    results.classList.remove('show');
-                }
-            });
-
-            document.addEventListener('click', function (e) {
-                if (!e.target.closest('.search-wrap')) {
-                    results.classList.remove('show');
-                }
-            });
-
-            // Deep-link: ?officer=FO-015 or ?name=Lakshmi
-            try {
-                var params = new URLSearchParams(window.location.search);
-                var byId = params.get('officer') || params.get('id');
-                var byName = params.get('name');
-                var found = null;
-                if (byId) {
-                    found = OFFICERS.find(function (o) {
-                        return o.id.toLowerCase() === byId.toLowerCase();
-                    });
-                }
-                if (!found && byName) {
-                    var nq = byName.toLowerCase();
-                    found = OFFICERS.find(function (o) {
-                        return o.name.toLowerCase().indexOf(nq) !== -1;
-                    });
-                }
-                if (found) {
-                    input.value = found.name;
-                    applyOfficer(found);
-                }
-            } catch (err) { /* ignore */ }
-        });
-    </script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Field Officer', subtitle: 'Assign · Reports · Track' });
+    loadUser();
+    try {
+      miniMap = L.map('mini-map').setView([lat, lng], 11);
+      L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18 }).addTo(miniMap);
+      marker = L.marker([lat, lng]).addTo(miniMap);
+      setTimeout(function () { miniMap.invalidateSize(); }, 300);
+    } catch (e) {}
+  });
+})();
+</script>
 </body>
 </html>

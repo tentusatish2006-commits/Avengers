@@ -1,4 +1,4 @@
-/* SmartRoute shared UI — stable sidebar; topbar with LIVE + clock only (no corner logos) */
+/* SmartRoute — stable sidebar, working hamburger, topbar LIVE+clock+alerts+settings */
 const SR_PUBLIC_PAGES = ['index.html', 'login.html', 'signup.html', ''];
 
 function isLoggedIn() {
@@ -169,12 +169,38 @@ function ensureStableSidebar(active) {
   shell.setAttribute('data-sr-sidebar-locked', '1');
 }
 
-/** Top-right: LIVE status + live clock only (no alert/settings logos) */
+function injectSidebarCss() {
+  if (document.getElementById('sr-sidebar-css')) return;
+  var style = document.createElement('style');
+  style.id = 'sr-sidebar-css';
+  style.textContent =
+    '.sidebar{display:flex;flex-direction:column;width:260px;min-height:100vh;position:fixed;left:0;top:0;bottom:0;z-index:200;background:rgba(4,11,26,0.96);border-right:1px solid rgba(0,212,255,0.18);}' +
+    '.main-content{margin-left:260px;min-height:100vh;}' +
+    '.nav-item{display:flex;align-items:center;gap:10px;padding:8px 12px;margin:2px 8px;border-radius:8px;text-decoration:none;color:#c5d8ec;font-size:0.88rem;font-weight:500;}' +
+    '.nav-item:hover{background:rgba(0,212,255,0.08);color:#fff;}' +
+    '.nav-item.active{background:linear-gradient(90deg,rgba(0,212,255,0.18),rgba(0,212,255,0.05));color:#00d4ff;}' +
+    '#sr-sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:150;}' +
+    'body.sidebar-open #sr-sidebar-backdrop{display:block;}' +
+    '@media(max-width:900px){' +
+      '.sidebar{transform:translateX(-105%);transition:transform 0.25s ease;}' +
+      'body.sidebar-open .sidebar{transform:translateX(0);box-shadow:8px 0 32px rgba(0,0,0,0.5);}' +
+      '.main-content{margin-left:0;}' +
+    '}';
+  document.head.appendChild(style);
+}
+
 function buildTopbarRightHtml() {
   return '' +
     '<div class="topbar-right" style="display:flex;align-items:center;gap:10px;margin-left:auto;">' +
       '<span class="live-pill" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(0,255,136,0.12);border:1px solid rgba(0,255,136,0.35);color:#00ff88;font-size:0.75rem;font-weight:800;letter-spacing:0.06em;">● LIVE</span>' +
       '<span id="sr-clock" class="clock-pill" style="font-family:JetBrains Mono,monospace;font-size:0.85rem;font-weight:600;color:#e8f4ff;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);padding:6px 12px;border-radius:8px;min-width:88px;text-align:center;">--:--:--</span>' +
+      '<a href="alerts.html" id="sr-alerts-btn" title="Alerts" style="position:relative;width:40px;height:40px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,149,0,0.12);border:1px solid rgba(255,149,0,0.4);text-decoration:none;font-size:1.15rem;">' +
+        '🔔' +
+        '<span style="position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:#ff3b3b;border:1.5px solid #0a1628;box-shadow:0 0 6px #ff3b3b;"></span>' +
+      '</a>' +
+      '<a href="settings.html" id="sr-settings-btn" title="Settings" style="width:40px;height:40px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.35);text-decoration:none;font-size:1.15rem;">' +
+        '⚙' +
+      '</a>' +
     '</div>';
 }
 
@@ -185,13 +211,8 @@ function ensureTopbar(opts) {
 
   var existing = document.querySelector('.topbar');
   if (existing) {
-    // Remove any leftover alert/settings icons from older builds
-    var oldAlerts = document.getElementById('sr-alerts-btn');
-    var oldSettings = document.getElementById('sr-settings-btn');
-    if (oldAlerts && oldAlerts.parentNode) oldAlerts.parentNode.removeChild(oldAlerts);
-    if (oldSettings && oldSettings.parentNode) oldSettings.parentNode.removeChild(oldSettings);
     var right = existing.querySelector('.topbar-right');
-    if (!right || !document.getElementById('sr-clock')) {
+    if (!document.getElementById('sr-alerts-btn') || !document.getElementById('sr-settings-btn')) {
       if (right) right.outerHTML = buildTopbarRightHtml();
       else existing.insertAdjacentHTML('beforeend', buildTopbarRightHtml());
     }
@@ -215,8 +236,17 @@ function initSharedComponents(opts) {
   opts = opts || {};
   if (!requireAuth()) return;
 
+  injectSidebarCss();
   ensureStableSidebar(opts.active);
   ensureTopbar(opts);
+
+  // Backdrop for mobile menu
+  if (!document.getElementById('sr-sidebar-backdrop')) {
+    var bd = document.createElement('div');
+    bd.id = 'sr-sidebar-backdrop';
+    bd.onclick = function () { document.body.classList.remove('sidebar-open'); };
+    document.body.appendChild(bd);
+  }
 
   var so = document.getElementById('sr-signout');
   if (so) {
@@ -234,8 +264,15 @@ function initSharedComponents(opts) {
 
   var menu = document.getElementById('sr-menu');
   if (menu) {
-    menu.onclick = function () {
+    menu.onclick = function (e) {
+      e.preventDefault();
+      e.stopPropagation();
       document.body.classList.toggle('sidebar-open');
+      var sb = document.getElementById('sidebar');
+      if (sb && window.innerWidth > 900) {
+        // Desktop: also allow collapse toggle
+        sb.classList.toggle('collapsed');
+      }
     };
   }
 
@@ -271,7 +308,7 @@ function loadScript(src, next) {
     return;
   }
   var s = document.createElement('script');
-  s.src = src + (src.indexOf('?') >= 0 ? '&' : '?') + 'v=nav6';
+  s.src = src + (src.indexOf('?') >= 0 ? '&' : '?') + 'v=nav7';
   s.async = true;
   s.onload = function () { if (next) next(); };
   s.onerror = function () { if (next) next(); };
