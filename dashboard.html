@@ -1,42 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <title>SmartRoute - Dashboard</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/design-system.css">
-  <link rel="stylesheet" href="css/animations.css">
-  <link rel="stylesheet" href="css/components.css">
-  <style>
-    .dash-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:16px; }
-    .stat-card { padding:16px; border-radius:12px; background:rgba(8,18,36,0.85); border:1px solid rgba(0,212,255,0.2); }
-    .stat-card .label { font-size:0.75rem; color:#8fa3b8; text-transform:uppercase; }
-    .stat-card .value { font-size:1.6rem; font-weight:800; color:#00d4ff; margin-top:4px; }
-    .map-panel { height:360px; border-radius:12px; overflow:hidden; border:1px solid rgba(0,212,255,0.2); }
-    #dash-map { width:100%; height:100%; }
-    @media(max-width:900px){ .dash-grid{ grid-template-columns:1fr 1fr; } }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>SmartRoute - Command Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/components.css">
+    <style>
+        .dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+        .stat-card { background: rgba(8,18,36,0.85); border: 1px solid rgba(0,212,255,0.22); border-radius: 14px; padding: 18px; position: relative; overflow: hidden; }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #00d4ff, #00ff88); }
+        .stat-label { font-size: 0.75rem; color: #8fa3b8; text-transform: uppercase; letter-spacing: 0.06em; }
+        .stat-value { font-size: 1.85rem; font-weight: 800; color: #00d4ff; margin-top: 6px; font-family: 'JetBrains Mono', monospace; }
+        .stat-sub { font-size: 0.78rem; color: #6a8ea8; margin-top: 4px; }
+        .panel-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; margin-bottom: 16px; }
+        .panel { background: rgba(8,18,36,0.85); border: 1px solid rgba(0,212,255,0.2); border-radius: 14px; padding: 14px; min-height: 320px; }
+        .panel h3 { margin: 0 0 12px; font-size: 0.95rem; color: #e8f4ff; }
+        #dash-map { width: 100%; height: 300px; border-radius: 10px; }
+        .incident-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.85rem; }
+        .sev { font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
+        .sev.crit { background: rgba(255,59,59,0.2); color: #ff6b6b; }
+        .sev.high { background: rgba(255,149,0,0.2); color: #ff9500; }
+        .sev.mod { background: rgba(0,212,255,0.15); color: #00d4ff; }
+        .quick-links { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .quick-links a { display: block; text-align: center; padding: 14px 8px; border-radius: 10px; text-decoration: none; color: #e8f4ff; background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.25); font-weight: 700; font-size: 0.82rem; }
+        .quick-links a:hover { background: rgba(0,212,255,0.18); }
+        @media (max-width: 1000px) { .dash-grid { grid-template-columns: 1fr 1fr; } .panel-row { grid-template-columns: 1fr; } .quick-links { grid-template-columns: 1fr 1fr; } }
+    </style>
 </head>
 <body>
 <div class="app-shell">
   <div class="main-content" id="main-content">
     <main class="page-body" style="padding:16px;">
-      <div class="page-header">
-        <h1 class="page-title">Command Dashboard</h1>
-        <p class="page-subtitle">NER Logistics · Live overview</p>
+      <div class="page-header" style="margin-bottom:16px;">
+        <h1 class="page-title" style="margin:0;">Command Dashboard</h1>
+        <p class="page-subtitle" style="margin:4px 0 0;color:#8fa3b8;">NER Logistics Intelligence · Live overview</p>
       </div>
+
       <div class="dash-grid">
-        <div class="stat-card"><div class="label">Active vehicles</div><div class="value" data-count="24">24</div></div>
-        <div class="stat-card"><div class="label">Open incidents</div><div class="value" data-count="7">7</div></div>
-        <div class="stat-card"><div class="label">Safe corridors</div><div class="value" data-count="12">12</div></div>
-        <div class="stat-card"><div class="label">Alerts today</div><div class="value" data-count="5">5</div></div>
+        <div class="stat-card"><div class="stat-label">Active Vehicles</div><div class="stat-value">24</div><div class="stat-sub">On NER corridors</div></div>
+        <div class="stat-card"><div class="stat-label">Open Incidents</div><div class="stat-value" style="color:#ff6b6b;">7</div><div class="stat-sub">3 critical</div></div>
+        <div class="stat-card"><div class="stat-label">Safe Corridors</div><div class="stat-value" style="color:#00ff88;">12</div><div class="stat-sub">Green routes</div></div>
+        <div class="stat-card"><div class="stat-label">Alerts Today</div><div class="stat-value" style="color:#ff9500;">5</div><div class="stat-sub">Weather + landslide</div></div>
       </div>
-      <div class="map-panel"><div id="dash-map"></div></div>
+
+      <div class="panel-row">
+        <div class="panel">
+          <h3>Live NER Map · Routes & Vehicles</h3>
+          <div id="dash-map"></div>
+        </div>
+        <div class="panel">
+          <h3>Priority Incidents</h3>
+          <div class="incident-row"><span>Tawang Pass Landslide</span><span class="sev crit">CRITICAL</span></div>
+          <div class="incident-row"><span>Brahmaputra Flood Surge</span><span class="sev crit">CRITICAL</span></div>
+          <div class="incident-row"><span>Medicine Delivery — Kohima</span><span class="sev high">HIGH</span></div>
+          <div class="incident-row"><span>Shillong Bypass Warning</span><span class="sev high">HIGH</span></div>
+          <div class="incident-row"><span>Silchar NH-306 Damage</span><span class="sev mod">MEDIUM</span></div>
+          <div style="margin-top:16px;">
+            <a href="emergency.html" style="color:#00d4ff;font-weight:700;text-decoration:none;">Open Emergency Response →</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Quick Command</h3>
+        <div class="quick-links">
+          <a href="map.html">Live Map</a>
+          <a href="emergency.html">Emergency</a>
+          <a href="simulation.html">Simulation</a>
+          <a href="route-prediction.html">AI Routes</a>
+          <a href="photo-analysis.html">Photo AI</a>
+          <a href="ai-command.html">AI Command</a>
+          <a href="incidents.html">Incidents</a>
+          <a href="vehicle-tracking.html">Vehicles</a>
+          <a href="language.html">Language</a>
+        </div>
+      </div>
     </main>
   </div>
 </div>
@@ -47,26 +92,24 @@
 <script src="js/map-engine.js?v=auth3"></script>
 <script>
 (function () {
-  // If session missing, bounce to login; otherwise stay
-  function ok() {
+  function sessionOk() {
     try {
       return localStorage.getItem('sr_logged_in') === '1' ||
         !!localStorage.getItem('sr_user') ||
         !!localStorage.getItem('sr_username');
     } catch (e) { return false; }
   }
-  if (!ok()) {
-    // tiny delay in case storage write is still flushing
+  if (!sessionOk()) {
     setTimeout(function () {
-      if (!ok()) location.replace('login.html');
-    }, 50);
+      if (!sessionOk()) location.replace('login.html');
+    }, 80);
   }
 
   document.addEventListener('DOMContentLoaded', function () {
     if (window.SmartRoute && SmartRoute.initSharedComponents) {
       SmartRoute.initSharedComponents({
         title: 'Command Dashboard',
-        subtitle: 'NER Logistics · Live overview'
+        subtitle: 'NER Logistics Intelligence · Live overview'
       });
     }
     try {
