@@ -28,6 +28,9 @@
         .sev.crit { background: rgba(255,59,59,0.2); color: #ff6b6b; }
         .sev.high { background: rgba(255,149,0,0.2); color: #ff9500; }
         .sev.mod { background: rgba(0,212,255,0.15); color: #00d4ff; }
+        .route-legend { display:flex; gap:14px; flex-wrap:wrap; margin:8px 0 12px; font-size:0.8rem; color:#c5d8ec; }
+        .route-legend span { display:inline-flex; align-items:center; gap:6px; }
+        .route-legend i { width:28px; height:4px; border-radius:2px; display:inline-block; }
         .quick-links { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         .quick-links a { display: block; text-align: center; padding: 14px 8px; border-radius: 10px; text-decoration: none; color: #e8f4ff; background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.25); font-weight: 700; font-size: 0.82rem; }
         .quick-links a:hover { background: rgba(0,212,255,0.18); }
@@ -38,17 +41,9 @@
 <div class="app-shell">
   <div class="main-content" id="main-content">
     <main class="page-body" style="padding:16px;">
-      <div class="page-header" style="margin-bottom:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-        <div>
-          <h1 class="page-title" style="margin:0;">Command Dashboard</h1>
-          <p class="page-subtitle" style="margin:4px 0 0;color:#8fa3b8;">NER Logistics Intelligence · Live overview</p>
-        </div>
-        <div class="dash-top-actions" style="display:flex;align-items:center;gap:10px;">
-          <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(0,255,136,0.12);border:1px solid rgba(0,255,136,0.35);color:#00ff88;font-size:0.75rem;font-weight:800;">● LIVE</span>
-          <span id="dash-clock" style="font-family:JetBrains Mono,monospace;font-size:0.85rem;font-weight:600;color:#e8f4ff;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);padding:6px 12px;border-radius:8px;min-width:88px;text-align:center;">--:--:--</span>
-          <a href="alerts.html" title="Alerts" style="position:relative;width:40px;height:40px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,149,0,0.12);border:1px solid rgba(255,149,0,0.4);text-decoration:none;font-size:1.15rem;">🔔<span style="position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:#ff3b3b;border:1.5px solid #0a1628;"></span></a>
-          <a href="settings.html" title="Settings" style="width:40px;height:40px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.35);text-decoration:none;font-size:1.15rem;">⚙</a>
-        </div>
+      <div class="page-header" style="margin-bottom:16px;">
+        <h1 class="page-title" style="margin:0;">Command Dashboard</h1>
+        <p class="page-subtitle" style="margin:4px 0 0;color:#8fa3b8;">NER Logistics Intelligence · Live overview</p>
       </div>
 
       <div class="dash-grid">
@@ -60,7 +55,12 @@
 
       <div class="panel-row">
         <div class="panel">
-          <h3>Live NER Map · Routes & Vehicles</h3>
+          <h3>Live NER Map · Road routes</h3>
+          <div class="route-legend">
+            <span><i style="background:#00ff88"></i> Safe (green)</span>
+            <span><i style="background:#ff9500"></i> Alternate (orange)</span>
+            <span><i style="background:#ff3b3b"></i> Critical (red)</span>
+          </div>
           <div id="dash-map"></div>
         </div>
         <div class="panel">
@@ -94,10 +94,10 @@
   </div>
 </div>
 
-<script src="js/auth-users.js?v=nav5"></script>
-<script src="js/auth-gate.js?v=nav5"></script>
-<script src="js/components.js?v=nav5"></script>
-<script src="js/map-engine.js?v=nav5"></script>
+<script src="js/auth-users.js?v=nav6"></script>
+<script src="js/auth-gate.js?v=nav6"></script>
+<script src="js/components.js?v=nav6"></script>
+<script src="js/map-engine.js?v=nav6"></script>
 <script>
 (function () {
   function sessionOk() {
@@ -113,15 +113,7 @@
     }, 80);
   }
 
-  function tickDash() {
-    var el = document.getElementById('dash-clock');
-    if (el) el.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  }
-
   document.addEventListener('DOMContentLoaded', function () {
-    tickDash();
-    setInterval(tickDash, 1000);
-
     if (window.SmartRoute && SmartRoute.initSharedComponents) {
       SmartRoute.initSharedComponents({
         title: 'Command Dashboard',
