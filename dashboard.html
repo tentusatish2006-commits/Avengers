@@ -1,168 +1,89 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartRoute - Command Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="css/design-system.css">
-    <link rel="stylesheet" href="css/animations.css">
-    <link rel="stylesheet" href="css/components.css">
-    <style>
-        body { background-color: #030810; color: #fff; font-family: 'Outfit', sans-serif; margin: 0; }
-        .page-body { padding: 20px; }
-        .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 16px; }
-        @media (max-width: 1100px) { .kpi-row { grid-template-columns: repeat(3, 1fr); } }
-        .kpi-card { padding: 14px; border-left: 4px solid #00d4ff; background: rgba(3, 8, 16, 0.5); border-radius: 8px; }
-        .kpi-card.safe { border-left-color: #00ff88; }
-        .kpi-card.warn { border-left-color: #ff9500; }
-        .kpi-card.danger { border-left-color: #ff3b3b; }
-        .kpi-title { font-size: 0.75rem; color: #8fa3b0; text-transform: uppercase; }
-        .kpi-value { font-size: 1.6rem; font-family: 'JetBrains Mono', monospace; font-weight: 700; }
-        .middle-row { display: flex; gap: 16px; margin-bottom: 16px; min-height: 440px; }
-        .map-container { flex: 1; border-radius: 16px; overflow: hidden; border: 1px solid rgba(100, 200, 255, 0.18); position: relative; min-height: 400px; }
-        #dashboard-map { width: 100%; height: 100%; min-height: 400px; }
-        .map-toolbar {
-            position: absolute; top: 10px; left: 10px; right: 10px; z-index: 500;
-            display: flex; flex-wrap: wrap; gap: 8px; align-items: center; pointer-events: none;
-        }
-        .map-toolbar * { pointer-events: auto; }
-        .chip {
-            padding: 6px 10px; border-radius: 8px; font-size: 0.72rem; font-weight: 700;
-            background: rgba(5,12,28,0.92); border: 1px solid rgba(0,212,255,0.3); color: #c8d8e8;
-        }
-        .chip.safe { border-color: #00ff88; color: #00ff88; }
-        .chip.alt { border-color: #ff9500; color: #ff9500; }
-        .chip.crit { border-color: #ff3b3b; color: #ff6b6b; }
-        .alert-panel {
-            width: 300px; background: rgba(3, 8, 16, 0.5); border: 1px solid rgba(100, 200, 255, 0.18);
-            border-radius: 16px; padding: 14px; display: flex; flex-direction: column;
-        }
-        .alert-header { font-weight: 700; color: #ff3b3b; margin-bottom: 10px; }
-        .alert-item { padding: 10px; margin-bottom: 8px; border-left: 3px solid #ff3b3b; background: rgba(255,255,255,0.03); border-radius: 6px; font-size: 0.85rem; }
-        .alert-item.warn { border-left-color: #ff9500; }
-        .alert-item .time { color: #8fa3b0; font-size: 0.72rem; }
-        .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .chart-card { padding: 16px; background: rgba(3, 8, 16, 0.5); border: 1px solid rgba(100, 200, 255, 0.18); border-radius: 16px; }
-        .chart-title { font-weight: 600; margin-bottom: 10px; }
-        .chart-container { height: 220px; }
-        .gemini-strip {
-            margin-top: 12px; padding: 10px 12px; border-radius: 10px;
-            background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.25);
-            font-size: 0.85rem; white-space: pre-wrap;
-        }
-        @media (max-width: 900px) {
-            .middle-row { flex-direction: column; }
-            .alert-panel { width: 100%; }
-            .charts-row { grid-template-columns: 1fr; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>SmartRoute - Dashboard</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    .dash-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:16px; }
+    .stat-card { padding:16px; border-radius:12px; background:rgba(8,18,36,0.85); border:1px solid rgba(0,212,255,0.2); }
+    .stat-card .label { font-size:0.75rem; color:#8fa3b8; text-transform:uppercase; }
+    .stat-card .value { font-size:1.6rem; font-weight:800; color:#00d4ff; margin-top:4px; }
+    .map-panel { height:360px; border-radius:12px; overflow:hidden; border:1px solid rgba(0,212,255,0.2); }
+    #dash-map { width:100%; height:100%; }
+    @media(max-width:900px){ .dash-grid{ grid-template-columns:1fr 1fr; } }
+  </style>
 </head>
 <body>
 <div class="app-shell">
   <div class="main-content" id="main-content">
-    <main class="page-body">
-      <div class="kpi-row">
-        <div class="kpi-card"><div class="kpi-title">Roads Monitored</div><div class="kpi-value">1,248</div></div>
-        <div class="kpi-card safe"><div class="kpi-title">Accessible</div><div class="kpi-value">892</div></div>
-        <div class="kpi-card"><div class="kpi-title">Vehicles</div><div class="kpi-value">126</div></div>
-        <div class="kpi-card danger"><div class="kpi-title">Incidents</div><div class="kpi-value">18</div></div>
-        <div class="kpi-card warn"><div class="kpi-title">Risk Corridors</div><div class="kpi-value">7</div></div>
-        <div class="kpi-card warn"><div class="kpi-title">Delayed</div><div class="kpi-value">23</div></div>
+    <main class="page-body" style="padding:16px;">
+      <div class="page-header">
+        <h1 class="page-title">Command Dashboard</h1>
+        <p class="page-subtitle">NER Logistics · Live overview</p>
       </div>
-
-      <div class="middle-row">
-        <div class="map-container">
-          <div class="map-toolbar">
-            <span class="chip">NER LIVE MAP</span>
-            <span class="chip safe">■ Safe routes</span>
-            <span class="chip alt">■ Alternate</span>
-            <span class="chip crit">■ Critical</span>
-            <a class="chip" href="simulation.html?autoplay=1" style="text-decoration:none;background:linear-gradient(135deg,#00ff88,#00b359);color:#030810;border:none;">▶ LIVE SIMULATION</a>
-            <a class="chip" href="map.html" style="text-decoration:none;">Open full Live Map</a>
-          </div>
-          <div id="dashboard-map"></div>
-        </div>
-        <div class="alert-panel">
-          <div class="alert-header">LIVE ALERTS · NER</div>
-          <div class="alert-item">
-            <div class="time">10:42 · Shillong Route</div>
-            <div><strong>Landslide risk</strong> — monitor NH-6 approaches</div>
-          </div>
-          <div class="alert-item warn">
-            <div class="time">10:15 · Tawang</div>
-            <div><strong>Heavy fog</strong> — visibility &lt; 50m</div>
-          </div>
-          <div class="alert-item">
-            <div class="time">09:30 · Silchar</div>
-            <div><strong>Drainage alert</strong> — alternate available</div>
-          </div>
-          <div class="alert-item warn">
-            <div class="time">08:45 · Dimapur–Kohima</div>
-            <div><strong>Slope watch</strong> — convoy spacing</div>
-          </div>
-          <div class="gemini-strip" id="dash-gemini">Gemini: loading advice…</div>
-        </div>
+      <div class="dash-grid">
+        <div class="stat-card"><div class="label">Active vehicles</div><div class="value" data-count="24">24</div></div>
+        <div class="stat-card"><div class="label">Open incidents</div><div class="value" data-count="7">7</div></div>
+        <div class="stat-card"><div class="label">Safe corridors</div><div class="value" data-count="12">12</div></div>
+        <div class="stat-card"><div class="label">Alerts today</div><div class="value" data-count="5">5</div></div>
       </div>
-
-      <div class="charts-row">
-        <div class="chart-card">
-          <div class="chart-title">Route risk mix (NER)</div>
-          <div class="chart-container"><canvas id="chart-risk"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-title">Weekly incidents</div>
-          <div class="chart-container"><canvas id="chart-inc"></canvas></div>
-        </div>
-      </div>
+      <div class="map-panel"><div id="dash-map"></div></div>
     </main>
   </div>
 </div>
 
-<script src="js/components.js"></script>
-<script src="js/map-engine.js"></script>
-<script src="js/charts.js"></script>
-<script src="js/gemini-api.js"></script>
+<script src="js/auth-users.js?v=auth3"></script>
+<script src="js/auth-gate.js?v=auth3"></script>
+<script src="js/components.js?v=auth3"></script>
+<script src="js/map-engine.js?v=auth3"></script>
 <script>
-  document.addEventListener('DOMContentLoaded', async function () {
-    if (window.SmartRoute) {
+(function () {
+  // If session missing, bounce to login; otherwise stay
+  function ok() {
+    try {
+      return localStorage.getItem('sr_logged_in') === '1' ||
+        !!localStorage.getItem('sr_user') ||
+        !!localStorage.getItem('sr_username');
+    } catch (e) { return false; }
+  }
+  if (!ok()) {
+    // tiny delay in case storage write is still flushing
+    setTimeout(function () {
+      if (!ok()) location.replace('login.html');
+    }, 50);
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.SmartRoute && SmartRoute.initSharedComponents) {
       SmartRoute.initSharedComponents({
         title: 'Command Dashboard',
-        subtitle: 'North Eastern Region · multi-route live map'
+        subtitle: 'NER Logistics · Live overview'
       });
     }
-
-    // Same map experience as Live Map: OSRM roads + vehicles
-    if (window.MapEngine && MapEngine.bootstrapMap) {
-      await MapEngine.bootstrapMap('dashboard-map');
-      if (MapEngine.map) {
-        setTimeout(function () { MapEngine.map.invalidateSize(); }, 300);
-        setTimeout(function () { MapEngine.map.invalidateSize(); }, 800);
+    try {
+      if (window.MapEngine && MapEngine.bootstrapMap) {
+        MapEngine.bootstrapMap('dash-map');
+      } else if (window.MapEngine && MapEngine.initMap) {
+        var m = MapEngine.initMap('dash-map', { center: [26.2, 92.0], zoom: 7 });
+        if (MapEngine.addRoads) MapEngine.addRoads(m);
+        if (MapEngine.addIncidents) MapEngine.addIncidents(m);
+        if (MapEngine.addVehicles) MapEngine.addVehicles(m);
+      } else if (window.L) {
+        var map = L.map('dash-map').setView([26.2, 92.0], 7);
+        L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18 }).addTo(map);
       }
-    } else if (window.MapEngine && MapEngine.initMap) {
-      var map = MapEngine.initMap('dashboard-map', { center: [26.14, 91.73], zoom: 7 });
-      if (MapEngine.loadAllRoutes) await MapEngine.loadAllRoutes(map);
-      if (MapEngine.addIncidents) MapEngine.addIncidents(map);
-      if (MapEngine.addVehicles) MapEngine.addVehicles(map);
-      if (MapEngine.animateVehicles) MapEngine.animateVehicles();
-    }
-
-    if (window.SmartRouteCharts) {
-      if (SmartRouteCharts.riskPie) SmartRouteCharts.riskPie('chart-risk');
-      if (SmartRouteCharts.incidentTrend) SmartRouteCharts.incidentTrend('chart-inc');
-    }
-
-    if (window.SmartRouteGemini) {
-      SmartRouteGemini.analyzeNERSituation(
-        'Dashboard summary for North Eastern Region: show safest Guwahati-Shillong, alternates via Silchar, critical toward Tawang.'
-      ).then(function (r) {
-        document.getElementById('dash-gemini').textContent = 'Gemini: ' + (r.text || '—');
-      });
-    }
+    } catch (e) {}
   });
+})();
 </script>
 </body>
 </html>

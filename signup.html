@@ -6,14 +6,13 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>SmartRoute - Officer Registration</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/design-system.css">
-  <link rel="stylesheet" href="css/components.css">
   <style>
     body { margin:0; min-height:100vh; font-family:Outfit,sans-serif; background:#030810; color:#fff;
       display:flex; align-items:center; justify-content:center; padding:24px; box-sizing:border-box; }
     .card { width:min(560px,100%); padding:28px 32px; border-radius:16px;
-      background:rgba(8,18,36,0.92); border:1px solid rgba(0,212,255,0.3); }
-    h1 { margin:0 0 4px; font-size:1.6rem; }
+      background:rgba(8,18,36,0.95); border:1px solid rgba(0,212,255,0.35);
+      box-shadow:0 20px 50px rgba(0,0,0,0.45); }
+    h1 { margin:0 0 4px; font-size:1.55rem; }
     .sub { color:#8fa3b8; margin-bottom:18px; font-size:0.9rem; }
     .roles { display:flex; gap:8px; margin-bottom:16px; }
     .role-card { flex:1; text-align:center; padding:10px 6px; border-radius:10px; cursor:pointer;
@@ -26,10 +25,14 @@
       border:1px solid rgba(0,212,255,0.25); background:#061018; color:#fff; font-family:inherit; }
     .full { grid-column:1 / -1; }
     .btn { width:100%; margin-top:16px; padding:14px; border:none; border-radius:8px; font-weight:800;
-      cursor:pointer; background:linear-gradient(90deg,#00d4ff,#00ff88); color:#031018; }
+      cursor:pointer; background:linear-gradient(90deg,#00d4ff,#00ff88); color:#031018; font-size:0.95rem; }
+    .btn:disabled { opacity:0.6; cursor:wait; }
     .links { margin-top:14px; text-align:center; color:#8fa3b8; font-size:0.88rem; }
     .links a { color:#00d4ff; font-weight:700; text-decoration:none; }
-    #loading { display:none; position:fixed; inset:0; background:rgba(3,8,16,0.92); z-index:50;
+    .msg { display:none; margin-top:12px; padding:10px; border-radius:8px; font-size:0.88rem; }
+    .msg.err { display:block; background:rgba(255,59,59,0.15); border:1px solid #ff3b3b; color:#ff8a8a; }
+    .msg.ok { display:block; background:rgba(0,255,136,0.12); border:1px solid #00ff88; color:#00ff88; }
+    #loading { display:none; position:fixed; inset:0; background:rgba(3,8,16,0.92); z-index:100;
       align-items:center; justify-content:center; flex-direction:column; color:#00d4ff; font-weight:700; gap:12px; }
     @media(max-width:600px){ .grid{ grid-template-columns:1fr; } }
   </style>
@@ -43,15 +46,15 @@
       <div class="role-card" data-role="FIELD OFFICER"><div class="role-title">FIELD OFFICER</div></div>
       <div class="role-card" data-role="LOCAL AUTHORITY"><div class="role-title">LOCAL AUTHORITY</div></div>
     </div>
-    <form id="signup-form">
+    <form id="signup-form" action="dashboard.html" method="get">
       <div class="grid">
         <div>
           <label for="full-name">Full Name</label>
-          <input id="full-name" required placeholder="Capt. Rajesh Barman">
+          <input id="full-name" name="name" required placeholder="Capt. Rajesh Barman" autocomplete="name">
         </div>
         <div>
           <label for="badge-id">Service / Badge ID</label>
-          <input id="badge-id" required placeholder="NE-CMD-904">
+          <input id="badge-id" name="badge" required placeholder="NE-CMD-904" autocomplete="username">
         </div>
         <div>
           <label for="department">Agency</label>
@@ -77,28 +80,33 @@
         </div>
         <div class="full">
           <label for="email">Official Email</label>
-          <input id="email" type="email" required placeholder="officer@nic.in">
+          <input id="email" type="email" required placeholder="officer@nic.in" autocomplete="email">
         </div>
         <div>
           <label for="password">Security Passcode</label>
-          <input id="password" type="password" required>
+          <input id="password" type="password" required autocomplete="new-password">
         </div>
         <div>
           <label for="confirm-password">Confirm Passcode</label>
-          <input id="confirm-password" type="password" required>
+          <input id="confirm-password" type="password" required autocomplete="new-password">
         </div>
       </div>
-      <button type="submit" class="btn" id="btn-signup">REGISTER & ACCESS COMMAND CENTER</button>
+      <div class="msg" id="msg"></div>
+      <button type="submit" class="btn" id="btn-signup">REGISTER &amp; ACCESS COMMAND CENTER</button>
     </form>
     <div class="links">Already registered? <a href="login.html">Login</a> · <a href="index.html">Home</a></div>
   </div>
-  <div id="loading">Enrolling officer…</div>
+  <div id="loading">
+    <div>Registration successful</div>
+    <div>Opening dashboard…</div>
+  </div>
 
-  <script src="js/auth-users.js?v=auth2"></script>
-  <script src="js/signup-handler.js?v=auth2"></script>
+  <script src="js/auth-users.js?v=auth3"></script>
   <script>
   (function () {
     var role = 'ADMINISTRATOR';
+    var going = false;
+
     document.getElementById('roles').addEventListener('click', function (e) {
       var card = e.target.closest('.role-card');
       if (!card) return;
@@ -107,21 +115,53 @@
       role = card.getAttribute('data-role') || 'ADMINISTRATOR';
     });
 
-    function doSignup(e) {
-      if (e) e.preventDefault();
-      var pass = document.getElementById('password').value;
-      var confirmPass = document.getElementById('confirm-password').value;
-      if (pass !== confirmPass) { alert('Passcodes do not match.'); return; }
-      if (!pass) { alert('Enter a passcode.'); return; }
+    function showMsg(text, ok) {
+      var el = document.getElementById('msg');
+      el.textContent = text;
+      el.className = 'msg ' + (ok ? 'ok' : 'err');
+    }
 
-      var name = document.getElementById('full-name').value.trim();
-      var badge = document.getElementById('badge-id').value.trim();
-      var email = document.getElementById('email').value.trim();
-      var dept = document.getElementById('department').value;
-      var region = document.getElementById('region').value;
-
+    function goDashboard() {
+      var url = 'dashboard.html';
       try {
-        if (!window.SmartRouteAuth) throw new Error('Auth not loaded');
+        url = new URL('dashboard.html', window.location.href).href;
+      } catch (e) {}
+      try { window.location.replace(url); } catch (e1) {}
+      try { window.location.href = url; } catch (e2) {}
+      // last resort
+      setTimeout(function () {
+        window.location = url;
+      }, 100);
+    }
+
+    function saveSession(name, badge, email, dept, region, pass) {
+      var payload = {
+        username: name || badge || email,
+        officerId: badge,
+        email: email,
+        role: role,
+        department: dept,
+        region: region
+      };
+
+      // Always write session keys first (even if auth script missing)
+      try {
+        localStorage.setItem('sr_username', payload.username);
+        localStorage.setItem('sr_officer_id', badge);
+        localStorage.setItem('sr_email', email);
+        localStorage.setItem('sr_user_role', role);
+        localStorage.setItem('sr_department', dept);
+        localStorage.setItem('sr_region', region);
+        localStorage.setItem('sr_logged_in', '1');
+        localStorage.setItem('sr_user', JSON.stringify(payload));
+        sessionStorage.setItem('sr_user', JSON.stringify(payload));
+        sessionStorage.setItem('sr_logged_in', '1');
+      } catch (e) {
+        throw new Error('Cannot save session (storage blocked)');
+      }
+
+      // Also register in user DB for later login
+      if (window.SmartRouteAuth && SmartRouteAuth.registerUser) {
         SmartRouteAuth.registerUser({
           username: name,
           officerId: badge,
@@ -131,19 +171,73 @@
           department: dept,
           region: region
         });
-      } catch (err) {
-        alert('Registration failed: ' + (err.message || err));
-        return;
       }
-
-      document.getElementById('loading').style.display = 'flex';
-      setTimeout(function () {
-        window.location.replace('dashboard.html');
-      }, 400);
     }
 
-    document.getElementById('signup-form').addEventListener('submit', doSignup);
-    window.doSignup = doSignup;
+    function doSignup(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      if (going) return false;
+
+      var pass = document.getElementById('password').value;
+      var confirmPass = document.getElementById('confirm-password').value;
+      if (pass !== confirmPass) {
+        showMsg('Passcodes do not match.', false);
+        return false;
+      }
+      if (!pass) {
+        showMsg('Enter a security passcode.', false);
+        return false;
+      }
+
+      var name = document.getElementById('full-name').value.trim();
+      var badge = document.getElementById('badge-id').value.trim();
+      var email = document.getElementById('email').value.trim();
+      var dept = document.getElementById('department').value;
+      var region = document.getElementById('region').value;
+
+      if (!name || !badge || !email) {
+        showMsg('Fill name, badge ID, and email.', false);
+        return false;
+      }
+
+      try {
+        saveSession(name, badge, email, dept, region, pass);
+      } catch (err) {
+        showMsg('Registration failed: ' + (err.message || err), false);
+        return false;
+      }
+
+      going = true;
+      document.getElementById('btn-signup').disabled = true;
+      showMsg('Success! Opening dashboard…', true);
+      var loading = document.getElementById('loading');
+      loading.style.display = 'flex';
+
+      // Navigate immediately + retries
+      goDashboard();
+      setTimeout(goDashboard, 250);
+      setTimeout(goDashboard, 800);
+      return false;
+    }
+
+    var form = document.getElementById('signup-form');
+    form.addEventListener('submit', doSignup);
+    document.getElementById('btn-signup').addEventListener('click', function (e) {
+      // ensure click also triggers even if form submit is blocked
+      if (form.checkValidity()) {
+        doSignup(e);
+      }
+    });
+
+    // If already logged in, go straight to dashboard
+    try {
+      if (localStorage.getItem('sr_logged_in') === '1' || localStorage.getItem('sr_user')) {
+        /* stay on page so user can create another account if needed */
+      }
+    } catch (e) {}
   })();
   </script>
 </body>
