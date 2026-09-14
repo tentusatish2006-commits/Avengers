@@ -10,26 +10,47 @@
   <link rel="stylesheet" href="css/design-system.css">
   <link rel="stylesheet" href="css/components.css">
   <style>
-    .page-body { padding: 16px; }
-    .profile-card { display:flex; align-items:center; gap:14px; padding:16px; border-radius:12px; background:rgba(8,18,36,0.85); border:1px solid rgba(0,212,255,0.2); margin-bottom:14px; }
-    .avatar { width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg,#00d4ff,#00ff88); color:#031018; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.2rem; }
-    .action-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:16px 0; }
-    .action-btn { background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.35); color:#e8f4ff; min-height:88px; border-radius:14px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:6px; font-weight:700; cursor:pointer; font-family:inherit; font-size:0.85rem; }
-    .action-btn:hover { background:rgba(0,212,255,0.2); }
-    .action-btn.red { background:rgba(255,59,59,0.12); border-color:rgba(255,59,59,0.45); color:#ff6b6b; }
-    .action-btn.orange { background:rgba(255,149,0,0.12); border-color:rgba(255,149,0,0.45); color:#ff9500; }
-    #mini-map { height:200px; border-radius:10px; border:1px solid rgba(0,212,255,0.3); margin-top:8px; }
-    .task-card { background:rgba(255,255,255,0.04); border-left:4px solid #ff9500; padding:12px; border-radius:8px; margin-bottom:8px; }
-    .modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:500; align-items:center; justify-content:center; padding:16px; }
-    .modal-bg.show { display:flex; }
-    .modal { width:min(420px,100%); background:#0a1628; border:1px solid rgba(0,212,255,0.35); border-radius:14px; padding:20px; }
-    .modal h3 { margin:0 0 12px; color:#00d4ff; }
-    .modal select, .modal input, .modal textarea { width:100%; box-sizing:border-box; margin:6px 0 12px; padding:10px; border-radius:8px; border:1px solid rgba(0,212,255,0.25); background:#061018; color:#fff; font-family:inherit; }
-    .modal .row { display:flex; gap:8px; justify-content:flex-end; }
-    .modal button { padding:10px 14px; border-radius:8px; border:none; font-weight:700; cursor:pointer; }
-    .btn-ok { background:linear-gradient(90deg,#00d4ff,#00ff88); color:#031018; }
-    .btn-cancel { background:rgba(255,255,255,0.08); color:#e8f4ff; }
-    @media(max-width:700px){ .action-grid{ grid-template-columns:1fr 1fr; } }
+    .page-body { padding: 16px; max-width: 720px; }
+    .search-wrap { position: relative; margin-bottom: 14px; }
+    .officer-search { width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 10px;
+      border: 1px solid rgba(0,212,255,0.3); background: rgba(6,16,24,0.95); color: #e8f4ff; font-family: inherit; font-size: 0.95rem; }
+    .search-results { display: none; position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30;
+      background: #0a1628; border: 1px solid rgba(0,212,255,0.35); border-radius: 10px; max-height: 240px; overflow-y: auto; }
+    .search-results.show { display: block; }
+    .search-item { padding: 12px 14px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .search-item:hover { background: rgba(0,212,255,0.12); }
+    .search-item .name { font-weight: 700; color: #e8f4ff; }
+    .search-item .meta { font-size: 0.8rem; color: #8fa3b8; }
+    .empty-state { text-align: center; padding: 36px 16px; border: 1px dashed rgba(0,212,255,0.3); border-radius: 14px;
+      background: rgba(0,212,255,0.04); color: #8fa3b8; }
+    .dashboard-body { display: none; flex-direction: column; gap: 14px; }
+    .dashboard-body.show { display: flex; }
+    .profile-card { display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 12px;
+      background: rgba(8,18,36,0.9); border: 1px solid rgba(0,212,255,0.25); }
+    .avatar { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg,#00d4ff,#00ff88);
+      color: #031018; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.15rem; }
+    .action-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .action-btn { background: rgba(0,212,255,0.12); border: 2px solid rgba(0,212,255,0.45); color: #e8f4ff;
+      min-height: 96px; border-radius: 14px; display: flex; flex-direction: column; justify-content: center; align-items: center;
+      gap: 8px; font-weight: 800; cursor: pointer; font-family: inherit; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.03em; }
+    .action-btn:hover { background: rgba(0,212,255,0.22); transform: translateY(-1px); }
+    .action-btn.orange { background: rgba(255,149,0,0.15); border-color: rgba(255,149,0,0.55); color: #ffb347; }
+    .action-btn.green { background: rgba(0,255,136,0.1); border-color: rgba(0,255,136,0.45); color: #00ff88; }
+    .action-btn.blue { background: rgba(0,212,255,0.12); border-color: rgba(0,212,255,0.5); color: #00d4ff; }
+    #mini-map { height: 200px; border-radius: 10px; border: 1px solid rgba(0,212,255,0.3); margin-top: 8px; }
+    .task-card { background: rgba(255,255,255,0.04); border-left: 4px solid #ff9500; padding: 12px; border-radius: 8px; margin-bottom: 8px; }
+    .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 600; align-items: center; justify-content: center; padding: 16px; }
+    .modal-bg.show { display: flex !important; }
+    .modal { width: min(440px, 100%); background: #0a1628; border: 1px solid rgba(0,212,255,0.4); border-radius: 14px; padding: 22px; }
+    .modal h3 { margin: 0 0 12px; color: #00d4ff; }
+    .modal label { font-size: 0.75rem; color: #8fa3b8; display: block; margin-top: 8px; }
+    .modal select, .modal input, .modal textarea { width: 100%; box-sizing: border-box; margin: 6px 0 10px; padding: 10px; border-radius: 8px;
+      border: 1px solid rgba(0,212,255,0.25); background: #061018; color: #fff; font-family: inherit; }
+    .modal .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+    .modal button { padding: 10px 16px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .btn-ok { background: linear-gradient(90deg,#00d4ff,#00ff88); color: #031018; }
+    .btn-cancel { background: rgba(255,255,255,0.1); color: #e8f4ff; }
+    @media (max-width: 600px) { .action-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -38,58 +59,55 @@
     <main class="page-body">
       <div class="page-header" style="margin-bottom:12px;">
         <h1 class="page-title" style="margin:0;">Field Officer</h1>
-        <p class="page-subtitle" style="margin:4px 0 0;color:#8fa3b8;">Assign incidents · view reports · track location</p>
+        <p class="page-subtitle" style="margin:4px 0 0;color:#8fa3b8;">Search an officer, then assign · view reports · track location</p>
       </div>
 
-      <div class="profile-card">
-        <div class="avatar" id="od-avatar">FO</div>
+      <div class="search-wrap">
+        <input type="text" id="officer-search" class="officer-search" placeholder="Search officer by name, FO-ID or district..." autocomplete="off">
+        <div id="search-results" class="search-results"></div>
+      </div>
+
+      <div id="empty-state" class="empty-state">
+        <h3 style="margin:0 0 8px;color:#e8f4ff;">Select an officer</h3>
+        <p style="margin:0;">Type a name (e.g. Ravi), ID (FO-042), or district (Assam).<br>After you select, Assign Incident, View Reports and Track Location will appear.</p>
+      </div>
+
+      <div id="dashboard-body" class="dashboard-body">
+        <div class="profile-card">
+          <div class="avatar" id="od-avatar">FO</div>
+          <div>
+            <div id="od-name" style="font-weight:800;font-size:1.15rem;">—</div>
+            <div id="od-meta" style="color:#8fa3b8;font-size:0.9rem;">—</div>
+            <div style="color:#00ff88;font-size:0.85rem;margin-top:4px;" id="od-status">● ACTIVE</div>
+          </div>
+        </div>
+
+        <!-- Primary actions — always visible after officer select -->
+        <div class="action-grid" id="primary-actions">
+          <button type="button" class="action-btn orange" id="btn-assign">
+            <span style="font-size:1.5rem;">📌</span> Assign Incident
+          </button>
+          <button type="button" class="action-btn green" id="btn-reports">
+            <span style="font-size:1.5rem;">📋</span> View Reports
+          </button>
+          <button type="button" class="action-btn blue" id="btn-track">
+            <span style="font-size:1.5rem;">📡</span> Track Location
+          </button>
+        </div>
+
+        <div style="padding:14px;border-radius:12px;border:1px solid rgba(0,212,255,0.25);background:rgba(8,18,36,0.85);">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <strong style="color:#00d4ff;">📍 Live location</strong>
+            <button type="button" id="btn-refresh-gps" style="padding:8px 12px;border-radius:8px;border:1px solid rgba(0,212,255,0.4);background:rgba(0,212,255,0.12);color:#00d4ff;font-weight:700;cursor:pointer;">Refresh GPS</button>
+          </div>
+          <p id="od-coords" style="font-family:JetBrains Mono,monospace;color:#00d4ff;margin:8px 0 0;">—</p>
+          <p id="od-location" style="color:#8fa3b8;margin:4px 0 0;font-size:0.88rem;">—</p>
+          <div id="mini-map"></div>
+        </div>
+
         <div>
-          <div id="od-name" style="font-weight:800;font-size:1.15rem;">—</div>
-          <div id="od-meta" style="color:#8fa3b8;font-size:0.9rem;">—</div>
-          <div style="color:#00ff88;font-size:0.85rem;margin-top:4px;" id="od-status">● ACTIVE</div>
-        </div>
-      </div>
-
-      <div class="glass-card" style="padding:14px;border-radius:12px;border:1px solid rgba(0,212,255,0.2);background:rgba(8,18,36,0.7);margin-bottom:14px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <strong style="color:#00d4ff;">📍 Track Location</strong>
-          <button type="button" class="action-btn" style="min-height:auto;padding:8px 12px;" onclick="trackLocation()">Refresh GPS</button>
-        </div>
-        <p id="od-coords" style="font-family:JetBrains Mono,monospace;color:#00d4ff;margin:8px 0 0;">26.1445° N, 91.7362° E</p>
-        <p id="od-location" style="color:#8fa3b8;margin:4px 0 0;font-size:0.88rem;">Guwahati Sector · Assam</p>
-        <div id="mini-map"></div>
-      </div>
-
-      <div class="action-grid">
-        <button type="button" class="action-btn orange" onclick="openAssignModal()">
-          <span style="font-size:1.4rem;">📌</span> ASSIGN INCIDENT
-        </button>
-        <button type="button" class="action-btn" onclick="viewReports()">
-          <span style="font-size:1.4rem;">📋</span> VIEW REPORTS
-        </button>
-        <button type="button" class="action-btn" onclick="trackLocation()">
-          <span style="font-size:1.4rem;">📡</span> TRACK LOCATION
-        </button>
-        <button type="button" class="action-btn" onclick="location.href='field-report.html'">
-          <span style="font-size:1.4rem;">📍</span> REPORT INCIDENT
-        </button>
-        <button type="button" class="action-btn" onclick="location.href='photo-analysis.html'">
-          <span style="font-size:1.4rem;">📷</span> UPLOAD PHOTO
-        </button>
-        <button type="button" class="action-btn red" onclick="location.href='emergency.html'">
-          <span style="font-size:1.4rem;">🚨</span> EMERGENCY
-        </button>
-      </div>
-
-      <h3 style="color:#e8f4ff;margin:8px 0;">Assigned Tasks</h3>
-      <div id="od-tasks">
-        <div class="task-card">
-          <div style="font-weight:700;">Verify Landslide on NH-13</div>
-          <div style="font-size:0.85rem;color:#8fa3b8;margin-top:4px;">Tawang Pass · High Priority</div>
-        </div>
-        <div class="task-card" style="border-left-color:#00d4ff;">
-          <div style="font-weight:700;">Medicine convoy escort</div>
-          <div style="font-size:0.85rem;color:#8fa3b8;margin-top:4px;">Guwahati → Kohima · Medium</div>
+          <h3 style="color:#e8f4ff;margin:0 0 8px;">Assigned tasks</h3>
+          <div id="od-tasks"></div>
         </div>
       </div>
     </main>
@@ -99,7 +117,8 @@
 <div class="modal-bg" id="assign-modal">
   <div class="modal">
     <h3>Assign Incident</h3>
-    <label style="font-size:0.75rem;color:#8fa3b8;">Incident type</label>
+    <p id="assign-to" style="color:#8fa3b8;font-size:0.88rem;margin:0 0 10px;">To: —</p>
+    <label>Incident type</label>
     <select id="as-type">
       <option>Landslide</option>
       <option>Flood</option>
@@ -107,110 +126,216 @@
       <option>Bridge Warning</option>
       <option>Medical Logistics</option>
     </select>
-    <label style="font-size:0.75rem;color:#8fa3b8;">Location (NER)</label>
+    <label>Location (NER)</label>
     <input id="as-loc" value="Tawang Pass, Arunachal Pradesh">
-    <label style="font-size:0.75rem;color:#8fa3b8;">Priority</label>
+    <label>Priority</label>
     <select id="as-pri">
       <option>Critical</option>
       <option selected>High</option>
       <option>Medium</option>
       <option>Low</option>
     </select>
-    <label style="font-size:0.75rem;color:#8fa3b8;">Notes</label>
+    <label>Notes</label>
     <textarea id="as-notes" rows="3" placeholder="Assignment notes..."></textarea>
     <div class="row">
-      <button type="button" class="btn-cancel" onclick="closeAssignModal()">Cancel</button>
-      <button type="button" class="btn-ok" onclick="confirmAssign()">Assign</button>
+      <button type="button" class="btn-cancel" id="btn-cancel-assign">Cancel</button>
+      <button type="button" class="btn-ok" id="btn-confirm-assign">Assign</button>
     </div>
   </div>
 </div>
 
-<script src="js/auth-users.js?v=nav7"></script>
-<script src="js/components.js?v=nav7"></script>
-<script src="js/map-engine.js?v=nav7"></script>
+<script src="js/auth-users.js?v=nav8"></script>
+<script src="js/components.js?v=nav8"></script>
 <script>
 (function () {
+  var OFFICERS = [
+    { id: 'FO-042', name: 'Ravi Kumar', initials: 'RK', dist: 'Assam', lat: 26.1524, lng: 91.7510, status: 'ACTIVE',
+      note: 'Guwahati / Brahmaputra Sector', tasks: [{ t: 'Verify landslide SH-39', m: '4.2 km · High' }] },
+    { id: 'FO-015', name: 'Lakshmi Devi', initials: 'LD', dist: 'Arunachal Pradesh', lat: 27.584, lng: 91.862, status: 'ACTIVE',
+      note: 'NH-13 Tawang Pass', tasks: [{ t: 'Assess NH-13 ice', m: '2.1 km · High' }] },
+    { id: 'FO-028', name: 'Suresh Rao', initials: 'SR', dist: 'Nagaland', lat: 25.67, lng: 94.10, status: 'REPORTING',
+      note: 'Kohima pass', tasks: [{ t: 'File Kohima report', m: '1.0 km · High' }] },
+    { id: 'FO-061', name: 'Anand Babu', initials: 'AB', dist: 'Meghalaya', lat: 25.57, lng: 91.89, status: 'ACTIVE',
+      note: 'Shillong Plateau', tasks: [{ t: 'Plateau corridor check', m: '6 km · Medium' }] },
+    { id: 'FO-033', name: 'Priya Singh', initials: 'PS', dist: 'Sikkim', lat: 27.33, lng: 88.61, status: 'OFF DUTY',
+      note: 'Gangtok depot', tasks: [] },
+    { id: 'FO-077', name: 'Mohan Rao', initials: 'MR', dist: 'Tripura', lat: 23.83, lng: 91.28, status: 'ACTIVE',
+      note: 'Agartala corridor', tasks: [{ t: 'Corridor sweep', m: '8 km · Medium' }] },
+    { id: 'FO-089', name: 'Kavitha Reddy', initials: 'KR', dist: 'Mizoram', lat: 23.73, lng: 92.71, status: 'ACTIVE',
+      note: 'Aizawl high pass', tasks: [{ t: 'High pass assessment', m: '5.5 km · High' }] },
+    { id: 'FO-055', name: 'Rajesh Varma', initials: 'RV', dist: 'Manipur', lat: 24.817, lng: 93.936, status: 'ACTIVE',
+      note: 'Imphal valley', tasks: [{ t: 'Causeway inspect', m: '3.8 km · Medium' }] }
+  ];
+
+  var current = null;
   var miniMap = null, marker = null;
-  var lat = 26.1445, lng = 91.7362;
 
-  function loadUser() {
-    var u = null;
-    try {
-      if (window.SmartRouteAuth) u = SmartRouteAuth.getSessionUser();
-      if (!u) {
-        u = {
-          username: localStorage.getItem('sr_username') || 'Field Officer',
-          officerId: localStorage.getItem('sr_officer_id') || 'FO-001',
-          role: localStorage.getItem('sr_user_role') || 'FIELD OFFICER',
-          region: localStorage.getItem('sr_region') || 'Assam (Guwahati)'
-        };
-      }
-    } catch (e) { u = { username: 'Field Officer', officerId: 'FO-001', role: 'FIELD OFFICER', region: 'Assam' }; }
-
-    var name = u.username || 'Field Officer';
-    var initials = name.split(/\s+/).map(function (p) { return p[0]; }).join('').slice(0, 2).toUpperCase() || 'FO';
-    document.getElementById('od-avatar').textContent = initials;
-    document.getElementById('od-name').textContent = name;
-    document.getElementById('od-meta').textContent = (u.officerId || '') + ' · ' + (u.role || '') + ' · ' + (u.region || '');
+  function toast(msg, type) {
+    if (window.SmartRoute && SmartRoute.showToast) SmartRoute.showToast(msg, type || 'info');
+    else alert(msg);
   }
 
-  window.openAssignModal = function () {
+  function filterOfficers(q) {
+    q = (q || '').toLowerCase().trim();
+    if (!q) return OFFICERS.slice(0, 8);
+    return OFFICERS.filter(function (o) {
+      return o.name.toLowerCase().indexOf(q) >= 0 ||
+        o.id.toLowerCase().indexOf(q) >= 0 ||
+        o.dist.toLowerCase().indexOf(q) >= 0;
+    });
+  }
+
+  function renderResults(list) {
+    var box = document.getElementById('search-results');
+    if (!list.length) {
+      box.innerHTML = '<div class="search-item"><div class="meta">No officers found</div></div>';
+      box.classList.add('show');
+      return;
+    }
+    box.innerHTML = list.map(function (o, i) {
+      return '<div class="search-item" data-idx="' + i + '" data-id="' + o.id + '">' +
+        '<div class="name">' + o.name + ' · ' + o.id + '</div>' +
+        '<div class="meta">' + o.dist + ' · ' + o.status + '</div></div>';
+    }).join('');
+    box.classList.add('show');
+    box.querySelectorAll('.search-item[data-id]').forEach(function (el) {
+      el.onclick = function () {
+        var id = el.getAttribute('data-id');
+        var off = OFFICERS.find(function (x) { return x.id === id; });
+        if (off) selectOfficer(off);
+        box.classList.remove('show');
+        document.getElementById('officer-search').value = off.name + ' (' + off.id + ')';
+      };
+    });
+  }
+
+  function selectOfficer(off) {
+    current = off;
+    document.getElementById('empty-state').style.display = 'none';
+    var body = document.getElementById('dashboard-body');
+    body.classList.add('show');
+    body.style.display = 'flex';
+
+    document.getElementById('od-avatar').textContent = off.initials;
+    document.getElementById('od-name').textContent = off.name;
+    document.getElementById('od-meta').textContent = off.id + ' · ' + off.dist + ' · ' + off.note;
+    document.getElementById('od-status').textContent = '● ' + off.status;
+    document.getElementById('od-status').style.color = off.status === 'ACTIVE' ? '#00ff88' : (off.status === 'REPORTING' ? '#00d4ff' : '#8fa3b8');
+    document.getElementById('od-coords').textContent = off.lat.toFixed(4) + '° N, ' + off.lng.toFixed(4) + '° E';
+    document.getElementById('od-location').textContent = off.note + ' · ' + off.dist;
+    document.getElementById('assign-to').textContent = 'To: ' + off.name + ' (' + off.id + ')';
+
+    var tasks = document.getElementById('od-tasks');
+    if (off.tasks && off.tasks.length) {
+      tasks.innerHTML = off.tasks.map(function (t) {
+        return '<div class="task-card"><div style="font-weight:700;">' + t.t + '</div>' +
+          '<div style="font-size:0.85rem;color:#8fa3b8;margin-top:4px;">' + t.m + '</div></div>';
+      }).join('');
+    } else {
+      tasks.innerHTML = '<div class="task-card" style="border-left-color:#8fa3b8;"><div style="color:#8fa3b8;">No open tasks</div></div>';
+    }
+
+    // Ensure primary buttons are visible
+    document.getElementById('primary-actions').style.display = 'grid';
+
+    initMap(off.lat, off.lng);
+    toast('Officer selected: ' + off.name, 'success');
+  }
+
+  function initMap(lat, lng) {
+    try {
+      if (!miniMap) {
+        miniMap = L.map('mini-map').setView([lat, lng], 11);
+        L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18 }).addTo(miniMap);
+        marker = L.marker([lat, lng]).addTo(miniMap);
+      } else {
+        miniMap.setView([lat, lng], 11);
+        if (marker) marker.setLatLng([lat, lng]);
+        else marker = L.marker([lat, lng]).addTo(miniMap);
+      }
+      setTimeout(function () { if (miniMap) miniMap.invalidateSize(); }, 200);
+    } catch (e) {}
+  }
+
+  function openAssign() {
+    if (!current) { toast('Select an officer first', 'warn'); return; }
     document.getElementById('assign-modal').classList.add('show');
-  };
-  window.closeAssignModal = function () {
+  }
+  function closeAssign() {
     document.getElementById('assign-modal').classList.remove('show');
-  };
-  window.confirmAssign = function () {
+  }
+  function confirmAssign() {
+    if (!current) return;
     var type = document.getElementById('as-type').value;
     var loc = document.getElementById('as-loc').value;
     var pri = document.getElementById('as-pri').value;
     var notes = document.getElementById('as-notes').value;
     var card = document.createElement('div');
     card.className = 'task-card';
-    card.innerHTML = '<div style="font-weight:700;">' + type + ' — Assigned</div>' +
+    card.innerHTML = '<div style="font-weight:700;">' + type + ' — Assigned to ' + current.name + '</div>' +
       '<div style="font-size:0.85rem;color:#8fa3b8;margin-top:4px;">' + loc + ' · ' + pri +
       (notes ? '<br>' + notes : '') + '</div>';
     document.getElementById('od-tasks').insertBefore(card, document.getElementById('od-tasks').firstChild);
-    closeAssignModal();
-    if (window.SmartRoute) SmartRoute.showToast('Incident assigned: ' + type, 'success');
-  };
+    closeAssign();
+    toast('Incident assigned to ' + current.name, 'success');
+  }
 
-  window.viewReports = function () {
-    location.href = 'reports.html';
-  };
+  function viewReports() {
+    if (!current) { toast('Select an officer first', 'warn'); return; }
+    try { sessionStorage.setItem('sr_report_officer', current.id); } catch (e) {}
+    window.location.href = 'reports.html';
+  }
 
-  window.trackLocation = function () {
+  function trackLocation() {
+    if (!current) { toast('Select an officer first', 'warn'); return; }
     function setPos(la, ln, label) {
-      lat = la; lng = ln;
       document.getElementById('od-coords').textContent = la.toFixed(4) + '° N, ' + ln.toFixed(4) + '° E';
-      document.getElementById('od-location').textContent = label || 'Live GPS position';
-      if (miniMap) {
-        miniMap.setView([la, ln], 12);
-        if (marker) marker.setLatLng([la, ln]);
-        else marker = L.marker([la, ln]).addTo(miniMap);
-      }
-      if (window.SmartRoute) SmartRoute.showToast('Location updated', 'success');
+      document.getElementById('od-location').textContent = label || current.note;
+      initMap(la, ln);
+      toast('Location tracked for ' + current.name, 'success');
     }
+    // Prefer officer sector coords; try device GPS as overlay
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        function (pos) { setPos(pos.coords.latitude, pos.coords.longitude, 'Device GPS'); },
-        function () { setPos(26.1445, 91.7362, 'Guwahati Sector · Assam (fallback)'); },
-        { enableHighAccuracy: true, timeout: 5000 }
+        function (pos) {
+          setPos(pos.coords.latitude, pos.coords.longitude, 'Device GPS near ' + current.name);
+        },
+        function () {
+          setPos(current.lat, current.lng, current.note + ' · ' + current.dist);
+        },
+        { enableHighAccuracy: true, timeout: 4000 }
       );
     } else {
-      setPos(26.1445, 91.7362, 'Guwahati Sector · Assam');
+      setPos(current.lat, current.lng, current.note + ' · ' + current.dist);
     }
-  };
+  }
 
   document.addEventListener('DOMContentLoaded', function () {
     if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Field Officer', subtitle: 'Assign · Reports · Track' });
-    loadUser();
-    try {
-      miniMap = L.map('mini-map').setView([lat, lng], 11);
-      L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18 }).addTo(miniMap);
-      marker = L.marker([lat, lng]).addTo(miniMap);
-      setTimeout(function () { miniMap.invalidateSize(); }, 300);
-    } catch (e) {}
+
+    var search = document.getElementById('officer-search');
+    search.addEventListener('input', function () {
+      renderResults(filterOfficers(search.value));
+    });
+    search.addEventListener('focus', function () {
+      renderResults(filterOfficers(search.value));
+    });
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('.search-wrap')) {
+        document.getElementById('search-results').classList.remove('show');
+      }
+    });
+
+    document.getElementById('btn-assign').onclick = openAssign;
+    document.getElementById('btn-reports').onclick = viewReports;
+    document.getElementById('btn-track').onclick = trackLocation;
+    document.getElementById('btn-refresh-gps').onclick = trackLocation;
+    document.getElementById('btn-cancel-assign').onclick = closeAssign;
+    document.getElementById('btn-confirm-assign').onclick = confirmAssign;
+
+    document.getElementById('assign-modal').addEventListener('click', function (e) {
+      if (e.target.id === 'assign-modal') closeAssign();
+    });
   });
 })();
 </script>
