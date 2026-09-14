@@ -1,4 +1,4 @@
-/* SmartRoute — stable sidebar, working hamburger, topbar LIVE+clock+alerts+settings */
+/* SmartRoute — sidebar + hamburger + topbar LIVE/clock/alerts/settings */
 const SR_PUBLIC_PAGES = ['index.html', 'login.html', 'signup.html', ''];
 
 function isLoggedIn() {
@@ -174,33 +174,36 @@ function injectSidebarCss() {
   var style = document.createElement('style');
   style.id = 'sr-sidebar-css';
   style.textContent =
-    '.sidebar{display:flex;flex-direction:column;width:260px;min-height:100vh;position:fixed;left:0;top:0;bottom:0;z-index:200;background:rgba(4,11,26,0.96);border-right:1px solid rgba(0,212,255,0.18);}' +
-    '.main-content{margin-left:260px;min-height:100vh;}' +
+    '.sidebar{display:flex;flex-direction:column;width:260px;min-height:100vh;position:fixed;left:0;top:0;bottom:0;z-index:200;' +
+    'background:rgba(4,11,26,0.98);border-right:1px solid rgba(0,212,255,0.18);transition:transform 0.28s ease;}' +
+    '.main-content{margin-left:260px;min-height:100vh;transition:margin-left 0.28s ease;}' +
     '.nav-item{display:flex;align-items:center;gap:10px;padding:8px 12px;margin:2px 8px;border-radius:8px;text-decoration:none;color:#c5d8ec;font-size:0.88rem;font-weight:500;}' +
     '.nav-item:hover{background:rgba(0,212,255,0.08);color:#fff;}' +
     '.nav-item.active{background:linear-gradient(90deg,rgba(0,212,255,0.18),rgba(0,212,255,0.05));color:#00d4ff;}' +
-    '#sr-sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:150;}' +
-    'body.sidebar-open #sr-sidebar-backdrop{display:block;}' +
+    '#sr-sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:150;}' +
+    /* Desktop + mobile: hamburger hides/shows sidebar */ +
+    'body.sidebar-hidden .sidebar{transform:translateX(-105%);}' +
+    'body.sidebar-hidden .main-content{margin-left:0;}' +
+    'body.sidebar-hidden #sr-sidebar-backdrop{display:block;}' +
     '@media(max-width:900px){' +
-      '.sidebar{transform:translateX(-105%);transition:transform 0.25s ease;}' +
-      'body.sidebar-open .sidebar{transform:translateX(0);box-shadow:8px 0 32px rgba(0,0,0,0.5);}' +
+      '.sidebar{transform:translateX(-105%);}' +
       '.main-content{margin-left:0;}' +
+      'body.sidebar-open .sidebar{transform:translateX(0);box-shadow:8px 0 32px rgba(0,0,0,0.55);}' +
+      'body.sidebar-open #sr-sidebar-backdrop{display:block;}' +
+      'body.sidebar-hidden .sidebar{transform:translateX(-105%);}' +
     '}';
   document.head.appendChild(style);
 }
 
 function buildTopbarRightHtml() {
   return '' +
-    '<div class="topbar-right" style="display:flex;align-items:center;gap:10px;margin-left:auto;">' +
-      '<span class="live-pill" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(0,255,136,0.12);border:1px solid rgba(0,255,136,0.35);color:#00ff88;font-size:0.75rem;font-weight:800;letter-spacing:0.06em;">● LIVE</span>' +
-      '<span id="sr-clock" class="clock-pill" style="font-family:JetBrains Mono,monospace;font-size:0.85rem;font-weight:600;color:#e8f4ff;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);padding:6px 12px;border-radius:8px;min-width:88px;text-align:center;">--:--:--</span>' +
-      '<a href="alerts.html" id="sr-alerts-btn" title="Alerts" style="position:relative;width:40px;height:40px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,149,0,0.12);border:1px solid rgba(255,149,0,0.4);text-decoration:none;font-size:1.15rem;">' +
-        '🔔' +
-        '<span style="position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:#ff3b3b;border:1.5px solid #0a1628;box-shadow:0 0 6px #ff3b3b;"></span>' +
+    '<div class="topbar-right" style="display:flex;align-items:center;gap:10px;margin-left:auto;flex-shrink:0;">' +
+      '<span class="live-pill" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(0,255,136,0.12);border:1px solid rgba(0,255,136,0.35);color:#00ff88;font-size:0.75rem;font-weight:800;">● LIVE</span>' +
+      '<span id="sr-clock" style="font-family:JetBrains Mono,monospace;font-size:0.85rem;font-weight:600;color:#e8f4ff;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);padding:6px 12px;border-radius:8px;min-width:88px;text-align:center;">--:--:--</span>' +
+      '<a href="alerts.html" id="sr-alerts-btn" title="Alerts" style="position:relative;width:42px;height:42px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,149,0,0.15);border:1px solid rgba(255,149,0,0.5);text-decoration:none;font-size:1.2rem;">' +
+        '🔔<span style="position:absolute;top:5px;right:5px;width:9px;height:9px;border-radius:50%;background:#ff3b3b;border:1.5px solid #0a1628;"></span>' +
       '</a>' +
-      '<a href="settings.html" id="sr-settings-btn" title="Settings" style="width:40px;height:40px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.35);text-decoration:none;font-size:1.15rem;">' +
-        '⚙' +
-      '</a>' +
+      '<a href="settings.html" id="sr-settings-btn" title="Settings" style="width:42px;height:42px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.45);text-decoration:none;font-size:1.2rem;">⚙</a>' +
     '</div>';
 }
 
@@ -211,25 +214,51 @@ function ensureTopbar(opts) {
 
   var existing = document.querySelector('.topbar');
   if (existing) {
-    var right = existing.querySelector('.topbar-right');
     if (!document.getElementById('sr-alerts-btn') || !document.getElementById('sr-settings-btn')) {
+      var right = existing.querySelector('.topbar-right');
       if (right) right.outerHTML = buildTopbarRightHtml();
       else existing.insertAdjacentHTML('beforeend', buildTopbarRightHtml());
+    }
+    if (!document.getElementById('sr-menu')) {
+      var left = existing.querySelector('.topbar-left');
+      if (left) {
+        left.insertAdjacentHTML('afterbegin',
+          '<button type="button" class="icon-btn" id="sr-menu" aria-label="Menu" style="width:38px;height:38px;border-radius:9px;border:1px solid rgba(0,212,255,0.3);background:rgba(0,212,255,0.1);color:#e8f4ff;cursor:pointer;font-size:1.2rem;">☰</button>');
+      }
     }
     return;
   }
 
   var top = document.createElement('div');
   top.className = 'topbar';
-  top.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(0,212,255,0.15);background:rgba(5,12,28,0.9);position:sticky;top:0;z-index:40;';
+  top.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(0,212,255,0.15);background:rgba(5,12,28,0.95);position:sticky;top:0;z-index:40;';
   top.innerHTML =
-    '<div class="topbar-left" style="display:flex;align-items:center;gap:12px;">' +
-      '<button type="button" class="icon-btn" id="sr-menu" aria-label="Menu" style="width:36px;height:36px;border-radius:8px;border:1px solid rgba(0,212,255,0.25);background:rgba(0,212,255,0.08);color:#e8f4ff;cursor:pointer;font-size:1.1rem;">☰</button>' +
-      '<div><div class="topbar-title" style="font-weight:700;color:#e8f4ff;">' + (opts.title || document.title) + '</div>' +
+    '<div class="topbar-left" style="display:flex;align-items:center;gap:12px;min-width:0;">' +
+      '<button type="button" class="icon-btn" id="sr-menu" aria-label="Open menu" style="width:38px;height:38px;border-radius:9px;border:1px solid rgba(0,212,255,0.3);background:rgba(0,212,255,0.1);color:#e8f4ff;cursor:pointer;font-size:1.2rem;flex-shrink:0;">☰</button>' +
+      '<div style="min-width:0;"><div class="topbar-title" style="font-weight:700;color:#e8f4ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (opts.title || document.title) + '</div>' +
       '<div class="topbar-sub" style="font-size:0.78rem;color:#8fa3b8;">' + (opts.subtitle || '') + '</div></div>' +
     '</div>' +
     buildTopbarRightHtml();
   main.insertBefore(top, main.firstChild);
+}
+
+function wireMenuButton() {
+  var menu = document.getElementById('sr-menu');
+  if (!menu || menu._srWired) return;
+  menu._srWired = true;
+  menu.onclick = function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var w = window.innerWidth || 1200;
+    if (w <= 900) {
+      document.body.classList.toggle('sidebar-open');
+      document.body.classList.remove('sidebar-hidden');
+    } else {
+      // Desktop: hide / show left sidebar
+      document.body.classList.toggle('sidebar-hidden');
+      document.body.classList.remove('sidebar-open');
+    }
+  };
 }
 
 function initSharedComponents(opts) {
@@ -240,11 +269,13 @@ function initSharedComponents(opts) {
   ensureStableSidebar(opts.active);
   ensureTopbar(opts);
 
-  // Backdrop for mobile menu
   if (!document.getElementById('sr-sidebar-backdrop')) {
     var bd = document.createElement('div');
     bd.id = 'sr-sidebar-backdrop';
-    bd.onclick = function () { document.body.classList.remove('sidebar-open'); };
+    bd.onclick = function () {
+      document.body.classList.remove('sidebar-open');
+      document.body.classList.remove('sidebar-hidden');
+    };
     document.body.appendChild(bd);
   }
 
@@ -262,19 +293,7 @@ function initSharedComponents(opts) {
     };
   }
 
-  var menu = document.getElementById('sr-menu');
-  if (menu) {
-    menu.onclick = function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      document.body.classList.toggle('sidebar-open');
-      var sb = document.getElementById('sidebar');
-      if (sb && window.innerWidth > 900) {
-        // Desktop: also allow collapse toggle
-        sb.classList.toggle('collapsed');
-      }
-    };
-  }
+  wireMenuButton();
 
   function tick() {
     var el = document.getElementById('sr-clock');
@@ -282,9 +301,7 @@ function initSharedComponents(opts) {
     el.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
   tick();
-  if (!window._srClockTimer) {
-    window._srClockTimer = setInterval(tick, 1000);
-  }
+  if (!window._srClockTimer) window._srClockTimer = setInterval(tick, 1000);
 
   applySidebarLabels();
   ensureI18n();
@@ -308,7 +325,7 @@ function loadScript(src, next) {
     return;
   }
   var s = document.createElement('script');
-  s.src = src + (src.indexOf('?') >= 0 ? '&' : '?') + 'v=nav7';
+  s.src = src + (src.indexOf('?') >= 0 ? '&' : '?') + 'v=nav8';
   s.async = true;
   s.onload = function () { if (next) next(); };
   s.onerror = function () { if (next) next(); };
