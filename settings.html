@@ -1,1 +1,116 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings - SmartRoute</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/design-system.css">
+<link rel="stylesheet" href="css/animations.css">
+<link rel="stylesheet" href="css/components.css">
+<style>
+.settings-layout{display:flex;gap:30px;height:calc(100vh - 120px)}
+.settings-nav{width:250px;display:flex;flex-direction:column;gap:10px}
+.nav-pill{padding:15px 20px;border-radius:12px;cursor:pointer;background:rgba(255,255,255,0.02);color:#aaa;font-weight:bold;transition:all 0.3s;text-transform:uppercase;letter-spacing:1px}
+.nav-pill:hover{background:rgba(255,255,255,0.05);color:#fff}
+.nav-pill.active{background:rgba(0,212,255,0.1);color:#00d4ff;border-left:4px solid #00d4ff}
+.settings-content{flex:1;overflow-y:auto;padding-right:15px}
+.panel{display:none;animation:fadeIn 0.4s ease forwards}
+.panel.active{display:block}
+.setting-row{display:flex;justify-content:space-between;align-items:center;padding:20px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+.setting-row:last-child{border-bottom:none}
+.setting-info h4{margin:0 0 5px 0;color:#fff}
+.setting-info p{margin:0;color:#aaa;font-size:0.9rem}
+.toggle-switch{position:relative;display:inline-block;width:60px;height:34px}
+.toggle-switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:rgba(255,255,255,0.1);transition:.4s;border-radius:34px}
+.slider:before{position:absolute;content:"";height:26px;width:26px;left:4px;bottom:4px;background-color:#aaa;transition:.4s;border-radius:50%}
+input:checked + .slider{background-color:rgba(0,212,255,0.2);border:1px solid #00d4ff}
+input:checked + .slider:before{transform:translateX(26px);background-color:#00d4ff}
+.profile-header{display:flex;align-items:center;gap:30px;margin-bottom:30px}
+.avatar-lg{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#00d4ff,#b050ff);display:flex;justify-content:center;align-items:center;font-size:2.5rem;font-weight:bold;color:#000}
+select.form-control,input.form-control{background:rgba(255,255,255,0.05);border:1px solid rgba(100,200,255,0.2);color:#fff;padding:10px 15px;border-radius:8px;width:200px;outline:none;font-family:inherit}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div class="app-shell">
+<div class="main-content" id="main-content">
+<main class="page-body">
+<div class="settings-layout">
+<div class="settings-nav glass-card">
+<div class="nav-pill active" onclick="switchPanel('profile')" data-i18n="tab_profile">PROFILE</div>
+<div class="nav-pill" onclick="switchPanel('security')" data-i18n="tab_security">SECURITY</div>
+<div class="nav-pill" onclick="switchPanel('notifications')" data-i18n="tab_notifications">NOTIFICATIONS</div>
+<div class="nav-pill" onclick="switchPanel('map')" data-i18n="tab_map">MAP</div>
+<div class="nav-pill" onclick="switchPanel('gps')" data-i18n="tab_gps">GPS</div>
+<div class="nav-pill" onclick="switchPanel('alerts')" data-i18n="tab_alerts">ALERTS</div>
+</div>
+<div class="settings-content glass-card" style="padding:30px;">
+<div id="panel-profile" class="panel active">
+<h2 style="color:#00d4ff" data-i18n="profile_title">Profile Settings</h2>
+<p data-i18n="profile_subtitle" style="color:#8fa3b8">Manage officer identity, assigned sector, and emergency contact telemetry.</p>
+<div class="profile-header glass-card" style="padding:20px;border-radius:12px;border:1px solid rgba(0,212,255,0.2)">
+<div class="avatar-lg" id="prof-avatar-display">RK</div>
+<div><h1 id="prof-display-name" style="margin:0;font-size:1.8rem">Ravi Kumar</h1>
+<span class="badge" style="background:rgba(0,212,255,0.15);color:#00d4ff;border:1px solid #00d4ff;padding:3px 8px">FO-042</span>
+<p style="color:#aaa">Command Field Officer • Assam Sector (Guwahati Headquarters)</p></div></div>
+<p style="margin-top:20px;color:#8fa3b8">Full profile editing is available. Use the Language & Region page in the sidebar to change interface language.</p>
+<a href="language.html" class="btn-primary" style="display:inline-block;margin-top:12px;text-decoration:none;padding:10px 18px">Open Language & Region</a>
+</div>
+<div id="panel-security" class="panel"><h2 style="color:#00d4ff">Security</h2><p style="color:#aaa">Password and session controls.</p>
+<div class="setting-row"><div class="setting-info"><h4>Two-Factor Authentication</h4><p>Require OTP for login</p></div><label class="toggle-switch"><input type="checkbox"><span class="slider"></span></label></div>
+</div>
+<div id="panel-notifications" class="panel"><h2 style="color:#00d4ff">Notifications</h2>
+<div class="setting-row"><div class="setting-info"><h4>Push Alerts</h4><p>Critical incident notifications</p></div><label class="toggle-switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+</div>
+<div id="panel-map" class="panel"><h2 style="color:#00d4ff">Map</h2>
+<div class="setting-row"><div class="setting-info"><h4>Show risk overlays</h4><p>Landslide and flood layers</p></div><label class="toggle-switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+</div>
+<div id="panel-gps" class="panel"><h2 style="color:#00d4ff">GPS</h2>
+<div class="setting-row"><div class="setting-info"><h4>High accuracy mode</h4><p>Use fine GPS when available</p></div><label class="toggle-switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+</div>
+<div id="panel-alerts" class="panel"><h2 style="color:#00d4ff">Alerts</h2>
+<div class="setting-row"><div class="setting-info"><h4>Sound on critical alert</h4><p>Play tone for severity Critical</p></div><label class="toggle-switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+<script src="js/i18n.js"></script>
+<script src="js/components.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Settings', subtitle: 'System Configuration & Preferences' });
+  document.querySelectorAll('.toggle-switch input').forEach(function (t, idx) {
+    var key = 'sr_setting_toggle_' + idx;
+    var saved = localStorage.getItem(key);
+    if (saved !== null) t.checked = saved === 'true';
+    t.addEventListener('change', function () {
+      localStorage.setItem(key, t.checked);
+      if (window.SmartRoute) SmartRoute.showToast('Preference saved', 'success');
+    });
+  });
+  var hash = (location.hash || '').replace('#', '');
+  if (hash) switchPanel(hash);
+});
+function switchPanel(panelId) {
+  document.querySelectorAll('.nav-pill').forEach(function (p) { p.classList.remove('active'); });
+  document.querySelectorAll('.panel').forEach(function (p) { p.classList.remove('active'); });
+  var pills = document.querySelectorAll('.nav-pill');
+  pills.forEach(function (p) {
+    if ((p.getAttribute('onclick') || '').indexOf("'" + panelId + "'") >= 0) p.classList.add('active');
+  });
+  var target = document.getElementById('panel-' + panelId);
+  if (target) target.classList.add('active');
+  try { history.replaceState(null, '', '#' + panelId); } catch (e) {}
+}
+</script>
+</body>
+</html>
