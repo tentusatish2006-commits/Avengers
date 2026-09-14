@@ -39,7 +39,6 @@
       localStorage.setItem('sr_department', payload.department);
       localStorage.setItem('sr_region', payload.region);
       localStorage.setItem('sr_logged_in', '1');
-      // components.js checks sr_user — keep in sync
       localStorage.setItem('sr_user', JSON.stringify(payload));
       sessionStorage.setItem('sr_user', JSON.stringify(payload));
       sessionStorage.setItem('sr_logged_in', '1');
@@ -91,6 +90,37 @@
     return record;
   }
 
+  function updateUserProfile(updates) {
+    updates = updates || {};
+    var session = getSessionUser();
+    if (!session) throw new Error('Not logged in');
+
+    var users = readUsers();
+    var matchIndex = users.findIndex(function (u) {
+      return normalizeId(u.username) === normalizeId(session.username) ||
+        normalizeId(u.officerId) === normalizeId(session.officerId) ||
+        normalizeId(u.email) === normalizeId(session.email);
+    });
+
+    var next = {
+      username: (updates.username != null ? String(updates.username).trim() : session.username) || session.username,
+      officerId: (updates.officerId != null ? String(updates.officerId).trim() : session.officerId) || session.officerId,
+      email: (updates.email != null ? String(updates.email).trim() : session.email) || session.email,
+      role: (updates.role != null ? String(updates.role).trim() : session.role) || session.role,
+      department: (updates.department != null ? String(updates.department).trim() : session.department) || session.department,
+      region: (updates.region != null ? String(updates.region).trim() : session.region) || session.region,
+      password: matchIndex >= 0 ? users[matchIndex].password : ''
+    };
+
+    if (updates.password) next.password = String(updates.password);
+
+    if (matchIndex >= 0) users[matchIndex] = next;
+    else users.push(next);
+    writeUsers(users);
+    startSession(next);
+    return next;
+  }
+
   function createUserWithoutLogin(user) {
     return registerUser(user, { startSession: false });
   }
@@ -131,7 +161,7 @@
     return null;
   }
 
-  function isLoggedIn() {
+  function isLoggedInFn() {
     try {
       return localStorage.getItem('sr_logged_in') === '1' ||
         !!localStorage.getItem('sr_user') ||
@@ -149,7 +179,8 @@
     startSession: startSession,
     clearSession: clearSession,
     getSessionUser: getSessionUser,
-    isLoggedIn: isLoggedIn,
+    updateUserProfile: updateUserProfile,
+    isLoggedIn: isLoggedInFn,
     readUsers: readUsers,
     countUsers: function () { return readUsers().length; }
   };

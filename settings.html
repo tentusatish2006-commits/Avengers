@@ -4,90 +4,212 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Settings - SmartRoute</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/design-system.css">
 <link rel="stylesheet" href="css/animations.css">
 <link rel="stylesheet" href="css/components.css">
 <style>
-.settings-layout{display:flex;gap:30px;height:calc(100vh - 120px)}
-.settings-nav{width:250px;display:flex;flex-direction:column;gap:10px}
-.nav-pill{padding:15px 20px;border-radius:12px;cursor:pointer;background:rgba(255,255,255,0.02);color:#aaa;font-weight:bold;transition:all 0.3s;text-transform:uppercase;letter-spacing:1px}
-.nav-pill:hover{background:rgba(255,255,255,0.05);color:#fff}
-.nav-pill.active{background:rgba(0,212,255,0.1);color:#00d4ff;border-left:4px solid #00d4ff}
-.settings-content{flex:1;overflow-y:auto;padding-right:15px}
-.panel{display:none;animation:fadeIn 0.4s ease forwards}
+.settings-layout{display:flex;gap:24px;min-height:calc(100vh - 140px)}
+.settings-nav{width:220px;display:flex;flex-direction:column;gap:8px;flex-shrink:0}
+.nav-pill{padding:14px 18px;border-radius:12px;cursor:pointer;background:rgba(255,255,255,0.03);color:#aaa;font-weight:700;transition:all 0.2s;text-transform:uppercase;letter-spacing:1px;font-size:0.78rem}
+.nav-pill:hover{background:rgba(255,255,255,0.06);color:#fff}
+.nav-pill.active{background:rgba(0,212,255,0.12);color:#00d4ff;border-left:4px solid #00d4ff}
+.settings-content{flex:1;overflow-y:auto}
+.panel{display:none;animation:fadeIn 0.35s ease forwards}
 .panel.active{display:block}
-.setting-row{display:flex;justify-content:space-between;align-items:center;padding:20px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
-.setting-row:last-child{border-bottom:none}
-.setting-info h4{margin:0 0 5px 0;color:#fff}
-.setting-info p{margin:0;color:#aaa;font-size:0.9rem}
-.toggle-switch{position:relative;display:inline-block;width:60px;height:34px}
+.setting-row{display:flex;justify-content:space-between;align-items:center;padding:18px 0;border-bottom:1px solid rgba(255,255,255,0.06)}
+.setting-info h4{margin:0 0 4px;color:#fff}
+.setting-info p{margin:0;color:#aaa;font-size:0.88rem}
+.toggle-switch{position:relative;display:inline-block;width:56px;height:30px}
 .toggle-switch input{opacity:0;width:0;height:0}
-.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:rgba(255,255,255,0.1);transition:.4s;border-radius:34px}
-.slider:before{position:absolute;content:"";height:26px;width:26px;left:4px;bottom:4px;background-color:#aaa;transition:.4s;border-radius:50%}
-input:checked + .slider{background-color:rgba(0,212,255,0.2);border:1px solid #00d4ff}
-input:checked + .slider:before{transform:translateX(26px);background-color:#00d4ff}
-.profile-header{display:flex;align-items:center;gap:30px;margin-bottom:30px}
-.avatar-lg{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#00d4ff,#b050ff);display:flex;justify-content:center;align-items:center;font-size:2.5rem;font-weight:bold;color:#000}
-select.form-control,input.form-control{background:rgba(255,255,255,0.05);border:1px solid rgba(100,200,255,0.2);color:#fff;padding:10px 15px;border-radius:8px;width:200px;outline:none;font-family:inherit}
-@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.slider{position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,0.12);transition:.3s;border-radius:30px}
+.slider:before{position:absolute;content:"";height:22px;width:22px;left:4px;bottom:4px;background:#aaa;transition:.3s;border-radius:50%}
+input:checked + .slider{background:rgba(0,212,255,0.25);border:1px solid #00d4ff}
+input:checked + .slider:before{transform:translateX(24px);background:#00d4ff}
+.profile-header{display:flex;align-items:center;gap:24px;margin-bottom:24px;padding:20px;border-radius:14px;border:1px solid rgba(0,212,255,0.25);background:rgba(0,212,255,0.05)}
+.avatar-lg{width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,#00d4ff,#b050ff);display:flex;justify-content:center;align-items:center;font-size:2rem;font-weight:800;color:#031018;flex-shrink:0}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px}
+.form-group label{display:block;font-size:0.72rem;color:#8fa3b8;margin-bottom:4px;text-transform:uppercase}
+.form-group input,.form-group select{width:100%;box-sizing:border-box;padding:11px;border-radius:8px;border:1px solid rgba(0,212,255,0.25);background:#061018;color:#fff;font-family:inherit}
+.btn-save{margin-top:18px;padding:12px 22px;border:none;border-radius:8px;font-weight:800;cursor:pointer;background:linear-gradient(90deg,#00d4ff,#00ff88);color:#031018}
+.msg{display:none;margin-top:12px;padding:10px;border-radius:8px;font-size:0.88rem}
+.msg.ok{display:block;background:rgba(0,255,136,0.12);border:1px solid #00ff88;color:#00ff88}
+.msg.err{display:block;background:rgba(255,59,59,0.12);border:1px solid #ff3b3b;color:#ff8a8a}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:800px){.settings-layout{flex-direction:column}.settings-nav{width:100%;flex-direction:row;flex-wrap:wrap}.form-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="app-shell">
 <div class="main-content" id="main-content">
-<main class="page-body">
+<main class="page-body" style="padding:16px;">
 <div class="settings-layout">
-<div class="settings-nav glass-card">
-<div class="nav-pill active" onclick="switchPanel('profile')" data-i18n="tab_profile">PROFILE</div>
-<div class="nav-pill" onclick="switchPanel('security')" data-i18n="tab_security">SECURITY</div>
-<div class="nav-pill" onclick="switchPanel('notifications')" data-i18n="tab_notifications">NOTIFICATIONS</div>
-<div class="nav-pill" onclick="switchPanel('map')" data-i18n="tab_map">MAP</div>
-<div class="nav-pill" onclick="switchPanel('gps')" data-i18n="tab_gps">GPS</div>
-<div class="nav-pill" onclick="switchPanel('alerts')" data-i18n="tab_alerts">ALERTS</div>
+<div class="settings-nav glass-card" style="padding:12px;">
+<div class="nav-pill active" onclick="switchPanel('profile')">PROFILE</div>
+<div class="nav-pill" onclick="switchPanel('security')">SECURITY</div>
+<div class="nav-pill" onclick="switchPanel('notifications')">NOTIFICATIONS</div>
+<div class="nav-pill" onclick="switchPanel('map')">MAP</div>
+<div class="nav-pill" onclick="switchPanel('gps')">GPS</div>
+<div class="nav-pill" onclick="switchPanel('alerts')">ALERTS</div>
 </div>
-<div class="settings-content glass-card" style="padding:30px;">
+<div class="settings-content glass-card" style="padding:28px;border-radius:14px;border:1px solid rgba(0,212,255,0.15);background:rgba(8,18,36,0.6);">
+
 <div id="panel-profile" class="panel active">
-<h2 style="color:#00d4ff" data-i18n="profile_title">Profile Settings</h2>
-<p data-i18n="profile_subtitle" style="color:#8fa3b8">Manage officer identity, assigned sector, and emergency contact telemetry.</p>
-<div class="profile-header glass-card" style="padding:20px;border-radius:12px;border:1px solid rgba(0,212,255,0.2)">
-<div class="avatar-lg" id="prof-avatar-display">RK</div>
-<div><h1 id="prof-display-name" style="margin:0;font-size:1.8rem">Ravi Kumar</h1>
-<span class="badge" style="background:rgba(0,212,255,0.15);color:#00d4ff;border:1px solid #00d4ff;padding:3px 8px">FO-042</span>
-<p style="color:#aaa">Command Field Officer • Assam Sector (Guwahati Headquarters)</p></div></div>
-<p style="margin-top:20px;color:#8fa3b8">Full profile editing is available. Use the Language & Region page in the sidebar to change interface language.</p>
-<a href="language.html" class="btn-primary" style="display:inline-block;margin-top:12px;text-decoration:none;padding:10px 18px">Open Language & Region</a>
+<h2 style="color:#00d4ff;margin-top:0">Profile Settings</h2>
+<p style="color:#8fa3b8">Your account details from login / signup. You can edit and save.</p>
+
+<div class="profile-header">
+  <div class="avatar-lg" id="prof-avatar">?</div>
+  <div>
+    <h1 id="prof-display-name" style="margin:0;font-size:1.6rem">—</h1>
+    <span class="badge" id="prof-badge" style="display:inline-block;margin-top:6px;background:rgba(0,212,255,0.15);color:#00d4ff;border:1px solid #00d4ff;padding:3px 10px;border-radius:999px;font-size:0.8rem;font-weight:700">—</span>
+    <p id="prof-meta" style="color:#aaa;margin:8px 0 0">—</p>
+  </div>
 </div>
-<div id="panel-security" class="panel"><h2 style="color:#00d4ff">Security</h2><p style="color:#aaa">Password and session controls.</p>
-<div class="setting-row"><div class="setting-info"><h4>Two-Factor Authentication</h4><p>Require OTP for login</p></div><label class="toggle-switch"><input type="checkbox"><span class="slider"></span></label></div>
+
+<form id="profile-form">
+  <div class="form-grid">
+    <div class="form-group"><label for="pf-name">Full Name</label><input id="pf-name" required></div>
+    <div class="form-group"><label for="pf-badge">Badge / Service ID</label><input id="pf-badge"></div>
+    <div class="form-group"><label for="pf-email">Email</label><input id="pf-email" type="email"></div>
+    <div class="form-group"><label for="pf-role">Role</label>
+      <select id="pf-role">
+        <option>ADMINISTRATOR</option>
+        <option>FIELD OFFICER</option>
+        <option>LOCAL AUTHORITY</option>
+      </select>
+    </div>
+    <div class="form-group"><label for="pf-dept">Department / Agency</label><input id="pf-dept"></div>
+    <div class="form-group"><label for="pf-region">Region</label><input id="pf-region"></div>
+  </div>
+  <button type="submit" class="btn-save">Save Profile</button>
+  <div class="msg" id="profile-msg"></div>
+</form>
 </div>
-<div id="panel-notifications" class="panel"><h2 style="color:#00d4ff">Notifications</h2>
+
+<div id="panel-security" class="panel"><h2 style="color:#00d4ff;margin-top:0">Security</h2>
+<div class="setting-row"><div class="setting-info"><h4>Change Passcode</h4><p>Update your login passcode</p></div></div>
+<div class="form-grid">
+  <div class="form-group"><label for="pf-pass">New Passcode</label><input id="pf-pass" type="password" placeholder="Leave blank to keep current"></div>
+  <div class="form-group"><label for="pf-pass2">Confirm Passcode</label><input id="pf-pass2" type="password"></div>
+</div>
+<button type="button" class="btn-save" id="btn-save-pass">Update Passcode</button>
+<div class="msg" id="pass-msg"></div>
+</div>
+
+<div id="panel-notifications" class="panel"><h2 style="color:#00d4ff;margin-top:0">Notifications</h2>
 <div class="setting-row"><div class="setting-info"><h4>Push Alerts</h4><p>Critical incident notifications</p></div><label class="toggle-switch"><input type="checkbox" checked><span class="slider"></span></label></div>
 </div>
-<div id="panel-map" class="panel"><h2 style="color:#00d4ff">Map</h2>
+<div id="panel-map" class="panel"><h2 style="color:#00d4ff;margin-top:0">Map</h2>
 <div class="setting-row"><div class="setting-info"><h4>Show risk overlays</h4><p>Landslide and flood layers</p></div><label class="toggle-switch"><input type="checkbox" checked><span class="slider"></span></label></div>
 </div>
-<div id="panel-gps" class="panel"><h2 style="color:#00d4ff">GPS</h2>
+<div id="panel-gps" class="panel"><h2 style="color:#00d4ff;margin-top:0">GPS</h2>
 <div class="setting-row"><div class="setting-info"><h4>High accuracy mode</h4><p>Use fine GPS when available</p></div><label class="toggle-switch"><input type="checkbox" checked><span class="slider"></span></label></div>
 </div>
-<div id="panel-alerts" class="panel"><h2 style="color:#00d4ff">Alerts</h2>
+<div id="panel-alerts" class="panel"><h2 style="color:#00d4ff;margin-top:0">Alerts</h2>
 <div class="setting-row"><div class="setting-info"><h4>Sound on critical alert</h4><p>Play tone for severity Critical</p></div><label class="toggle-switch"><input type="checkbox" checked><span class="slider"></span></label></div>
 </div>
+
 </div>
 </div>
 </main>
 </div>
 </div>
-<script src="js/i18n.js"></script>
-<script src="js/components.js"></script>
+<script src="js/auth-users.js?v=nav5"></script>
+<script src="js/components.js?v=nav5"></script>
 <script>
+function switchPanel(panelId) {
+  document.querySelectorAll('.nav-pill').forEach(function (p) { p.classList.remove('active'); });
+  document.querySelectorAll('.panel').forEach(function (p) { p.classList.remove('active'); });
+  document.querySelectorAll('.nav-pill').forEach(function (p) {
+    if ((p.getAttribute('onclick') || '').indexOf("'" + panelId + "'") >= 0) p.classList.add('active');
+  });
+  var target = document.getElementById('panel-' + panelId);
+  if (target) target.classList.add('active');
+}
+
+function loadProfile() {
+  var u = null;
+  if (window.SmartRouteAuth && SmartRouteAuth.getSessionUser) u = SmartRouteAuth.getSessionUser();
+  if (!u) {
+    try {
+      u = {
+        username: localStorage.getItem('sr_username') || '',
+        officerId: localStorage.getItem('sr_officer_id') || '',
+        email: localStorage.getItem('sr_email') || '',
+        role: localStorage.getItem('sr_user_role') || '',
+        department: localStorage.getItem('sr_department') || '',
+        region: localStorage.getItem('sr_region') || ''
+      };
+    } catch (e) { u = {}; }
+  }
+  var name = u.username || 'Officer';
+  var badge = u.officerId || '—';
+  var role = u.role || 'FIELD OFFICER';
+  var dept = u.department || '';
+  var region = u.region || '';
+  var email = u.email || '';
+
+  var initials = name.split(/\s+/).map(function (p) { return p[0]; }).join('').slice(0, 2).toUpperCase() || 'SR';
+  document.getElementById('prof-avatar').textContent = initials;
+  document.getElementById('prof-display-name').textContent = name;
+  document.getElementById('prof-badge').textContent = badge;
+  document.getElementById('prof-meta').textContent = role + (region ? ' • ' + region : '') + (dept ? ' • ' + dept : '');
+
+  document.getElementById('pf-name').value = name;
+  document.getElementById('pf-badge').value = badge;
+  document.getElementById('pf-email').value = email;
+  document.getElementById('pf-role').value = role;
+  document.getElementById('pf-dept').value = dept;
+  document.getElementById('pf-region').value = region;
+}
+
 document.addEventListener('DOMContentLoaded', function () {
-  if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Settings', subtitle: 'System Configuration & Preferences' });
+  if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Settings', subtitle: 'Profile & system preferences' });
+  loadProfile();
+
+  document.getElementById('profile-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var msg = document.getElementById('profile-msg');
+    try {
+      if (!window.SmartRouteAuth || !SmartRouteAuth.updateUserProfile) throw new Error('Auth not loaded');
+      SmartRouteAuth.updateUserProfile({
+        username: document.getElementById('pf-name').value.trim(),
+        officerId: document.getElementById('pf-badge').value.trim(),
+        email: document.getElementById('pf-email').value.trim(),
+        role: document.getElementById('pf-role').value,
+        department: document.getElementById('pf-dept').value.trim(),
+        region: document.getElementById('pf-region').value.trim()
+      });
+      loadProfile();
+      msg.className = 'msg ok';
+      msg.textContent = 'Profile saved successfully.';
+      if (window.SmartRoute) SmartRoute.showToast('Profile updated', 'success');
+    } catch (err) {
+      msg.className = 'msg err';
+      msg.textContent = err.message || 'Could not save profile';
+    }
+  });
+
+  document.getElementById('btn-save-pass').addEventListener('click', function () {
+    var p1 = document.getElementById('pf-pass').value;
+    var p2 = document.getElementById('pf-pass2').value;
+    var msg = document.getElementById('pass-msg');
+    if (!p1) { msg.className = 'msg err'; msg.textContent = 'Enter a new passcode.'; return; }
+    if (p1 !== p2) { msg.className = 'msg err'; msg.textContent = 'Passcodes do not match.'; return; }
+    try {
+      SmartRouteAuth.updateUserProfile({ password: p1 });
+      msg.className = 'msg ok';
+      msg.textContent = 'Passcode updated.';
+      document.getElementById('pf-pass').value = '';
+      document.getElementById('pf-pass2').value = '';
+      if (window.SmartRoute) SmartRoute.showToast('Passcode updated', 'success');
+    } catch (err) {
+      msg.className = 'msg err';
+      msg.textContent = err.message || 'Could not update passcode';
+    }
+  });
+
   document.querySelectorAll('.toggle-switch input').forEach(function (t, idx) {
     var key = 'sr_setting_toggle_' + idx;
     var saved = localStorage.getItem(key);
@@ -97,19 +219,22 @@ document.addEventListener('DOMContentLoaded', function () {
       if (window.SmartRoute) SmartRoute.showToast('Preference saved', 'success');
     });
   });
-  var hash = (location.hash || '').replace('#', '');
-  if (hash) switchPanel(hash);
+
+  // Extra clock on settings page header area if present
+  setInterval(function () {
+    var el = document.getElementById('dash-clock');
+    if (el) el.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }, 1000);
 });
+
 function switchPanel(panelId) {
   document.querySelectorAll('.nav-pill').forEach(function (p) { p.classList.remove('active'); });
   document.querySelectorAll('.panel').forEach(function (p) { p.classList.remove('active'); });
-  var pills = document.querySelectorAll('.nav-pill');
-  pills.forEach(function (p) {
+  document.querySelectorAll('.nav-pill').forEach(function (p) {
     if ((p.getAttribute('onclick') || '').indexOf("'" + panelId + "'") >= 0) p.classList.add('active');
   });
   var target = document.getElementById('panel-' + panelId);
   if (target) target.classList.add('active');
-  try { history.replaceState(null, '', '#' + panelId); } catch (e) {}
 }
 </script>
 </body>
