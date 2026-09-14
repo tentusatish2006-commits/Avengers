@@ -1,4 +1,4 @@
-/* SmartRoute shared UI + auth + i18n — full sidebar with page logos */
+/* SmartRoute shared UI — STABLE left sidebar (never changes on button clicks) */
 const SR_PUBLIC_PAGES = ['index.html', 'login.html', 'signup.html', ''];
 
 function isLoggedIn() {
@@ -61,88 +61,87 @@ function tr(key, fallback) {
   return fallback || key;
 }
 
-/** Brand logo mark used in sidebar, login, signup */
 function brandLogoHtml(size) {
   size = size || 36;
-  return '<div class="sr-logo-mark" style="width:' + size + 'px;height:' + size + 'px;border-radius:10px;background:linear-gradient(135deg,#00d4ff,#00ff88);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:' + Math.round(size * 0.38) + 'px;color:#031018;box-shadow:0 0 16px rgba(0,212,255,0.45);flex-shrink:0;letter-spacing:-0.02em;">SR</div>';
+  return '<div class="sr-logo-mark" style="width:' + size + 'px;height:' + size + 'px;border-radius:10px;background:linear-gradient(135deg,#00d4ff,#00ff88);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:' + Math.round(size * 0.38) + 'px;color:#031018;box-shadow:0 0 16px rgba(0,212,255,0.45);flex-shrink:0;">SR</div>';
 }
 
-function buildSidebar(active) {
-  // ALL app pages on left sidebar only — with logos/icons
-  var sections = [
-    {
-      label: 'Command',
-      items: [
-        { href: 'dashboard.html', key: 'nav_dashboard', label: 'Dashboard', icon: '▣' },
-        { href: 'map.html', key: 'nav_map', label: 'Live Map', icon: '🗺' },
-        { href: 'emergency.html', key: 'nav_emergency', label: 'Emergency Response', icon: '🚨' },
-        { href: 'ai-command.html', key: 'nav_ai_command', label: 'AI Command Center', icon: '🧠' }
-      ]
-    },
-    {
-      label: 'Operations',
-      items: [
-        { href: 'incidents.html', key: 'nav_incidents', label: 'Incidents', icon: '⚠' },
-        { href: 'alerts.html', key: 'nav_alerts', label: 'Alerts', icon: '🔔' },
-        { href: 'vehicle-tracking.html', key: 'nav_vehicle_tracking', label: 'Vehicle Tracking', icon: '🚛' },
-        { href: 'deliveries.html', key: 'nav_deliveries', label: 'Deliveries', icon: '📦' },
-        { href: 'simulation.html', key: 'nav_simulation', label: 'Live Simulation', icon: '▶' },
-        { href: 'field-report.html', key: 'nav_field_report', label: 'Field Report', icon: '📋' }
-      ]
-    },
-    {
-      label: 'Intelligence',
-      items: [
-        { href: 'route-prediction.html', key: 'nav_route_prediction', label: 'AI Route Prediction', icon: '🤖' },
-        { href: 'alternate-routes.html', key: 'nav_alternate_routes', label: 'Alternate Routes', icon: '⇄' },
-        { href: 'photo-analysis.html', key: 'nav_photo_analysis', label: 'AI Photo Analysis', icon: '📷' },
-        { href: 'weather.html', key: 'nav_weather', label: 'Weather', icon: '☁' },
-        { href: 'analytics.html', key: 'nav_analytics', label: 'Analytics', icon: '📊' },
-        { href: 'reports.html', key: 'nav_reports', label: 'Reports', icon: '📑' }
-      ]
-    },
-    {
-      label: 'Network',
-      items: [
-        { href: 'corridors.html', key: 'nav_corridors', label: 'Corridors', icon: '🛣' },
-        { href: 'districts.html', key: 'nav_districts', label: 'Districts', icon: '🏙' },
-        { href: 'infrastructure.html', key: 'nav_infrastructure', label: 'Infrastructure', icon: '🏗' },
-        { href: 'officers.html', key: 'nav_officers', label: 'Officers', icon: '👮' },
-        { href: 'officer-dashboard.html', key: 'nav_officer_dashboard', label: 'Officer Dashboard', icon: '👤' }
-      ]
-    },
-    {
-      label: 'System',
-      items: [
-        { href: 'language.html', key: 'nav_language', label: 'Language & Region', icon: '🌐' },
-        { href: 'admin.html', key: 'nav_admin', label: 'Admin Panel', icon: '🛡' },
-        { href: 'settings.html', key: 'nav_settings', label: 'Settings', icon: '⚙' }
-      ]
-    }
-  ];
+/** Fixed menu definition — same on every page */
+var SR_SIDEBAR_SECTIONS = [
+  {
+    label: 'Command',
+    items: [
+      { href: 'dashboard.html', key: 'nav_dashboard', label: 'Dashboard', icon: '▣' },
+      { href: 'map.html', key: 'nav_map', label: 'Live Map', icon: '🗺' },
+      { href: 'emergency.html', key: 'nav_emergency', label: 'Emergency Response', icon: '🚨' },
+      { href: 'ai-command.html', key: 'nav_ai_command', label: 'AI Command Center', icon: '🧠' }
+    ]
+  },
+  {
+    label: 'Operations',
+    items: [
+      { href: 'incidents.html', key: 'nav_incidents', label: 'Incidents', icon: '⚠' },
+      { href: 'alerts.html', key: 'nav_alerts', label: 'Alerts', icon: '🔔' },
+      { href: 'vehicle-tracking.html', key: 'nav_vehicle_tracking', label: 'Vehicle Tracking', icon: '🚛' },
+      { href: 'deliveries.html', key: 'nav_deliveries', label: 'Deliveries', icon: '📦' },
+      { href: 'simulation.html', key: 'nav_simulation', label: 'Live Simulation', icon: '▶' },
+      { href: 'field-report.html', key: 'nav_field_report', label: 'Field Report', icon: '📋' }
+    ]
+  },
+  {
+    label: 'Intelligence',
+    items: [
+      { href: 'route-prediction.html', key: 'nav_route_prediction', label: 'AI Route Prediction', icon: '🤖' },
+      { href: 'alternate-routes.html', key: 'nav_alternate_routes', label: 'Alternate Routes', icon: '⇄' },
+      { href: 'photo-analysis.html', key: 'nav_photo_analysis', label: 'AI Photo Analysis', icon: '📷' },
+      { href: 'weather.html', key: 'nav_weather', label: 'Weather', icon: '☁' },
+      { href: 'analytics.html', key: 'nav_analytics', label: 'Analytics', icon: '📊' },
+      { href: 'reports.html', key: 'nav_reports', label: 'Reports', icon: '📑' }
+    ]
+  },
+  {
+    label: 'Network',
+    items: [
+      { href: 'corridors.html', key: 'nav_corridors', label: 'Corridors', icon: '🛣' },
+      { href: 'districts.html', key: 'nav_districts', label: 'Districts', icon: '🏙' },
+      { href: 'infrastructure.html', key: 'nav_infrastructure', label: 'Infrastructure', icon: '🏗' },
+      { href: 'officers.html', key: 'nav_officers', label: 'Officers', icon: '👮' },
+      { href: 'officer-dashboard.html', key: 'nav_officer_dashboard', label: 'Officer Dashboard', icon: '👤' }
+    ]
+  },
+  {
+    label: 'System',
+    items: [
+      { href: 'language.html', key: 'nav_language', label: 'Language & Region', icon: '🌐' },
+      { href: 'admin.html', key: 'nav_admin', label: 'Admin Panel', icon: '🛡' },
+      { href: 'settings.html', key: 'nav_settings', label: 'Settings', icon: '⚙' }
+    ]
+  }
+];
 
+function buildSidebar(active) {
   var page = currentPage();
   var html = '';
-  html += '<aside class="sidebar" id="sidebar">';
-  html += '<div class="sidebar-brand" style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid rgba(0,212,255,0.15);">';
+  html += '<aside class="sidebar" id="sidebar" data-sr-stable="1">';
+  html += '<div class="sidebar-brand" style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid rgba(0,212,255,0.15);flex-shrink:0;">';
   html += brandLogoHtml(36);
   html += '<div><div class="brand-title" style="font-weight:800;font-size:0.95rem;color:#e8f4ff;">SmartRoute</div>';
   html += '<div class="brand-sub" style="font-size:9px;letter-spacing:0.1em;color:#6a8ea8;text-transform:uppercase;">NER Command</div></div></div>';
-  html += '<nav class="sidebar-nav" style="flex:1;overflow-y:auto;padding:8px 0 12px;">';
+  html += '<nav class="sidebar-nav" id="sr-sidebar-nav" style="flex:1;overflow-y:auto;padding:8px 0 12px;">';
 
-  sections.forEach(function (sec) {
+  SR_SIDEBAR_SECTIONS.forEach(function (sec) {
     html += '<div class="nav-section-label" style="font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#6a8ea8;padding:10px 16px 4px;opacity:0.85;">' + sec.label + '</div>';
     sec.items.forEach(function (it) {
       var on = page === it.href || active === it.href;
-      html += '<a class="nav-item' + (on ? ' active' : '') + '" href="' + it.href + '" title="' + it.label + '">';
-      html += '<span class="nav-ico" style="width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);font-size:14px;flex-shrink:0;">' + it.icon + '</span>';
-      html += '<span class="nav-label" data-i18n="' + it.key + '">' + tr(it.key, it.label) + '</span>';
+      html += '<a class="nav-item' + (on ? ' active' : '') + '" href="' + it.href + '" data-page="' + it.href + '" title="' + it.label + '">';
+      html += '<span class="nav-ico" aria-hidden="true" style="width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);font-size:14px;flex-shrink:0;">' + it.icon + '</span>';
+      html += '<span class="nav-label" data-i18n="' + it.key + '">' + it.label + '</span>';
       html += '</a>';
     });
   });
 
   html += '</nav>';
-  html += '<div class="sidebar-footer" style="border-top:1px solid rgba(0,212,255,0.15);padding:10px 8px;">';
+  html += '<div class="sidebar-footer" style="border-top:1px solid rgba(0,212,255,0.15);padding:10px 8px;flex-shrink:0;">';
   html += '<button type="button" class="nav-item" id="sr-signout" style="width:100%;border:none;background:transparent;cursor:pointer;text-align:left;">';
   html += '<span class="nav-ico" style="width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,59,59,0.12);border:1px solid rgba(255,59,59,0.3);font-size:14px;">⏻</span>';
   html += '<span class="nav-label">Sign Out</span></button></div>';
@@ -150,14 +149,43 @@ function buildSidebar(active) {
   return html;
 }
 
+/** Only update active highlight — do NOT rebuild menu HTML */
+function highlightSidebarActive() {
+  var page = currentPage();
+  var root = document.getElementById('sidebar');
+  if (!root) return;
+  root.querySelectorAll('a.nav-item[data-page]').forEach(function (a) {
+    if (a.getAttribute('data-page') === page) a.classList.add('active');
+    else a.classList.remove('active');
+  });
+}
+
+/**
+ * Mount sidebar ONCE. Remove any page-local sidebars so left menu never changes layout.
+ */
+function ensureStableSidebar(active) {
+  var shell = document.querySelector('.app-shell');
+  if (!shell) return;
+
+  // Remove ALL existing sidebars (page-specific ones cause the "changes on click" bug)
+  shell.querySelectorAll('aside.sidebar, #sidebar, .sidebar').forEach(function (el) {
+    if (el.parentNode) el.parentNode.removeChild(el);
+  });
+
+  // Insert the single shared sidebar
+  shell.insertAdjacentHTML('afterbegin', buildSidebar(active));
+  highlightSidebarActive();
+
+  // Mark shell so i18n scripts know not to wipe nav structure
+  shell.setAttribute('data-sr-sidebar-locked', '1');
+}
+
 function initSharedComponents(opts) {
   opts = opts || {};
   if (!requireAuth()) return;
 
-  var shell = document.querySelector('.app-shell');
-  if (shell && !document.getElementById('sidebar')) {
-    shell.insertAdjacentHTML('afterbegin', buildSidebar(opts.active));
-  }
+  // Always enforce the SAME left sidebar
+  ensureStableSidebar(opts.active);
 
   var main = document.getElementById('main-content') || document.querySelector('.main-content');
   if (main && !document.querySelector('.topbar')) {
@@ -182,15 +210,37 @@ function initSharedComponents(opts) {
   }
 
   var menu = document.getElementById('sr-menu');
-  if (menu) menu.onclick = function () { document.body.classList.toggle('sidebar-open'); };
+  if (menu) {
+    menu.onclick = function () {
+      document.body.classList.toggle('sidebar-open');
+      // never rebuild sidebar on menu toggle
+    };
+  }
 
   function tick() {
     var el = document.getElementById('sr-clock');
     if (el) el.textContent = new Date().toLocaleTimeString();
   }
   tick();
-  setInterval(tick, 1000);
+  if (!window._srClockTimer) {
+    window._srClockTimer = setInterval(tick, 1000);
+  }
+
+  // Translate labels only (do not rebuild)
+  applySidebarLabels();
   ensureI18n();
+}
+
+function applySidebarLabels() {
+  var root = document.getElementById('sidebar');
+  if (!root || !window.SmartRouteI18n) return;
+  var code = currentLang();
+  if (code === 'en') return;
+  root.querySelectorAll('[data-i18n]').forEach(function (el) {
+    var key = el.getAttribute('data-i18n');
+    var t = SmartRouteI18n.t(key, code);
+    if (t && t !== key) el.textContent = t;
+  });
 }
 
 function loadScript(src, next) {
@@ -199,7 +249,7 @@ function loadScript(src, next) {
     return;
   }
   var s = document.createElement('script');
-  s.src = src + (src.indexOf('?') >= 0 ? '&' : '?') + 'v=nav3';
+  s.src = src + (src.indexOf('?') >= 0 ? '&' : '?') + 'v=nav4';
   s.async = true;
   s.onload = function () { if (next) next(); };
   s.onerror = function () { if (next) next(); };
@@ -208,11 +258,8 @@ function loadScript(src, next) {
 
 function ensureI18n(cb) {
   function afterI18n() {
-    var left = 3;
-    function doneOne() { left--; if (left <= 0 && cb) cb(); }
-    loadScript('js/i18n-enhance.js', doneOne);
-    loadScript('js/force-i18n.js', doneOne);
-    loadScript('js/i18n-runtime.js', doneOne);
+    applySidebarLabels();
+    if (cb) cb();
   }
   if (window.SmartRouteI18n) { afterI18n(); return; }
   loadScript('js/i18n.js', afterI18n);
@@ -221,6 +268,7 @@ function ensureI18n(cb) {
 function applyFullLanguage(code) {
   code = code || currentLang();
   try { localStorage.setItem('sr_language', code); } catch (e) {}
+  applySidebarLabels();
   if (window.SmartRouteForceI18n && SmartRouteForceI18n.apply) SmartRouteForceI18n.apply(code);
   try {
     window.dispatchEvent(new CustomEvent('smartroute:language-changed', { detail: { language: code } }));
@@ -236,5 +284,7 @@ window.SmartRoute = {
   tr: tr,
   currentLang: currentLang,
   brandLogoHtml: brandLogoHtml,
-  buildSidebar: buildSidebar
+  buildSidebar: buildSidebar,
+  ensureStableSidebar: ensureStableSidebar,
+  highlightSidebarActive: highlightSidebarActive
 };
