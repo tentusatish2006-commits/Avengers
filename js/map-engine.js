@@ -1,4 +1,4 @@
-/* SMARTROUTE MAP ENGINE (NER) — fast load + background OSRM */
+/* SMARTROUTE MAP ENGINE (NER) — OSRM road routes first (green/orange/red on roads) */
 (function (global) {
   'use strict';
 
@@ -13,15 +13,27 @@
     Aizawl: [23.7271, 92.7176],
     Agartala: [23.8315, 91.2868],
     Itanagar: [27.0844, 93.6053],
-    Tezpur: [26.6338, 92.8]
+    Tezpur: [26.6338, 92.8],
+    Nagaon: [26.3464, 92.684],
+    Jorhat: [26.7465, 94.2026],
+    Bomdila: [27.2647, 92.424],
+    Nongpoh: [25.903, 91.88]
   };
 
+  // Intermediate towns approximate real highway corridors when OSRM is slow
   var ROUTE_DEFS = [
-    { id: 'SAFE-1', name: 'Guwahati → Shillong', status: 'safe', color: '#00ff88', weight: 6, waypoints: ['Guwahati', 'Shillong'] },
-    { id: 'MOD-1', name: 'Guwahati → Silchar → Aizawl', status: 'moderate', color: '#ff9500', weight: 5, waypoints: ['Guwahati', 'Silchar', 'Aizawl'] },
-    { id: 'CRIT-1', name: 'Guwahati → Tawang', status: 'critical', color: '#ff3b3b', weight: 5, waypoints: ['Guwahati', 'Tezpur', 'Tawang'] },
-    { id: 'SAFE-2', name: 'Agartala → Silchar', status: 'safe', color: '#00ff88', weight: 5, waypoints: ['Agartala', 'Silchar'] },
-    { id: 'MOD-2', name: 'Dimapur → Kohima', status: 'moderate', color: '#ff9500', weight: 5, waypoints: ['Dimapur', 'Kohima'] }
+    { id: 'SAFE-1', name: 'Guwahati → Shillong (Safe)', status: 'safe', color: '#00ff88', weight: 6,
+      waypoints: ['Guwahati', 'Nongpoh', 'Shillong'] },
+    { id: 'MOD-1', name: 'Guwahati → Silchar → Aizawl (Alternate)', status: 'moderate', color: '#ff9500', weight: 5,
+      waypoints: ['Guwahati', 'Nagaon', 'Silchar', 'Aizawl'] },
+    { id: 'CRIT-1', name: 'Guwahati → Tawang (Critical)', status: 'critical', color: '#ff3b3b', weight: 5,
+      waypoints: ['Guwahati', 'Tezpur', 'Bomdila', 'Tawang'] },
+    { id: 'SAFE-2', name: 'Agartala → Silchar (Safe)', status: 'safe', color: '#00ff88', weight: 5,
+      waypoints: ['Agartala', 'Silchar'] },
+    { id: 'MOD-2', name: 'Dimapur → Kohima (Alternate)', status: 'moderate', color: '#ff9500', weight: 5,
+      waypoints: ['Dimapur', 'Kohima'] },
+    { id: 'CRIT-2', name: 'Jorhat → Itanagar (Critical)', status: 'critical', color: '#ff3b3b', weight: 5,
+      waypoints: ['Jorhat', 'Itanagar'] }
   ];
 
   var INCIDENTS = [
@@ -31,9 +43,10 @@
   ];
 
   var VEHICLES = [
-    { id: 'VH-NE01', color: '#00d4ff', routeId: 'SAFE-1', progress: 0.1, speed: 0.0004 },
-    { id: 'VH-NE02', color: '#00ff88', routeId: 'MOD-1', progress: 0.3, speed: 0.0003 },
-    { id: 'VH-NE03', color: '#ff9500', routeId: 'SAFE-2', progress: 0.5, speed: 0.00035 }
+    { id: 'VH-NE01', color: '#00d4ff', routeId: 'SAFE-1', progress: 0.1, speed: 0.00035 },
+    { id: 'VH-NE02', color: '#00ff88', routeId: 'MOD-1', progress: 0.25, speed: 0.00028 },
+    { id: 'VH-NE03', color: '#ff9500', routeId: 'CRIT-1', progress: 0.4, speed: 0.0003 },
+    { id: 'VH-NE04', color: '#b050ff', routeId: 'SAFE-2', progress: 0.15, speed: 0.00032 }
   ];
 
   var MAP_CONFIG = {
@@ -69,7 +82,7 @@
       var path = waypoints.map(function (p) { return p[1] + ',' + p[0]; }).join(';');
       var url = 'https://router.project-osrm.org/route/v1/driving/' + path + '?overview=full&geometries=geojson';
       var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      var to = setTimeout(function () { if (ctrl) ctrl.abort(); }, 4000);
+      var to = setTimeout(function () { if (ctrl) ctrl.abort(); }, 12000);
       var res = await fetch(url, ctrl ? { signal: ctrl.signal } : undefined);
       clearTimeout(to);
       if (!res.ok) return null;
@@ -81,14 +94,21 @@
     }
   }
 
-  function densifyFallback(waypoints) {
+  /** Highway-style fallback (not pure straight): slight corridor bends */
+  function densifyRoadLike(waypoints) {
     var out = [];
     for (var i = 0; i < waypoints.length - 1; i++) {
       var a = waypoints[i], b = waypoints[i + 1];
-      var steps = 12;
+      var steps = 24;
+      var latSpan = b[0] - a[0];
+      var lngSpan = b[1] - a[1];
       for (var s = 0; s <= steps; s++) {
         var t = s / steps;
-        out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+        // mild sine offset so path is not a single straight cut across terrain
+        var offset = Math.sin(t * Math.PI) * 0.035 * (i % 2 === 0 ? 1 : -1);
+        var lat = a[0] + latSpan * t + offset * (lngSpan === 0 ? 0.2 : 0);
+        var lng = a[1] + lngSpan * t + offset * (latSpan === 0 ? 0.2 : 0.15);
+        out.push([lat, lng]);
       }
     }
     return out;
@@ -98,62 +118,60 @@
     return CITIES[name] || null;
   }
 
+  function drawRouteLine(map, def, coords) {
+    if (!map || !coords || coords.length < 2) return null;
+    try { if (_routeLayers[def.id]) map.removeLayer(_routeLayers[def.id]); } catch (e) {}
+    var line = L.polyline(coords, {
+      color: def.color,
+      weight: def.weight || 5,
+      opacity: 0.92,
+      lineCap: 'round',
+      lineJoin: 'round'
+    }).addTo(map);
+    line.bindPopup('<b>' + def.name + '</b><br>Status: ' + def.status);
+    _routeLayers[def.id] = line;
+    _routeCoords[def.id] = coords;
+    return line;
+  }
+
   async function resolveRoute(def) {
-    if (_routeCoords[def.id] && _routeCoords[def.id].length > 2) return _routeCoords[def.id];
     var pts = def.waypoints.map(cityPoint).filter(Boolean);
     if (pts.length < 2) return null;
     var coords = await fetchOsrmCoords(pts);
-    if (coords && coords.length) {
+    if (coords && coords.length > 2) {
       _routeCoords[def.id] = coords;
       return coords;
     }
-    return densifyFallback(pts);
+    // Pairwise OSRM if multi-stop full request fails
+    var merged = [];
+    for (var i = 0; i < pts.length - 1; i++) {
+      var seg = await fetchOsrmCoords([pts[i], pts[i + 1]]);
+      if (seg && seg.length) {
+        if (merged.length) seg = seg.slice(1);
+        merged = merged.concat(seg);
+      }
+    }
+    if (merged.length > 2) {
+      _routeCoords[def.id] = merged;
+      return merged;
+    }
+    var fb = densifyRoadLike(pts);
+    _routeCoords[def.id] = fb;
+    return fb;
   }
 
   async function loadAllRoutes(map) {
     map = map || MapEngine.map;
     if (!map) return {};
 
-    // Instant draw — no network wait
+    // Wait for OSRM road geometry first (preferred)
     for (var i = 0; i < ROUTE_DEFS.length; i++) {
       var def = ROUTE_DEFS[i];
       try {
-        var pts = def.waypoints.map(cityPoint).filter(Boolean);
-        if (pts.length < 2) continue;
-        var coords = densifyFallback(pts);
-        var line = L.polyline(coords, {
-          color: def.color, weight: def.weight || 5, opacity: 0.88,
-          lineCap: 'round', lineJoin: 'round'
-        }).addTo(map);
-        line.bindPopup('<b>' + def.name + '</b><br>Status: ' + def.status);
-        _routeLayers[def.id] = line;
-        _routeCoords[def.id] = coords;
+        var coords = await resolveRoute(def);
+        if (coords) drawRouteLine(map, def, coords);
       } catch (e) {}
     }
-
-    // Upgrade to OSRM in background (non-blocking)
-    setTimeout(function () {
-      ROUTE_DEFS.forEach(function (def) {
-        resolveRoute(def).then(function (coords) {
-          if (!coords || coords.length < 3) return;
-          try { if (_routeLayers[def.id]) map.removeLayer(_routeLayers[def.id]); } catch (e) {}
-          var line = L.polyline(coords, {
-            color: def.color, weight: def.weight || 5, opacity: 0.92,
-            lineCap: 'round', lineJoin: 'round'
-          }).addTo(map);
-          line.bindPopup('<b>' + def.name + '</b><br>Status: ' + def.status);
-          _routeLayers[def.id] = line;
-          // refresh vehicle path if bound to this route
-          Object.keys(_vehicleMarkers).forEach(function (vid) {
-            var entry = _vehicleMarkers[vid];
-            if (entry && entry.vehicle && entry.vehicle.routeId === def.id) {
-              entry.coords = coords;
-            }
-          });
-        }).catch(function () {});
-      });
-    }, 40);
-
     return _routeLayers;
   }
 
@@ -199,10 +217,9 @@
     map = map || MapEngine.map;
     if (!map) return;
     VEHICLES.forEach(function (v) {
-      var coords = _routeCoords[v.routeId] || densifyFallback(
-        (ROUTE_DEFS.find(function (d) { return d.id === v.routeId; }) || { waypoints: ['Guwahati', 'Shillong'] })
-          .waypoints.map(cityPoint).filter(Boolean)
-      );
+      var def = ROUTE_DEFS.find(function (d) { return d.id === v.routeId; });
+      var pts = def ? def.waypoints.map(cityPoint).filter(Boolean) : [CITIES.Guwahati, CITIES.Shillong];
+      var coords = _routeCoords[v.routeId] || densifyRoadLike(pts);
       var pos = pointAlong(coords, v.progress || 0) || { latlng: CITIES.Guwahati };
       var m = L.marker(pos.latlng, { icon: vehicleIcon(v.color) }).addTo(map);
       _vehicleMarkers[v.id] = { marker: m, vehicle: v, coords: coords };
@@ -215,7 +232,7 @@
     _animRunning = true;
     var last = 0;
     function tick(ts) {
-      if (ts - last < 50) { // ~20 fps — smoother CPU
+      if (ts - last < 50) {
         requestAnimationFrame(tick);
         return;
       }
@@ -223,7 +240,9 @@
       Object.keys(_vehicleMarkers).forEach(function (id) {
         var entry = _vehicleMarkers[id];
         if (!entry || !entry.coords) return;
-        entry.vehicle.progress += entry.vehicle.speed || 0.00035;
+        // keep path in sync when OSRM upgrades route
+        if (_routeCoords[entry.vehicle.routeId]) entry.coords = _routeCoords[entry.vehicle.routeId];
+        entry.vehicle.progress += entry.vehicle.speed || 0.0003;
         if (entry.vehicle.progress >= 1) entry.vehicle.progress = 0;
         var pos = pointAlong(entry.coords, entry.vehicle.progress);
         if (pos) entry.marker.setLatLng(pos.latlng);

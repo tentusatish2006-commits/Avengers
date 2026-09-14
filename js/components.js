@@ -1,4 +1,4 @@
-/* SmartRoute shared UI — STABLE left sidebar + topbar with live time, alerts, settings */
+/* SmartRoute shared UI — stable sidebar; topbar with LIVE + clock only (no corner logos) */
 const SR_PUBLIC_PAGES = ['index.html', 'login.html', 'signup.html', ''];
 
 function isLoggedIn() {
@@ -169,18 +169,12 @@ function ensureStableSidebar(active) {
   shell.setAttribute('data-sr-sidebar-locked', '1');
 }
 
+/** Top-right: LIVE status + live clock only (no alert/settings logos) */
 function buildTopbarRightHtml() {
   return '' +
     '<div class="topbar-right" style="display:flex;align-items:center;gap:10px;margin-left:auto;">' +
       '<span class="live-pill" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(0,255,136,0.12);border:1px solid rgba(0,255,136,0.35);color:#00ff88;font-size:0.75rem;font-weight:800;letter-spacing:0.06em;">● LIVE</span>' +
       '<span id="sr-clock" class="clock-pill" style="font-family:JetBrains Mono,monospace;font-size:0.85rem;font-weight:600;color:#e8f4ff;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);padding:6px 12px;border-radius:8px;min-width:88px;text-align:center;">--:--:--</span>' +
-      '<a href="alerts.html" id="sr-alerts-btn" title="Alerts" style="position:relative;width:40px;height:40px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,149,0,0.12);border:1px solid rgba(255,149,0,0.4);text-decoration:none;font-size:1.15rem;">' +
-        '🔔' +
-        '<span style="position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:#ff3b3b;border:1.5px solid #0a1628;box-shadow:0 0 6px #ff3b3b;"></span>' +
-      '</a>' +
-      '<a href="settings.html" id="sr-settings-btn" title="Settings" style="width:40px;height:40px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.35);text-decoration:none;font-size:1.15rem;">' +
-        '⚙' +
-      '</a>' +
     '</div>';
 }
 
@@ -191,8 +185,13 @@ function ensureTopbar(opts) {
 
   var existing = document.querySelector('.topbar');
   if (existing) {
+    // Remove any leftover alert/settings icons from older builds
+    var oldAlerts = document.getElementById('sr-alerts-btn');
+    var oldSettings = document.getElementById('sr-settings-btn');
+    if (oldAlerts && oldAlerts.parentNode) oldAlerts.parentNode.removeChild(oldAlerts);
+    if (oldSettings && oldSettings.parentNode) oldSettings.parentNode.removeChild(oldSettings);
     var right = existing.querySelector('.topbar-right');
-    if (!right || !document.getElementById('sr-alerts-btn')) {
+    if (!right || !document.getElementById('sr-clock')) {
       if (right) right.outerHTML = buildTopbarRightHtml();
       else existing.insertAdjacentHTML('beforeend', buildTopbarRightHtml());
     }
@@ -243,8 +242,7 @@ function initSharedComponents(opts) {
   function tick() {
     var el = document.getElementById('sr-clock');
     if (!el) return;
-    var now = new Date();
-    el.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    el.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
   tick();
   if (!window._srClockTimer) {
@@ -273,7 +271,7 @@ function loadScript(src, next) {
     return;
   }
   var s = document.createElement('script');
-  s.src = src + (src.indexOf('?') >= 0 ? '&' : '?') + 'v=nav5';
+  s.src = src + (src.indexOf('?') >= 0 ? '&' : '?') + 'v=nav6';
   s.async = true;
   s.onload = function () { if (next) next(); };
   s.onerror = function () { if (next) next(); };
