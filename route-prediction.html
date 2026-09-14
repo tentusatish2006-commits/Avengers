@@ -26,14 +26,14 @@
         .initial-state { text-align: center; color: var(--text-muted); margin-top: 50px; }
         .results-state { display: none; flex-direction: column; gap: 20px; }
         .results-state.active { display: flex; animation: fadeIn 0.5s ease forwards; }
-        .risk-gauge { width: 150px; height: 150px; border-radius: 50%; background: conic-gradient(var(--status-danger) 78%, rgba(255,255,255,0.1) 0); display: flex; justify-content: center; align-items: center; margin: 0 auto; position: relative; }
+        .risk-gauge { width: 150px; height: 150px; border-radius: 50%; background: conic-gradient(var(--status-danger) 78%, rgba(255,255,255,0.1) 0); display: flex; justify-content: center; align-items: center; margin: 0 auto; position: relative; transition: background 0.6s ease; }
         .risk-gauge::before { content: ''; position: absolute; width: 130px; height: 130px; background: var(--bg-card); border-radius: 50%; }
         .risk-gauge-text { position: relative; z-index: 1; text-align: center; }
-        .risk-gauge-text h2 { margin: 0; color: var(--status-danger); font-size: 2rem; }
+        .risk-gauge-text h2 { margin: 0; color: var(--status-danger); font-size: 2rem; transition: color 0.4s ease; }
         .risk-bar-container { margin-bottom: 10px; }
         .risk-bar-label { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 5px; }
         .risk-bar { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
-        .risk-bar-fill { height: 100%; border-radius: 3px; }
+        .risk-bar-fill { height: 100%; border-radius: 3px; transition: width 0.7s ease, background 0.5s ease; }
         .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .metric-item { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
         .metric-item .label { font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 5px; }
@@ -117,10 +117,10 @@
                             <div class="risk-bar-container"><div class="risk-bar-label"><span>Landslide Risk</span><span id="val-landslide">71%</span></div><div class="risk-bar"><div id="bar-landslide" class="risk-bar-fill" style="width: 71%; background: var(--status-warn);"></div></div></div>
                         </div>
                         <div class="metrics-grid">
-                            <div class="metric-item danger"><span class="label">Est. Delay</span><span class="value" id="val-delay">+2h 35m</span></div>
-                            <div class="metric-item"><span class="label">Road Accessibility</span><span class="value" id="val-access">42%</span></div>
-                            <div class="metric-item danger"><span class="label">Disruption Prob.</span><span class="value" id="val-disrupt">HIGH</span></div>
-                            <div class="metric-item"><span class="label">Rec. Departure</span><span class="value" id="val-departure">06:00 AM</span></div>
+                            <div class="metric-item danger" id="metric-delay"><span class="label">Est. Delay</span><span class="value" id="val-delay">+2h 35m</span></div>
+                            <div class="metric-item" id="metric-access"><span class="label">Road Accessibility</span><span class="value" id="val-access">42%</span></div>
+                            <div class="metric-item danger" id="metric-disrupt"><span class="label">Disruption Prob.</span><span class="value" id="val-disrupt">HIGH</span></div>
+                            <div class="metric-item" id="metric-departure"><span class="label">Rec. Departure</span><span class="value" id="val-departure">06:00 AM</span></div>
                         </div>
                         <a href="alternate-routes.html" class="btn-primary" style="text-align: center; text-decoration: none;">VIEW ALTERNATE ROUTES</a>
                         <button class="btn-secondary" id="btn-gen-report">GENERATE REPORT</button>
@@ -132,18 +132,36 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+    <script src="js/api.js"></script>
     <script src="js/components.js"></script>
     <script src="js/map-engine.js"></script>
     <script src="js/charts.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            if(window.SmartRoute) SmartRoute.initSharedComponents({ title: 'AI Route Prediction', subtitle: 'Machine Learning Route Risk Analysis — NER' });
-            if(window.MapEngine) MapEngine.initMap('map', { center: [25.80, 91.60], zoom: 7 });
+            if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'AI Route Prediction', subtitle: 'Machine Learning Route Risk Analysis — NER' });
+            if (window.MapEngine) MapEngine.initMap('map', { center: [25.80, 91.60], zoom: 7 });
             const btnReport = document.getElementById('btn-gen-report');
             if (btnReport) btnReport.addEventListener('click', () => {
                 if (window.SmartRoute) SmartRoute.showToast('Compiling Route Risk Dossier (PDF)... Check Reports Center', 'success');
             });
         });
+
+        function colorFor(value) {
+            if (value >= 70) return 'var(--status-danger)';
+            if (value >= 40) return 'var(--status-warn)';
+            return 'var(--status-safe)';
+        }
+
+        function setBar(id, value) {
+            const bar = document.getElementById('bar-' + id);
+            const label = document.getElementById('val-' + id);
+            if (bar) {
+                bar.style.width = value + '%';
+                bar.style.background = colorFor(value);
+            }
+            if (label) label.textContent = value + '%';
+        }
+
         async function analyzeRoute() {
             const scanner = document.getElementById('scanner');
             const initialState = document.getElementById('initial-state');
@@ -152,33 +170,109 @@
             const dstEl = document.getElementById('dest');
             const source = srcEl ? srcEl.options[srcEl.selectedIndex].text : 'Guwahati (Assam)';
             const destination = dstEl ? dstEl.options[dstEl.selectedIndex].text : 'Shillong (Meghalaya)';
+            const vehicleType = document.getElementById('vehicle-type').value;
+            const priority = document.getElementById('priority').value;
+
             scanner.classList.add('active');
             initialState.style.display = 'none';
             resultsState.classList.remove('active');
+
             let data = null;
             try {
                 if (window.SmartRouteAPI && window.SmartRouteAPI.predictRouteRisk) {
-                    data = await window.SmartRouteAPI.predictRouteRisk(source, destination, document.getElementById('vehicle-type').value, document.getElementById('priority').value);
+                    data = await window.SmartRouteAPI.predictRouteRisk(source, destination, vehicleType, priority);
                 }
-            } catch (err) { console.warn(err); }
-            await new Promise(r => setTimeout(r, 1200));
+            } catch (err) {
+                console.warn('API call failed:', err);
+            }
+
+            // Keep scanner visible briefly for better UX
+            await new Promise(r => setTimeout(r, 1100));
+
             scanner.classList.remove('active');
             resultsState.classList.add('active');
-            if (data && data.status === 'success') {
-                const score = Math.round(data.risk_score || 78);
-                const sev = (data.severity || 'HIGH').toUpperCase();
-                const gaugeVal = document.getElementById('risk-gauge-val');
-                if (gaugeVal) { gaugeVal.textContent = score; }
-                const gaugeSub = document.getElementById('risk-gauge-sub');
-                if (gaugeSub) gaugeSub.textContent = '% RISK — ' + sev;
+
+            // Fallback demo data if backend is offline
+            if (!data || data.status !== 'success') {
+                data = {
+                    risk_score: 72,
+                    severity: 'HIGH',
+                    breakdown: {
+                        road_condition: 58,
+                        weather_risk: 76,
+                        traffic_load: 42,
+                        flood_risk: 68,
+                        landslide_risk: 71
+                    },
+                    metrics: {
+                        est_delay: '+1h 50m',
+                        road_accessibility_pct: 38,
+                        disruption_probability: 'HIGH',
+                        rec_departure: '06:00 AM'
+                    }
+                };
+                if (window.SmartRoute) {
+                    SmartRoute.showToast('Backend offline — showing simulated prediction', 'warn');
+                }
             }
+
+            // Update risk gauge
+            const score = Math.round(data.risk_score || 0);
+            const sev = (data.severity || 'HIGH').toUpperCase();
+            const gaugeVal = document.getElementById('risk-gauge-val');
+            const gaugeSub = document.getElementById('risk-gauge-sub');
+            const gauge = document.getElementById('risk-gauge');
+
+            if (gaugeVal) gaugeVal.textContent = score;
+            if (gaugeSub) gaugeSub.textContent = '% RISK — ' + sev;
+
+            // Dynamic gauge color
+            let gaugeColor = 'var(--status-danger)';
+            if (score < 35) gaugeColor = 'var(--status-safe)';
+            else if (score < 55) gaugeColor = 'var(--status-warn)';
+
+            if (gauge) {
+                gauge.style.background = `conic-gradient(${gaugeColor} ${score}%, rgba(255,255,255,0.1) 0)`;
+            }
+            if (gaugeVal) gaugeVal.style.color = gaugeColor;
+
+            // Update breakdown bars
+            const b = data.breakdown || {};
+            setBar('road', Math.round(b.road_condition || 0));
+            setBar('weather', Math.round(b.weather_risk || 0));
+            setBar('traffic', Math.round(b.traffic_load || 0));
+            setBar('flood', Math.round(b.flood_risk || 0));
+            setBar('landslide', Math.round(b.landslide_risk || 0));
+
+            // Update metrics
+            const m = data.metrics || {};
+            const delayEl = document.getElementById('val-delay');
+            const accessEl = document.getElementById('val-access');
+            const disruptEl = document.getElementById('val-disrupt');
+            const departEl = document.getElementById('val-departure');
+
+            if (delayEl) delayEl.textContent = m.est_delay || '—';
+            if (accessEl) accessEl.textContent = (m.road_accessibility_pct || 0) + '%';
+            if (disruptEl) disruptEl.textContent = m.disruption_probability || '—';
+            if (departEl) departEl.textContent = m.rec_departure || '—';
+
+            // Highlight danger metrics
+            const delayMetric = document.getElementById('metric-delay');
+            const disruptMetric = document.getElementById('metric-disrupt');
+            if (delayMetric) delayMetric.classList.toggle('danger', score > 50);
+            if (disruptMetric) disruptMetric.classList.toggle('danger', (m.disruption_probability || '').toUpperCase() === 'HIGH');
+
+            // Map updates
             if (window.MapEngine && MapEngine.map) {
                 if (MapEngine.addRoads) MapEngine.addRoads();
                 if (MapEngine.drawAlternateRoutes) MapEngine.drawAlternateRoutes();
                 if (MapEngine.addIncidents) MapEngine.addIncidents();
                 MapEngine.map.setView([25.80, 91.60], 7);
             }
-            if (window.SmartRoute) SmartRoute.showToast('AI ML prediction computed for ' + source + ' ➔ ' + destination, 'info');
+
+            if (window.SmartRoute && data.status === 'success') {
+                SmartRoute.showToast('AI prediction ready: ' + source + ' → ' + destination + ' (' + sev + ')', 'success');
+            }
         }
     </script>
 </body>
