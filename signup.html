@@ -1,1 +1,150 @@
-SEE_FILE
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>SmartRoute - Officer Registration</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    body { margin:0; min-height:100vh; font-family:Outfit,sans-serif; background:#030810; color:#fff;
+      display:flex; align-items:center; justify-content:center; padding:24px; box-sizing:border-box; }
+    .card { width:min(560px,100%); padding:28px 32px; border-radius:16px;
+      background:rgba(8,18,36,0.92); border:1px solid rgba(0,212,255,0.3); }
+    h1 { margin:0 0 4px; font-size:1.6rem; }
+    .sub { color:#8fa3b8; margin-bottom:18px; font-size:0.9rem; }
+    .roles { display:flex; gap:8px; margin-bottom:16px; }
+    .role-card { flex:1; text-align:center; padding:10px 6px; border-radius:10px; cursor:pointer;
+      border:1px solid rgba(0,212,255,0.2); background:rgba(255,255,255,0.03); font-size:0.75rem; }
+    .role-card.active { border-color:#00d4ff; background:rgba(0,212,255,0.12); }
+    .role-title { font-weight:800; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    label { display:block; font-size:0.72rem; color:#8fa3b8; margin:0 0 4px; text-transform:uppercase; }
+    input, select { width:100%; box-sizing:border-box; padding:11px; border-radius:8px;
+      border:1px solid rgba(0,212,255,0.25); background:#061018; color:#fff; font-family:inherit; }
+    .full { grid-column:1 / -1; }
+    .btn { width:100%; margin-top:16px; padding:14px; border:none; border-radius:8px; font-weight:800;
+      cursor:pointer; background:linear-gradient(90deg,#00d4ff,#00ff88); color:#031018; }
+    .links { margin-top:14px; text-align:center; color:#8fa3b8; font-size:0.88rem; }
+    .links a { color:#00d4ff; font-weight:700; text-decoration:none; }
+    #loading { display:none; position:fixed; inset:0; background:rgba(3,8,16,0.92); z-index:50;
+      align-items:center; justify-content:center; flex-direction:column; color:#00d4ff; font-weight:700; gap:12px; }
+    @media(max-width:600px){ .grid{ grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Officer Registration</h1>
+    <div class="sub">Enroll for SmartRoute NER Command Center</div>
+    <div class="roles" id="roles">
+      <div class="role-card active" data-role="ADMINISTRATOR"><div class="role-title">ADMINISTRATOR</div></div>
+      <div class="role-card" data-role="FIELD OFFICER"><div class="role-title">FIELD OFFICER</div></div>
+      <div class="role-card" data-role="LOCAL AUTHORITY"><div class="role-title">LOCAL AUTHORITY</div></div>
+    </div>
+    <form id="signup-form">
+      <div class="grid">
+        <div>
+          <label for="full-name">Full Name</label>
+          <input id="full-name" required placeholder="Capt. Rajesh Barman">
+        </div>
+        <div>
+          <label for="badge-id">Service / Badge ID</label>
+          <input id="badge-id" required placeholder="NE-CMD-904">
+        </div>
+        <div>
+          <label for="department">Agency</label>
+          <select id="department">
+            <option>National Disaster Response Force (NDRF)</option>
+            <option>Border Roads Organisation (BRO)</option>
+            <option>Assam State Disaster Mgmt (ASDMA)</option>
+            <option>Emergency Medical Logistics</option>
+          </select>
+        </div>
+        <div>
+          <label for="region">North-East Region</label>
+          <select id="region">
+            <option>Assam (Guwahati)</option>
+            <option>Arunachal Pradesh (Itanagar)</option>
+            <option>Meghalaya (Shillong)</option>
+            <option>Nagaland (Kohima)</option>
+            <option>Manipur (Imphal)</option>
+            <option>Mizoram (Aizawl)</option>
+            <option>Tripura (Agartala)</option>
+            <option>Sikkim (Gangtok)</option>
+          </select>
+        </div>
+        <div class="full">
+          <label for="email">Official Email</label>
+          <input id="email" type="email" required placeholder="officer@nic.in">
+        </div>
+        <div>
+          <label for="password">Security Passcode</label>
+          <input id="password" type="password" required>
+        </div>
+        <div>
+          <label for="confirm-password">Confirm Passcode</label>
+          <input id="confirm-password" type="password" required>
+        </div>
+      </div>
+      <button type="submit" class="btn" id="btn-signup">REGISTER & ACCESS COMMAND CENTER</button>
+    </form>
+    <div class="links">Already registered? <a href="login.html">Login</a> · <a href="index.html">Home</a></div>
+  </div>
+  <div id="loading">Enrolling officer…</div>
+
+  <script src="js/auth-users.js?v=auth2"></script>
+  <script src="js/signup-handler.js?v=auth2"></script>
+  <script>
+  (function () {
+    var role = 'ADMINISTRATOR';
+    document.getElementById('roles').addEventListener('click', function (e) {
+      var card = e.target.closest('.role-card');
+      if (!card) return;
+      document.querySelectorAll('.role-card').forEach(function (c) { c.classList.remove('active'); });
+      card.classList.add('active');
+      role = card.getAttribute('data-role') || 'ADMINISTRATOR';
+    });
+
+    function doSignup(e) {
+      if (e) e.preventDefault();
+      var pass = document.getElementById('password').value;
+      var confirmPass = document.getElementById('confirm-password').value;
+      if (pass !== confirmPass) { alert('Passcodes do not match.'); return; }
+      if (!pass) { alert('Enter a passcode.'); return; }
+
+      var name = document.getElementById('full-name').value.trim();
+      var badge = document.getElementById('badge-id').value.trim();
+      var email = document.getElementById('email').value.trim();
+      var dept = document.getElementById('department').value;
+      var region = document.getElementById('region').value;
+
+      try {
+        if (!window.SmartRouteAuth) throw new Error('Auth not loaded');
+        SmartRouteAuth.registerUser({
+          username: name,
+          officerId: badge,
+          email: email,
+          password: pass,
+          role: role,
+          department: dept,
+          region: region
+        });
+      } catch (err) {
+        alert('Registration failed: ' + (err.message || err));
+        return;
+      }
+
+      document.getElementById('loading').style.display = 'flex';
+      setTimeout(function () {
+        window.location.replace('dashboard.html');
+      }, 400);
+    }
+
+    document.getElementById('signup-form').addEventListener('submit', doSignup);
+    window.doSignup = doSignup;
+  })();
+  </script>
+</body>
+</html>
