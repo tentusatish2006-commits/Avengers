@@ -1,4 +1,4 @@
-/* SmartRoute shared UI — STABLE left sidebar (never changes on button clicks) */
+/* SmartRoute shared UI — STABLE left sidebar + topbar with live time, alerts, settings */
 const SR_PUBLIC_PAGES = ['index.html', 'login.html', 'signup.html', ''];
 
 function isLoggedIn() {
@@ -66,7 +66,6 @@ function brandLogoHtml(size) {
   return '<div class="sr-logo-mark" style="width:' + size + 'px;height:' + size + 'px;border-radius:10px;background:linear-gradient(135deg,#00d4ff,#00ff88);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:' + Math.round(size * 0.38) + 'px;color:#031018;box-shadow:0 0 16px rgba(0,212,255,0.45);flex-shrink:0;">SR</div>';
 }
 
-/** Fixed menu definition — same on every page */
 var SR_SIDEBAR_SECTIONS = [
   {
     label: 'Command',
@@ -149,7 +148,6 @@ function buildSidebar(active) {
   return html;
 }
 
-/** Only update active highlight — do NOT rebuild menu HTML */
 function highlightSidebarActive() {
   var page = currentPage();
   var root = document.getElementById('sidebar');
@@ -160,40 +158,66 @@ function highlightSidebarActive() {
   });
 }
 
-/**
- * Mount sidebar ONCE. Remove any page-local sidebars so left menu never changes layout.
- */
 function ensureStableSidebar(active) {
   var shell = document.querySelector('.app-shell');
   if (!shell) return;
-
-  // Remove ALL existing sidebars (page-specific ones cause the "changes on click" bug)
   shell.querySelectorAll('aside.sidebar, #sidebar, .sidebar').forEach(function (el) {
     if (el.parentNode) el.parentNode.removeChild(el);
   });
-
-  // Insert the single shared sidebar
   shell.insertAdjacentHTML('afterbegin', buildSidebar(active));
   highlightSidebarActive();
-
-  // Mark shell so i18n scripts know not to wipe nav structure
   shell.setAttribute('data-sr-sidebar-locked', '1');
+}
+
+function buildTopbarRightHtml() {
+  return '' +
+    '<div class="topbar-right" style="display:flex;align-items:center;gap:10px;margin-left:auto;">' +
+      '<span class="live-pill" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(0,255,136,0.12);border:1px solid rgba(0,255,136,0.35);color:#00ff88;font-size:0.75rem;font-weight:800;letter-spacing:0.06em;">● LIVE</span>' +
+      '<span id="sr-clock" class="clock-pill" style="font-family:JetBrains Mono,monospace;font-size:0.85rem;font-weight:600;color:#e8f4ff;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);padding:6px 12px;border-radius:8px;min-width:88px;text-align:center;">--:--:--</span>' +
+      '<a href="alerts.html" id="sr-alerts-btn" title="Alerts" style="position:relative;width:40px;height:40px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,149,0,0.12);border:1px solid rgba(255,149,0,0.4);text-decoration:none;font-size:1.15rem;">' +
+        '🔔' +
+        '<span style="position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:#ff3b3b;border:1.5px solid #0a1628;box-shadow:0 0 6px #ff3b3b;"></span>' +
+      '</a>' +
+      '<a href="settings.html" id="sr-settings-btn" title="Settings" style="width:40px;height:40px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.35);text-decoration:none;font-size:1.15rem;">' +
+        '⚙' +
+      '</a>' +
+    '</div>';
+}
+
+function ensureTopbar(opts) {
+  opts = opts || {};
+  var main = document.getElementById('main-content') || document.querySelector('.main-content');
+  if (!main) return;
+
+  var existing = document.querySelector('.topbar');
+  if (existing) {
+    var right = existing.querySelector('.topbar-right');
+    if (!right || !document.getElementById('sr-alerts-btn')) {
+      if (right) right.outerHTML = buildTopbarRightHtml();
+      else existing.insertAdjacentHTML('beforeend', buildTopbarRightHtml());
+    }
+    return;
+  }
+
+  var top = document.createElement('div');
+  top.className = 'topbar';
+  top.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(0,212,255,0.15);background:rgba(5,12,28,0.9);position:sticky;top:0;z-index:40;';
+  top.innerHTML =
+    '<div class="topbar-left" style="display:flex;align-items:center;gap:12px;">' +
+      '<button type="button" class="icon-btn" id="sr-menu" aria-label="Menu" style="width:36px;height:36px;border-radius:8px;border:1px solid rgba(0,212,255,0.25);background:rgba(0,212,255,0.08);color:#e8f4ff;cursor:pointer;font-size:1.1rem;">☰</button>' +
+      '<div><div class="topbar-title" style="font-weight:700;color:#e8f4ff;">' + (opts.title || document.title) + '</div>' +
+      '<div class="topbar-sub" style="font-size:0.78rem;color:#8fa3b8;">' + (opts.subtitle || '') + '</div></div>' +
+    '</div>' +
+    buildTopbarRightHtml();
+  main.insertBefore(top, main.firstChild);
 }
 
 function initSharedComponents(opts) {
   opts = opts || {};
   if (!requireAuth()) return;
 
-  // Always enforce the SAME left sidebar
   ensureStableSidebar(opts.active);
-
-  var main = document.getElementById('main-content') || document.querySelector('.main-content');
-  if (main && !document.querySelector('.topbar')) {
-    var top = document.createElement('div');
-    top.className = 'topbar';
-    top.innerHTML = '<div class="topbar-left"><button type="button" class="icon-btn" id="sr-menu" aria-label="Menu">☰</button><div><div class="topbar-title">' + (opts.title || document.title) + '</div><div class="topbar-sub">' + (opts.subtitle || '') + '</div></div></div><div class="topbar-right"><span class="live-pill">● LIVE</span><span id="sr-clock" class="clock-pill"></span></div>';
-    main.insertBefore(top, main.firstChild);
-  }
+  ensureTopbar(opts);
 
   var so = document.getElementById('sr-signout');
   if (so) {
@@ -213,20 +237,20 @@ function initSharedComponents(opts) {
   if (menu) {
     menu.onclick = function () {
       document.body.classList.toggle('sidebar-open');
-      // never rebuild sidebar on menu toggle
     };
   }
 
   function tick() {
     var el = document.getElementById('sr-clock');
-    if (el) el.textContent = new Date().toLocaleTimeString();
+    if (!el) return;
+    var now = new Date();
+    el.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
   tick();
   if (!window._srClockTimer) {
     window._srClockTimer = setInterval(tick, 1000);
   }
 
-  // Translate labels only (do not rebuild)
   applySidebarLabels();
   ensureI18n();
 }
@@ -249,7 +273,7 @@ function loadScript(src, next) {
     return;
   }
   var s = document.createElement('script');
-  s.src = src + (src.indexOf('?') >= 0 ? '&' : '?') + 'v=nav4';
+  s.src = src + (src.indexOf('?') >= 0 ? '&' : '?') + 'v=nav5';
   s.async = true;
   s.onload = function () { if (next) next(); };
   s.onerror = function () { if (next) next(); };
