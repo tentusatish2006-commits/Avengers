@@ -15,13 +15,35 @@
     .officer-info { display: flex; justify-content: space-between; align-items: center; }
     .status-dot { width: 10px; height: 10px; background: #00ff88; border-radius: 50%; display: inline-block; box-shadow: 0 0 8px #00ff88; }
     .form-group { margin-bottom: 15px; }
-    .form-group label { display: block; margin-bottom: 5px; font-size: 0.9em; }
-    .form-control { width: 100%; padding: 12px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 8px; box-sizing: border-box; }
+    .form-group label { display: block; margin-bottom: 5px; font-size: 0.9em; color: #8fa3b8; }
+    .form-control { width: 100%; padding: 12px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 8px; box-sizing: border-box; font-family: inherit; }
     .btn-large { padding: 15px; font-size: 1.1em; width: 100%; text-transform: uppercase; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; }
     .loading-overlay { position: fixed; inset: 0; background: rgba(3,8,16,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
     .spinner { width: 50px; height: 50px; border: 5px solid rgba(0,212,255,0.2); border-top-color: #00d4ff; border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
     .success-screen { display: none; text-align: center; }
+    .search-wrap { position: relative; margin-bottom: 4px; }
+    .officer-search {
+      width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 10px;
+      border: 1px solid rgba(0,212,255,0.35); background: rgba(6,16,24,0.95);
+      color: #e8f4ff; font-family: inherit; font-size: 0.95rem;
+    }
+    .search-results {
+      display: none; position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 40;
+      background: #0a1628; border: 1px solid rgba(0,212,255,0.35); border-radius: 10px;
+      max-height: 240px; overflow-y: auto;
+    }
+    .search-results.show { display: block; }
+    .search-item { padding: 12px 14px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .search-item:hover { background: rgba(0,212,255,0.12); }
+    .search-item .name { font-weight: 700; color: #e8f4ff; }
+    .search-item .meta { font-size: 0.8rem; color: #8fa3b8; margin-top: 2px; }
+    .empty-hint {
+      text-align: center; padding: 28px 16px; border-radius: 14px;
+      border: 1px dashed rgba(0,212,255,0.3); background: rgba(0,212,255,0.04); color: #8fa3b8;
+    }
+    #report-body { display: none; flex-direction: column; gap: 15px; }
+    #report-body.show { display: flex; }
   </style>
 </head>
 <body>
@@ -29,59 +51,85 @@
     <div class="main-content" id="main-content">
       <main class="page-body">
         <div class="mobile-container" id="report-form">
-          <div class="glass-card officer-info" style="padding:14px;">
-            <div>
-              <strong>FO-042 | Ravi Kumar</strong><br>
-              <span class="text-sm" style="color:#00d4ff;">North-Eastern Command (Assam Sector)</span>
-            </div>
-            <div class="text-right">
-              <span class="status-dot"></span> Online<br>
-              <span class="text-sm" id="current-time"></span>
-            </div>
+          <div class="page-header" style="margin-bottom:4px;">
+            <h1 class="page-title" style="margin:0;font-size:1.35rem;">Field Report</h1>
+            <p class="page-subtitle" style="margin:4px 0 0;color:#8fa3b8;font-size:0.9rem;">Search officer first — then file incident</p>
           </div>
 
+          <!-- Officer search (no default) -->
           <div class="glass-card" style="padding:14px;">
-            <button class="btn btn-primary btn-large" id="btn-location">📍 GET LOCATION</button>
-            <div id="location-data" class="text-sm text-cyan" style="margin-top: 10px; font-family:'JetBrains Mono',monospace;">Lat: 26.1524, Lng: 91.7510 · Guwahati Riverfront, Assam</div>
-            <div id="mini-map" style="height:200px; border-radius:10px; margin-top:10px; border:1px solid rgba(0,212,255,0.3); overflow:hidden;"></div>
+            <label class="form-group" style="margin:0 0 8px;">
+              <span style="font-size:0.75rem;font-weight:700;color:#8fa3b8;text-transform:uppercase;letter-spacing:0.05em;">Officer</span>
+            </label>
+            <div class="search-wrap">
+              <input type="text" id="officer-search" class="officer-search"
+                placeholder="Search by name, FO-ID or district..." autocomplete="off">
+              <div id="search-results" class="search-results"></div>
+            </div>
+            <p style="margin:8px 0 0;font-size:0.8rem;color:#6a8ea8;">No officer is loaded by default. Type a name (e.g. Ravi) or ID (FO-042).</p>
           </div>
 
-          <div class="glass-card" style="padding:14px;">
-            <button class="btn btn-primary btn-large" id="btn-photo">📷 TAKE PHOTO / UPLOAD</button>
-            <input type="file" id="file-input" accept="image/*" style="display:none;">
-            <div id="photo-preview" style="background-size:cover; background-position:center; height:150px; border-radius:8px; margin-top:10px; display:flex; align-items:center; justify-content:center; background-color:#0d1b2a; border:1px dashed rgba(0,212,255,0.4); color:#8fa3b8; font-size:12px;">No photo selected</div>
+          <div id="empty-hint" class="empty-hint">
+            <div style="font-size:1.5rem;margin-bottom:8px;">👮</div>
+            <strong style="color:#e8f4ff;">Select an officer to continue</strong>
+            <p style="margin:8px 0 0;">Location, photo and submit appear only after you choose an officer from search.</p>
           </div>
 
-          <div class="glass-card" style="padding:14px;">
-            <div class="form-group">
-              <label>Incident Type</label>
-              <select id="inc-type" class="form-control">
-                <option>Landslide</option>
-                <option>Flood</option>
-                <option>Road Damage</option>
-                <option>Bridge Issue</option>
-                <option>Tree Fall</option>
-                <option>Other</option>
-              </select>
+          <div id="report-body">
+            <div class="glass-card officer-info" style="padding:14px;">
+              <div>
+                <strong id="oi-title">—</strong><br>
+                <span class="text-sm" id="oi-sector" style="color:#00d4ff;">—</span>
+              </div>
+              <div class="text-right">
+                <span class="status-dot"></span> <span id="oi-status">Online</span><br>
+                <span class="text-sm" id="current-time"></span>
+              </div>
             </div>
-            <div class="form-group">
-              <label>Severity</label>
-              <select id="inc-severity" class="form-control">
-                <option>Critical</option>
-                <option>High</option>
-                <option>Medium</option>
-                <option>Low</option>
-              </select>
+
+            <div class="glass-card" style="padding:14px;">
+              <button class="btn btn-primary btn-large" id="btn-location" type="button">📍 GET LOCATION</button>
+              <div id="location-data" class="text-sm text-cyan" style="margin-top: 10px; font-family:'JetBrains Mono',monospace;">—</div>
+              <div id="mini-map" style="height:200px; border-radius:10px; margin-top:10px; border:1px solid rgba(0,212,255,0.3); overflow:hidden;"></div>
             </div>
-            <div class="form-group">
-              <label>Description</label>
-              <textarea id="inc-desc" class="form-control" rows="4" placeholder="Enter details of obstruction, damage, or hazard..."></textarea>
+
+            <div class="glass-card" style="padding:14px;">
+              <button class="btn btn-primary btn-large" id="btn-photo" type="button">📷 TAKE PHOTO / UPLOAD</button>
+              <input type="file" id="file-input" accept="image/*" style="display:none;">
+              <div id="photo-preview" style="background-size:cover; background-position:center; height:150px; border-radius:8px; margin-top:10px; display:flex; align-items:center; justify-content:center; background-color:#0d1b2a; border:1px dashed rgba(0,212,255,0.4); color:#8fa3b8; font-size:12px;">No photo selected</div>
             </div>
-            <div class="form-group">
-              <label>Road/Location Name</label>
-              <input id="inc-road" type="text" class="form-control" placeholder="e.g. NH-6 KM 52 near Shillong" value="NH-6 KM 48 (Shillong Sector)">
+
+            <div class="glass-card" style="padding:14px;">
+              <div class="form-group">
+                <label>Incident Type</label>
+                <select id="inc-type" class="form-control">
+                  <option>Landslide</option>
+                  <option>Flood</option>
+                  <option>Road Damage</option>
+                  <option>Bridge Issue</option>
+                  <option>Tree Fall</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Severity</label>
+                <select id="inc-severity" class="form-control">
+                  <option>Critical</option>
+                  <option>High</option>
+                  <option>Medium</option>
+                  <option>Low</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Description</label>
+                <textarea id="inc-desc" class="form-control" rows="4" placeholder="Enter details of obstruction, damage, or hazard..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>Road/Location Name</label>
+                <input id="inc-road" type="text" class="form-control" placeholder="e.g. NH-6 KM 52 near Shillong">
+              </div>
+              <button class="btn-large" style="background: #ff3b3b; color: white;" id="btn-submit" type="button">🚨 SUBMIT REPORT</button>
             </div>
-            <button class="btn-large" style="background: #ff3b3b; color: white;" id="btn-submit">🚨 SUBMIT REPORT</button>
           </div>
         </div>
 
@@ -95,7 +143,7 @@
             <div style="font-size:3rem;">✅</div>
             <h2>Incident Report Successfully Submitted</h2>
             <p id="report-id-text" class="text-cyan" style="margin: 20px 0; font-size: 1.2em;">Report ID: RPT-2089</p>
-            <button class="btn btn-primary btn-large" onclick="location.reload()">Back to Form</button>
+            <button class="btn btn-primary btn-large" type="button" onclick="location.reload()">Back to Form</button>
           </div>
         </div>
       </main>
@@ -103,9 +151,119 @@
   </div>
 
   <script src="js/components.js"></script>
-  <script src="js/map-engine.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+  (function () {
+    var OFFICERS = [
+      { id: 'FO-042', name: 'Ravi Kumar', dist: 'Assam', lat: 26.1524, lng: 91.7510,
+        sector: 'North-Eastern Command (Assam Sector)', place: 'Guwahati Riverfront Base, Assam' },
+      { id: 'FO-015', name: 'Lakshmi Devi', dist: 'Arunachal Pradesh', lat: 27.584, lng: 91.862,
+        sector: 'North-Eastern Command (Tawang Sector)', place: 'NH-13 Tawang Pass' },
+      { id: 'FO-028', name: 'Suresh Rao', dist: 'Nagaland', lat: 25.67, lng: 94.10,
+        sector: 'North-Eastern Command (Nagaland Sector)', place: 'Kohima Pass' },
+      { id: 'FO-061', name: 'Anand Babu', dist: 'Meghalaya', lat: 25.57, lng: 91.89,
+        sector: 'North-Eastern Command (Meghalaya Sector)', place: 'Shillong Plateau' },
+      { id: 'FO-033', name: 'Priya Singh', dist: 'Sikkim', lat: 27.33, lng: 88.61,
+        sector: 'North-Eastern Command (Sikkim Sector)', place: 'Gangtok Depot' },
+      { id: 'FO-077', name: 'Mohan Rao', dist: 'Tripura', lat: 23.83, lng: 91.28,
+        sector: 'North-Eastern Command (Tripura Sector)', place: 'Agartala Corridor' },
+      { id: 'FO-089', name: 'Kavitha Reddy', dist: 'Mizoram', lat: 23.73, lng: 92.71,
+        sector: 'North-Eastern Command (Mizoram Sector)', place: 'Aizawl High Pass' },
+      { id: 'FO-055', name: 'Rajesh Varma', dist: 'Manipur', lat: 24.817, lng: 93.936,
+        sector: 'North-Eastern Command (Manipur Sector)', place: 'Imphal Valley' }
+    ];
+
+    var current = null;
+    var acquiredLat = null;
+    var acquiredLng = null;
+    var fieldMap = null;
+
+    function toast(msg, type) {
+      if (window.SmartRoute && SmartRoute.showToast) SmartRoute.showToast(msg, type || 'info');
+    }
+
+    function filterOfficers(q) {
+      q = (q || '').toLowerCase().trim();
+      if (!q) return OFFICERS.slice();
+      return OFFICERS.filter(function (o) {
+        return o.name.toLowerCase().indexOf(q) >= 0 ||
+          o.id.toLowerCase().indexOf(q) >= 0 ||
+          o.dist.toLowerCase().indexOf(q) >= 0;
+      });
+    }
+
+    function renderResults(list) {
+      var box = document.getElementById('search-results');
+      if (!list.length) {
+        box.innerHTML = '<div class="search-item"><div class="meta">No officers found</div></div>';
+        box.classList.add('show');
+        return;
+      }
+      box.innerHTML = list.map(function (o) {
+        return '<div class="search-item" data-id="' + o.id + '">' +
+          '<div class="name">' + o.name + ' · ' + o.id + '</div>' +
+          '<div class="meta">' + o.dist + ' · ' + o.place + '</div></div>';
+      }).join('');
+      box.classList.add('show');
+      box.querySelectorAll('.search-item[data-id]').forEach(function (el) {
+        el.onclick = function () {
+          var id = el.getAttribute('data-id');
+          var off = OFFICERS.find(function (x) { return x.id === id; });
+          if (off) selectOfficer(off);
+          box.classList.remove('show');
+          document.getElementById('officer-search').value = off.name + ' (' + off.id + ')';
+        };
+      });
+    }
+
+    function renderMapLoc(lat, lng, placeLabel, officerId) {
+      var locEl = document.getElementById('location-data');
+      locEl.innerHTML =
+        'Lat: ' + lat.toFixed(4) + '° N, Lng: ' + lng.toFixed(4) + '° E · ' +
+        (placeLabel || 'NER Sector');
+
+      var mapEl = document.getElementById('mini-map');
+      if (fieldMap) {
+        try { fieldMap.remove(); } catch (e) {}
+        fieldMap = null;
+      }
+      mapEl.innerHTML = '';
+      fieldMap = L.map('mini-map', {
+        center: [lat, lng],
+        zoom: 11,
+        zoomControl: true,
+        attributionControl: false
+      });
+      L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20 }).addTo(fieldMap);
+      L.marker([lat, lng]).addTo(fieldMap)
+        .bindPopup('<b>Officer ' + (officerId || '') + '</b><br>' + (placeLabel || '')).openPopup();
+      setTimeout(function () {
+        if (fieldMap) fieldMap.invalidateSize();
+      }, 150);
+    }
+
+    function selectOfficer(off) {
+      current = off;
+      acquiredLat = off.lat;
+      acquiredLng = off.lng;
+
+      document.getElementById('empty-hint').style.display = 'none';
+      var body = document.getElementById('report-body');
+      body.classList.add('show');
+      body.style.display = 'flex';
+
+      document.getElementById('oi-title').textContent = off.id + ' | ' + off.name;
+      document.getElementById('oi-sector').textContent = off.sector;
+      document.getElementById('oi-status').textContent = 'Online';
+
+      // Clear previous road default — use officer place as hint only
+      var road = document.getElementById('inc-road');
+      if (!road.value) road.placeholder = 'e.g. near ' + off.place;
+
+      renderMapLoc(off.lat, off.lng, off.place, off.id);
+      toast('Reporting as ' + off.name + ' (' + off.id + ')', 'success');
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
       if (window.SmartRoute) {
         SmartRoute.initSharedComponents({
           title: 'Field Report',
@@ -113,53 +271,63 @@
         });
       }
 
-      let acquiredLat = 26.1524;
-      let acquiredLng = 91.7510;
-      let fieldMap = null;
-
       document.getElementById('current-time').textContent = new Date().toLocaleTimeString();
+      setInterval(function () {
+        var el = document.getElementById('current-time');
+        if (el) el.textContent = new Date().toLocaleTimeString();
+      }, 1000);
 
-      function renderMapLoc(lat, lng) {
-        document.getElementById('location-data').innerHTML =
-          'Lat: ' + lat.toFixed(4) + '° N, Lng: ' + lng.toFixed(4) + '° E · Guwahati / Brahmaputra Sector';
-        const mapEl = document.getElementById('mini-map');
-        if (fieldMap) { try { fieldMap.remove(); } catch (e) {} fieldMap = null; }
-        mapEl.innerHTML = '';
-        fieldMap = L.map('mini-map', { center: [lat, lng], zoom: 11, zoomControl: true, attributionControl: false });
-        L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20 }).addTo(fieldMap);
-        L.marker([lat, lng]).addTo(fieldMap)
-          .bindPopup('<b>Officer FO-042</b><br>Guwahati Riverfront Base, Assam').openPopup();
-        setTimeout(() => fieldMap.invalidateSize(), 150);
-      }
+      // No default officer — form body stays hidden until search select
 
-      renderMapLoc(acquiredLat, acquiredLng);
-
-      document.getElementById('btn-location').addEventListener('click', () => {
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              acquiredLat = pos.coords.latitude;
-              acquiredLng = pos.coords.longitude;
-              renderMapLoc(acquiredLat, acquiredLng);
-            },
-            () => renderMapLoc(acquiredLat, acquiredLng),
-            { timeout: 3000 }
-          );
-        } else {
-          renderMapLoc(acquiredLat, acquiredLng);
+      var search = document.getElementById('officer-search');
+      search.addEventListener('input', function () {
+        renderResults(filterOfficers(search.value));
+      });
+      search.addEventListener('focus', function () {
+        renderResults(filterOfficers(search.value));
+      });
+      document.addEventListener('click', function (e) {
+        if (!e.target.closest('.search-wrap')) {
+          document.getElementById('search-results').classList.remove('show');
         }
       });
 
-      document.getElementById('btn-photo').addEventListener('click', () => {
+      document.getElementById('btn-location').addEventListener('click', function () {
+        if (!current) {
+          toast('Select an officer first', 'warn');
+          return;
+        }
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            function (pos) {
+              acquiredLat = pos.coords.latitude;
+              acquiredLng = pos.coords.longitude;
+              renderMapLoc(acquiredLat, acquiredLng, 'Device GPS · ' + current.dist, current.id);
+            },
+            function () {
+              renderMapLoc(current.lat, current.lng, current.place, current.id);
+            },
+            { timeout: 4000 }
+          );
+        } else {
+          renderMapLoc(current.lat, current.lng, current.place, current.id);
+        }
+      });
+
+      document.getElementById('btn-photo').addEventListener('click', function () {
+        if (!current) {
+          toast('Select an officer first', 'warn');
+          return;
+        }
         document.getElementById('file-input').click();
       });
 
-      document.getElementById('file-input').addEventListener('change', (e) => {
-        const file = e.target.files[0];
+      document.getElementById('file-input').addEventListener('change', function (e) {
+        var file = e.target.files[0];
         if (file) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            const preview = document.getElementById('photo-preview');
+          var reader = new FileReader();
+          reader.onload = function (event) {
+            var preview = document.getElementById('photo-preview');
             preview.style.backgroundImage = 'url(' + event.target.result + ')';
             preview.textContent = '';
           };
@@ -167,19 +335,25 @@
         }
       });
 
-      document.getElementById('btn-submit').addEventListener('click', async () => {
-        const type = document.getElementById('inc-type').value;
-        const road = document.getElementById('inc-road').value.trim() || 'NH-6 Shillong Sector';
+      document.getElementById('btn-submit').addEventListener('click', async function () {
+        if (!current) {
+          toast('Select an officer before submitting', 'warn');
+          return;
+        }
+        var type = document.getElementById('inc-type').value;
+        var road = document.getElementById('inc-road').value.trim() || current.place;
         document.getElementById('loading').style.display = 'flex';
-        const reportCode = 'RPT-' + Math.floor(1000 + Math.random() * 9000);
-        await new Promise(r => setTimeout(r, 900));
+        var reportCode = 'RPT-' + Math.floor(1000 + Math.random() * 9000);
+        await new Promise(function (r) { setTimeout(r, 900); });
         document.getElementById('loading').style.display = 'none';
         document.getElementById('report-form').style.display = 'none';
-        document.getElementById('report-id-text').textContent = 'Report ID: ' + reportCode + ' · ' + type + ' at ' + road;
+        document.getElementById('report-id-text').textContent =
+          'Report ID: ' + reportCode + ' · ' + type + ' · ' + current.name + ' (' + current.id + ') · ' + road;
         document.getElementById('success-screen').style.display = 'block';
-        if (window.SmartRoute) SmartRoute.showToast('Incident submitted to NER Command', 'success');
+        toast('Incident submitted by ' + current.name, 'success');
       });
     });
+  })();
   </script>
 </body>
 </html>
