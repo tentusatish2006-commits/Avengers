@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alternate Routes - SmartRoute</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="css/design-system.css">
@@ -13,27 +11,24 @@
     <link rel="stylesheet" href="css/components.css">
     <style>
         .page-body { display: grid; grid-template-columns: 55% 45%; gap: 20px; height: calc(100vh - 80px); padding: 20px; box-sizing: border-box; }
-        .map-container { border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); }
-        #map { width: 100%; height: 100%; background: var(--bg-dark); }
+        .map-container { border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); min-height: 360px; }
+        #map { width: 100%; height: 100%; min-height: 360px; background: #061018; }
         .routes-panel { display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding-right: 10px; }
-        .recommendation-banner { background: rgba(0, 255, 136, 0.1); border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 20px rgba(0, 255, 136, 0.1); }
+        .recommendation-banner { background: rgba(0, 255, 136, 0.1); border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 8px; padding: 15px; text-align: center; }
         .recommendation-banner h2 { color: var(--status-safe); margin: 0 0 5px 0; font-size: 1.2rem; }
-        .recommendation-banner p { margin: 0; font-size: 0.9rem; color: var(--text-light); }
-        .route-card { background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); border-radius: 10px; padding: 15px; cursor: pointer; transition: all 0.3s ease; position: relative; overflow: hidden; }
-        .route-card:hover { transform: translateY(-4px); border-color: var(--accent-cyan); }
+        .route-card { background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); border-radius: 10px; padding: 15px; cursor: pointer; }
         .route-card.recommended { border-color: var(--status-safe); background: rgba(0, 255, 136, 0.05); }
-        .route-card.recommended::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--status-safe); }
-        .route-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .route-title { font-size: 1.1rem; font-weight: 600; color: var(--text-light); margin: 0; }
+        .route-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .route-title { font-size: 1.05rem; font-weight: 600; color: var(--text-light); margin: 0; }
         .badge-recommended { background: rgba(0, 255, 136, 0.2); color: var(--status-safe); padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
         .route-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .stat-line { display: flex; flex-direction: column; font-size: 0.9rem; }
         .stat-line .label { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; }
         .stat-line .val { font-weight: 500; color: var(--text-light); }
         .val.safe { color: var(--status-safe); } .val.warn { color: var(--status-warn); } .val.danger { color: var(--status-danger); }
-        .action-buttons { display: flex; gap: 10px; margin-top: 20px; }
-        .btn-green { background: linear-gradient(135deg, rgba(0,255,136,0.2) 0%, rgba(0,255,136,0.1) 100%); border: 1px solid var(--status-safe); color: var(--status-safe); padding: 12px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; flex: 2; text-align: center; }
-        .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-light); padding: 12px 15px; border-radius: 6px; cursor: pointer; flex: 1; text-align: center; }
+        .action-buttons { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+        .btn-green { background: linear-gradient(135deg, rgba(0,255,136,0.2), rgba(0,255,136,0.1)); border: 1px solid var(--status-safe); color: var(--status-safe); padding: 12px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; flex: 2; }
+        .btn-outline { background: transparent; border: 1px solid rgba(0,212,255,0.35); color: var(--text-light); padding: 12px 15px; border-radius: 6px; cursor: pointer; flex: 1; font-weight: 600; }
+        @media(max-width:900px){ .page-body{grid-template-columns:1fr;height:auto;} #map{min-height:280px;} }
     </style>
 </head>
 <body>
@@ -44,9 +39,9 @@
                 <div class="glass-card routes-panel">
                     <div class="recommendation-banner">
                         <h2>AI RECOMMENDED ROUTE</h2>
-                        <p>Lowest combined transport risk and travel delay — North Eastern Region</p>
+                        <p>Lowest combined transport risk — North Eastern Region</p>
                     </div>
-                    <div class="route-card recommended" onclick="focusRoute(0)">
+                    <div class="route-card recommended" data-idx="0">
                         <div class="route-header">
                             <h3 class="route-title">Route A — Via GS-1 Guwahati–Shillong</h3>
                             <span class="badge-recommended">RECOMMENDED</span>
@@ -59,7 +54,7 @@
                             <div class="stat-line"><span class="label">Road Condition</span><span class="val safe">Good</span></div>
                         </div>
                     </div>
-                    <div class="route-card" onclick="focusRoute(1)">
+                    <div class="route-card" data-idx="1">
                         <div class="route-header"><h3 class="route-title">Route B — Via NH-306 Silchar–Aizawl</h3></div>
                         <div class="route-stats">
                             <div class="stat-line"><span class="label">Distance</span><span class="val">180 km</span></div>
@@ -69,7 +64,7 @@
                             <div class="stat-line"><span class="label">Road Condition</span><span class="val warn">Fair</span></div>
                         </div>
                     </div>
-                    <div class="route-card" onclick="focusRoute(2)">
+                    <div class="route-card" data-idx="2">
                         <div class="route-header"><h3 class="route-title">Route C — Via AH-1 Guwahati–Imphal</h3></div>
                         <div class="route-stats">
                             <div class="stat-line"><span class="label">Distance</span><span class="val">480 km</span></div>
@@ -80,54 +75,117 @@
                         </div>
                     </div>
                     <div class="action-buttons">
-                        <button class="btn-green" id="btn-start-route">START ROUTE</button>
-                        <button class="btn-outline" id="btn-view-details">VIEW DETAILS</button>
-                        <button class="btn-outline" id="btn-export-route">EXPORT</button>
+                        <button type="button" class="btn-green" id="btn-start-route">START ROUTE</button>
+                        <button type="button" class="btn-outline" id="btn-view-details">VIEW DETAILS</button>
+                        <button type="button" class="btn-outline" id="btn-export-route">EXPORT</button>
                     </div>
                 </div>
             </main>
         </div>
     </div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
-    <script src="js/components.js"></script>
-    <script src="js/map-engine.js"></script>
-    <script src="js/charts.js"></script>
+    <script src="js/components.js?v=alt2"></script>
+    <script src="js/map-engine.js?v=alt2"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            if(window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Alternate Routes', subtitle: 'AI-Recommended Safe Route Options — NER' });
-            if(window.MapEngine) {
-                MapEngine.initMap('map', { center: [25.80, 91.60], zoom: 7 });
-                MapEngine.addRoads();
-                MapEngine.addIncidents();
-                setTimeout(() => { if (MapEngine.drawAlternateRoutes) MapEngine.drawAlternateRoutes(); }, 500);
-            }
-            const btnStart = document.getElementById('btn-start-route');
-            if (btnStart) btnStart.addEventListener('click', async () => {
-                try { if (window.SmartRouteAPI && window.SmartRouteAPI.rerouteDeliveries) await window.SmartRouteAPI.rerouteDeliveries(); } catch(e) {}
-                if (window.SmartRoute) SmartRoute.showToast('Route A (GS-1 Guwahati–Shillong) activated. Real-time GPS dispatched to all convoys.', 'success', 3500);
-            });
-            const btnDetails = document.getElementById('btn-view-details');
-            if (btnDetails) btnDetails.addEventListener('click', () => {
-                if (window.SmartRoute) SmartRoute.showToast('Route A Telemetry: Guwahati–Shillong 98 km · ETA 2h 15m · GS-1 Expressway Clear', 'info', 3000);
-            });
-            const btnExport = document.getElementById('btn-export-route');
-            if (btnExport) btnExport.addEventListener('click', () => {
-                const report = ['SmartRoute NER — Alternate Route Export','======================================','Route A: GS-1 Guwahati–Shillong Expressway (RECOMMENDED)','  Distance: ~98 km | ETA: 2h 15m | Risk: LOW','Route B: NH-306 Silchar–Aizawl Corridor','  Distance: ~180 km | ETA: 4h 10m | Risk: MODERATE','Route C: AH-1 Guwahati–Kohima–Imphal','  Distance: ~480 km | ETA: 11h | Risk: HIGH (terrain)','','Generated by AI Logistics Intelligence Platform — NER'].join('\n');
-                const blob = new Blob([report], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = 'NER_Alternate_Routes.txt'; a.click();
-                URL.revokeObjectURL(url);
-                if (window.SmartRoute) SmartRoute.showToast('Route plan exported (NER corridors).', 'success', 2500);
-            });
+    (function () {
+      var map = null;
+      var ROUTES = [
+        { name: 'Route A — GS-1 Guwahati–Shillong', dist: '98 km', eta: '2h 15m', risk: '28/100 LOW', traffic: 'Light', road: 'Good', center: [25.85, 91.81] },
+        { name: 'Route B — NH-306 Silchar–Aizawl', dist: '180 km', eta: '4h 10m', risk: '61/100 MODERATE', traffic: 'Heavy', road: 'Fair', center: [24.27, 92.75] },
+        { name: 'Route C — AH-1 Guwahati–Imphal', dist: '480 km', eta: '11h', risk: '74/100 HIGH', traffic: 'Moderate', road: 'Poor', center: [25.70, 93.50] }
+      ];
+      var selected = 0;
+
+      function toast(msg, type) {
+        if (window.SmartRoute && SmartRoute.showToast) SmartRoute.showToast(msg, type || 'info', 2800);
+        else alert(msg);
+      }
+
+      function focusRoute(index) {
+        selected = index;
+        document.querySelectorAll('.route-card').forEach(function (c, i) {
+          c.style.outline = i === index ? '2px solid #00d4ff' : 'none';
         });
-        function focusRoute(index) {
-            const names = ['Route A (GS-1 Guwahati–Shillong - SAFE)', 'Route B (NH-306 Silchar–Aizawl - MODERATE)', 'Route C (AH-1 Guwahati–Imphal - HIGH RISK)'];
-            const centers = [[25.85, 91.81], [24.27, 92.75], [25.70, 93.50]];
-            if(window.MapEngine && MapEngine.map) MapEngine.map.flyTo(centers[index], 9, { duration: 1.5 });
-            if(window.SmartRoute) SmartRoute.showToast('Selected: ' + names[index], index === 0 ? 'success' : index === 1 ? 'warn' : 'danger', 2000);
+        if (map) map.flyTo(ROUTES[index].center, 9, { duration: 1.2 });
+        toast('Selected: ' + ROUTES[index].name, index === 0 ? 'success' : 'info');
+      }
+
+      function exportRoutes() {
+        var lines = [
+          'SmartRoute NER — Alternate Route Export',
+          'Generated: ' + new Date().toLocaleString(),
+          '======================================',
+          ''
+        ];
+        ROUTES.forEach(function (r, i) {
+          lines.push((i === 0 ? '[RECOMMENDED] ' : '') + r.name);
+          lines.push('  Distance: ' + r.dist + ' | ETA: ' + r.eta);
+          lines.push('  Risk: ' + r.risk + ' | Traffic: ' + r.traffic + ' | Road: ' + r.road);
+          lines.push('');
+        });
+        lines.push('Selected for dispatch: ' + ROUTES[selected].name);
+        lines.push('AI Logistics Intelligence Platform — North Eastern Region');
+
+        var text = lines.join('\n');
+        var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'NER_Alternate_Routes_' + Date.now() + '.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        // Also CSV
+        var csv = 'Route,Distance,ETA,Risk,Traffic,Road\n' +
+          ROUTES.map(function (r) {
+            return '"' + r.name + '","' + r.dist + '","' + r.eta + '","' + r.risk + '","' + r.traffic + '","' + r.road + '"';
+          }).join('\n');
+        var blob2 = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+        var url2 = URL.createObjectURL(blob2);
+        var a2 = document.createElement('a');
+        a2.href = url2;
+        a2.download = 'NER_Alternate_Routes.csv';
+        document.body.appendChild(a2);
+        a2.click();
+        document.body.removeChild(a2);
+        URL.revokeObjectURL(url2);
+
+        toast('Exported TXT + CSV route plan', 'success');
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Alternate Routes', subtitle: 'AI-Recommended Safe Route Options — NER' });
+
+        if (window.MapEngine && MapEngine.initMap) {
+          map = MapEngine.initMap('map', { center: [25.80, 91.60], zoom: 7 });
+          if (MapEngine.addRoads) MapEngine.addRoads(map);
+        } else if (window.L) {
+          map = L.map('map').setView([25.80, 91.60], 7);
+          L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18 }).addTo(map);
         }
+        setTimeout(function () { try { if (map) map.invalidateSize(true); } catch (e) {} }, 300);
+
+        document.querySelectorAll('.route-card').forEach(function (card) {
+          card.addEventListener('click', function () {
+            focusRoute(parseInt(card.getAttribute('data-idx'), 10));
+          });
+        });
+
+        document.getElementById('btn-start-route').addEventListener('click', function () {
+          toast(ROUTES[selected].name + ' activated for convoys', 'success');
+        });
+        document.getElementById('btn-view-details').addEventListener('click', function () {
+          var r = ROUTES[selected];
+          toast(r.name + ' · ' + r.dist + ' · ETA ' + r.eta + ' · Risk ' + r.risk, 'info');
+        });
+        document.getElementById('btn-export-route').addEventListener('click', function (e) {
+          e.preventDefault();
+          exportRoutes();
+        });
+      });
+    })();
     </script>
 </body>
 </html>
