@@ -1,1 +1,1 @@
-window.SIM_PROBLEM_PHOTOS=window.SIM_PROBLEM_PHOTOS||{};SIM_PROBLEM_PHOTOS.landslide='assets/sim/landslide.jpg';
+window.SIM_PHOTO_LANDSLIDE="PLACEHOLDER_LS";
