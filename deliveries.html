@@ -79,8 +79,8 @@
 
             <div class="map-panel glass-card">
               <div class="map-legend" id="map-legend">
-                <div><i style="background:#ff3b3b"></i> At-risk path</div>
-                <div><i style="background:#00ff88"></i> Brahmaputra corridor</div>
+                <div><i style="background:#00d4ff"></i> Delivery points</div>
+                <div><i style="background:#00ff88"></i> Brahmaputra corridor (after reroute)</div>
               </div>
               <div id="delivery-map"></div>
             </div>
@@ -96,14 +96,13 @@
     </div>
   </div>
 
-  <script src="js/components.js?v=del2"></script>
-  <script src="js/map-engine.js?v=del2"></script>
+  <script src="js/components.js?v=del3"></script>
+  <script src="js/map-engine.js?v=del3"></script>
   <script>
   (function () {
     var delMap = null;
     var rerouted = false;
     var markers = {};
-    var riskLine = null;
     var corridorLine = null;
     var vehicleMarker = null;
 
@@ -116,23 +115,14 @@
       'DEL-008': [24.82, 93.95]
     };
 
-    // Guwahati → Tezpur → along Brahmaputra corridor (approx road points)
     var BRAHMAPUTRA_CORRIDOR = [
-      [26.1445, 91.7362], // Guwahati
+      [26.1445, 91.7362],
       [26.25, 91.95],
       [26.45, 92.35],
-      [26.6338, 92.80], // Tezpur
+      [26.6338, 92.80],
       [26.75, 93.15],
       [26.85, 93.45],
-      [27.0844, 93.6053] // Itanagar side
-    ];
-
-    var RISK_PATH = [
-      [26.1445, 91.7362],
-      [26.45, 92.0],
-      [26.8, 92.2],
-      [27.2, 92.0],
-      [27.58, 91.86] // Tawang
+      [27.0844, 93.6053]
     ];
 
     function toast(msg, type) {
@@ -140,56 +130,38 @@
     }
 
     function initMap() {
-      var el = document.getElementById('delivery-map');
-      if (!el || !window.L) return;
-
+      if (!window.L) return;
       if (window.MapEngine && MapEngine.initMap) {
         delMap = MapEngine.initMap('delivery-map', { center: [26.2, 92.5], zoom: 7 });
       } else {
         delMap = L.map('delivery-map').setView([26.2, 92.5], 7);
         L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18, attribution: 'SmartRoute NER' }).addTo(delMap);
       }
-
-      // Force visible size
-      setTimeout(function () {
-        try { delMap.invalidateSize(true); } catch (e) {}
-      }, 200);
-      setTimeout(function () {
-        try { delMap.invalidateSize(true); } catch (e) {}
-      }, 600);
+      setTimeout(function () { try { delMap.invalidateSize(true); } catch (e) {} }, 200);
+      setTimeout(function () { try { delMap.invalidateSize(true); } catch (e) {} }, 600);
 
       Object.keys(deliveryCoords).forEach(function (id) {
         var c = deliveryCoords[id];
-        var m = L.circleMarker(c, { radius: 8, color: '#00d4ff', fillColor: '#00d4ff', fillOpacity: 0.85, weight: 2 })
+        markers[id] = L.circleMarker(c, { radius: 8, color: '#00d4ff', fillColor: '#00d4ff', fillOpacity: 0.85, weight: 2 })
           .addTo(delMap).bindPopup('<b>' + id + '</b>');
-        markers[id] = m;
       });
-
-      // Default at-risk path toward Tawang
-      riskLine = L.polyline(RISK_PATH, { color: '#ff3b3b', weight: 5, opacity: 0.85, dashArray: '8,6' }).addTo(delMap);
-      riskLine.bindPopup('At-risk path (NH-13 toward Tawang)');
+      // No at-risk / red corridor drawn on map
     }
 
     function drawBrahmaputraCorridor() {
       if (!delMap) return;
-
-      // Prefer OSRM road geometry if available
       var pts = BRAHMAPUTRA_CORRIDOR;
       function finish(coords) {
         try { if (corridorLine) delMap.removeLayer(corridorLine); } catch (e) {}
-        try { if (riskLine) delMap.removeLayer(riskLine); } catch (e) {}
         corridorLine = L.polyline(coords, {
           color: '#00ff88', weight: 7, opacity: 0.95, lineCap: 'round', lineJoin: 'round'
         }).addTo(delMap);
         corridorLine.bindPopup('<b>NH-27 Brahmaputra Corridor</b><br>Rerouted safe path').openPopup();
         delMap.fitBounds(corridorLine.getBounds(), { padding: [40, 40] });
-
         if (vehicleMarker) delMap.removeLayer(vehicleMarker);
         vehicleMarker = L.marker(coords[0], {
           icon: L.divIcon({ className: '', html: '<div style="font-size:22px">🚛</div>', iconSize: [28, 28], iconAnchor: [14, 14] })
         }).addTo(delMap);
-
-        // Animate along corridor
         var i = 0;
         var t = setInterval(function () {
           i++;
@@ -197,15 +169,11 @@
           vehicleMarker.setLatLng(coords[i]);
         }, 80);
       }
-
       if (window.MapEngine && MapEngine.fetchOsrmCoords) {
         MapEngine.fetchOsrmCoords(pts).then(function (c) {
-          if (c && c.length > 3) finish(c);
-          else finish(pts);
+          finish(c && c.length > 3 ? c : pts);
         }).catch(function () { finish(pts); });
-      } else {
-        finish(pts);
-      }
+      } else finish(pts);
     }
 
     function applyReroute() {
@@ -215,7 +183,6 @@
         return;
       }
       rerouted = true;
-
       var panel = document.getElementById('ai-panel');
       panel.style.borderColor = 'rgba(0,255,136,0.45)';
       panel.style.background = 'rgba(0,255,136,0.08)';
@@ -227,7 +194,6 @@
       btn.style.background = 'rgba(0,255,136,0.2)';
       btn.style.borderColor = '#00ff88';
       btn.style.color = '#00ff88';
-
       document.querySelectorAll('.delivery-card').forEach(function (card) {
         var id = card.getAttribute('data-id');
         if (id === 'DEL-001' || id === 'DEL-003' || id === 'DEL-008') {
@@ -235,25 +201,17 @@
           if (badge) { badge.className = 'badge badge-safe'; badge.textContent = 'Rerouted (On-time)'; }
         }
       });
-
       drawBrahmaputraCorridor();
       toast('Brahmaputra corridor drawn on map', 'success');
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-      if (window.SmartRoute) {
-        SmartRoute.initSharedComponents({
-          title: 'Essential Deliveries',
-          subtitle: 'Critical Supply Chain Monitoring'
-        });
-      }
+      if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Essential Deliveries', subtitle: 'Critical Supply Chain Monitoring' });
       initMap();
-
       document.querySelectorAll('.delivery-card').forEach(function (card) {
         card.addEventListener('click', function () {
           document.querySelectorAll('.delivery-card').forEach(function (c) {
-            c.style.borderColor = 'rgba(255,255,255,0.08)';
-            c.style.background = '';
+            c.style.borderColor = 'rgba(255,255,255,0.08)'; c.style.background = '';
           });
           card.style.borderColor = '#00d4ff';
           card.style.background = 'rgba(0,212,255,0.06)';
@@ -265,7 +223,6 @@
           }
         });
       });
-
       document.getElementById('btn-reroute').addEventListener('click', applyReroute);
     });
   })();
