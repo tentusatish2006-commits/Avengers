@@ -16,8 +16,24 @@
     .cat-card { min-width:160px; padding:14px; }
     .main-area { display:flex; gap:16px; flex:1; min-height:420px; }
     .list-panel { width:38%; overflow-y:auto; display:flex; flex-direction:column; gap:12px; max-height:520px; }
-    .map-panel { width:62%; border-radius:12px; overflow:hidden; position:relative; min-height:420px; border:1px solid rgba(0,212,255,0.25); background:#061018; }
-    #delivery-map { width:100%; height:100%; min-height:420px; }
+    /* Map fills panel — no black side box */
+    .map-panel {
+      width:62%; border-radius:12px; overflow:hidden; position:relative;
+      min-height:420px; height:520px; border:1px solid rgba(0,212,255,0.25);
+      padding:0 !important; background:transparent !important;
+    }
+    #delivery-map {
+      position:absolute; inset:0; width:100% !important; height:100% !important;
+      min-height:0; z-index:1; background:#0a1628;
+    }
+    /* Tiny legend chip — does not cover the map */
+    .map-chip {
+      position:absolute; bottom:12px; left:12px; z-index:600;
+      background:rgba(4,12,24,0.88); border:1px solid rgba(0,212,255,0.35);
+      border-radius:8px; padding:6px 10px; font-size:11px; color:#c8d8e8;
+      pointer-events:none; max-width:220px; line-height:1.4;
+    }
+    .map-chip i { display:inline-block; width:16px; height:3px; margin-right:6px; vertical-align:middle; border-radius:2px; }
     .delivery-card { padding:14px; cursor:pointer; border:1px solid rgba(255,255,255,0.08); border-radius:10px; }
     .delivery-header { display:flex; justify-content:space-between; margin-bottom:8px; }
     .stepper { display:flex; justify-content:space-between; position:relative; margin:12px 0; }
@@ -25,9 +41,14 @@
     .step { width:12px; height:12px; border-radius:50%; background:#333; z-index:1; position:relative; }
     .step.active { background:#00d4ff; box-shadow:0 0 10px #00d4ff; }
     .ai-panel { margin-top:4px; border:1px solid rgba(255,149,0,0.35); padding:14px; background:rgba(255,149,0,0.06); border-radius:12px; }
-    .map-legend { position:absolute; top:10px; left:10px; z-index:500; background:rgba(4,12,24,0.9); border:1px solid rgba(0,212,255,0.35); border-radius:8px; padding:8px 10px; font-size:11px; color:#c8d8e8; }
-    .map-legend i { display:inline-block; width:18px; height:3px; margin-right:6px; vertical-align:middle; }
-    @media(max-width:900px){ .main-area{flex-direction:column;} .list-panel,.map-panel{width:100%;} #delivery-map{min-height:320px;} }
+    /* Keep Leaflet controls compact */
+    .map-panel .leaflet-control-zoom { margin:10px !important; }
+    .map-panel .leaflet-control-layers { display:none !important; }
+    @media(max-width:900px){
+      .main-area{flex-direction:column;}
+      .list-panel,.map-panel{width:100%;}
+      .map-panel{height:360px;}
+    }
   </style>
 </head>
 <body>
@@ -77,12 +98,12 @@
               </div>
             </div>
 
-            <div class="map-panel glass-card">
-              <div class="map-legend" id="map-legend">
-                <div><i style="background:#00d4ff"></i> Delivery points</div>
-                <div><i style="background:#00ff88"></i> Brahmaputra corridor (after reroute)</div>
-              </div>
+            <div class="map-panel" id="map-panel">
               <div id="delivery-map"></div>
+              <div class="map-chip" id="map-chip">
+                <div><i style="background:#00d4ff"></i>Delivery points</div>
+                <div id="chip-corridor" style="display:none;margin-top:4px;"><i style="background:#00ff88"></i>Brahmaputra corridor</div>
+              </div>
             </div>
           </div>
 
@@ -96,8 +117,8 @@
     </div>
   </div>
 
-  <script src="js/components.js?v=del3"></script>
-  <script src="js/map-engine.js?v=del3"></script>
+  <script src="js/components.js?v=del4"></script>
+  <script src="js/map-engine.js?v=del4"></script>
   <script>
   (function () {
     var delMap = null;
@@ -131,21 +152,30 @@
 
     function initMap() {
       if (!window.L) return;
-      if (window.MapEngine && MapEngine.initMap) {
-        delMap = MapEngine.initMap('delivery-map', { center: [26.2, 92.5], zoom: 7 });
-      } else {
-        delMap = L.map('delivery-map').setView([26.2, 92.5], 7);
-        L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18, attribution: 'SmartRoute NER' }).addTo(delMap);
+      var el = document.getElementById('delivery-map');
+      if (!el) return;
+
+      // Always create a clean Leaflet map (full panel, no black overlays)
+      delMap = L.map(el, { zoomControl: true, attributionControl: true }).setView([26.2, 92.5], 7);
+      L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+        maxZoom: 18,
+        attribution: 'SmartRoute NER'
+      }).addTo(delMap);
+
+      function fixSize() {
+        try { delMap.invalidateSize(true); } catch (e) {}
       }
-      setTimeout(function () { try { delMap.invalidateSize(true); } catch (e) {} }, 200);
-      setTimeout(function () { try { delMap.invalidateSize(true); } catch (e) {} }, 600);
+      setTimeout(fixSize, 100);
+      setTimeout(fixSize, 400);
+      setTimeout(fixSize, 900);
+      window.addEventListener('resize', fixSize);
 
       Object.keys(deliveryCoords).forEach(function (id) {
         var c = deliveryCoords[id];
-        markers[id] = L.circleMarker(c, { radius: 8, color: '#00d4ff', fillColor: '#00d4ff', fillOpacity: 0.85, weight: 2 })
-          .addTo(delMap).bindPopup('<b>' + id + '</b>');
+        markers[id] = L.circleMarker(c, {
+          radius: 8, color: '#00d4ff', fillColor: '#00d4ff', fillOpacity: 0.9, weight: 2
+        }).addTo(delMap).bindPopup('<b>' + id + '</b>');
       });
-      // No at-risk / red corridor drawn on map
     }
 
     function drawBrahmaputraCorridor() {
@@ -154,13 +184,17 @@
       function finish(coords) {
         try { if (corridorLine) delMap.removeLayer(corridorLine); } catch (e) {}
         corridorLine = L.polyline(coords, {
-          color: '#00ff88', weight: 7, opacity: 0.95, lineCap: 'round', lineJoin: 'round'
+          color: '#00ff88', weight: 6, opacity: 0.95, lineCap: 'round', lineJoin: 'round'
         }).addTo(delMap);
         corridorLine.bindPopup('<b>NH-27 Brahmaputra Corridor</b><br>Rerouted safe path').openPopup();
-        delMap.fitBounds(corridorLine.getBounds(), { padding: [40, 40] });
+        delMap.fitBounds(corridorLine.getBounds(), { padding: [36, 36] });
         if (vehicleMarker) delMap.removeLayer(vehicleMarker);
         vehicleMarker = L.marker(coords[0], {
-          icon: L.divIcon({ className: '', html: '<div style="font-size:22px">🚛</div>', iconSize: [28, 28], iconAnchor: [14, 14] })
+          icon: L.divIcon({
+            className: '',
+            html: '<div style="font-size:22px">🚛</div>',
+            iconSize: [28, 28], iconAnchor: [14, 14]
+          })
         }).addTo(delMap);
         var i = 0;
         var t = setInterval(function () {
@@ -168,6 +202,8 @@
           if (i >= coords.length) { clearInterval(t); return; }
           vehicleMarker.setLatLng(coords[i]);
         }, 80);
+        var chip = document.getElementById('chip-corridor');
+        if (chip) chip.style.display = 'block';
       }
       if (window.MapEngine && MapEngine.fetchOsrmCoords) {
         MapEngine.fetchOsrmCoords(pts).then(function (c) {
@@ -179,7 +215,7 @@
     function applyReroute() {
       if (rerouted) {
         toast('Already on Brahmaputra corridor', 'info');
-        if (corridorLine) delMap.fitBounds(corridorLine.getBounds(), { padding: [40, 40] });
+        if (corridorLine) delMap.fitBounds(corridorLine.getBounds(), { padding: [36, 36] });
         return;
       }
       rerouted = true;
@@ -206,12 +242,18 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-      if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Essential Deliveries', subtitle: 'Critical Supply Chain Monitoring' });
+      if (window.SmartRoute) {
+        SmartRoute.initSharedComponents({
+          title: 'Essential Deliveries',
+          subtitle: 'Critical Supply Chain Monitoring'
+        });
+      }
       initMap();
       document.querySelectorAll('.delivery-card').forEach(function (card) {
         card.addEventListener('click', function () {
           document.querySelectorAll('.delivery-card').forEach(function (c) {
-            c.style.borderColor = 'rgba(255,255,255,0.08)'; c.style.background = '';
+            c.style.borderColor = 'rgba(255,255,255,0.08)';
+            c.style.background = '';
           });
           card.style.borderColor = '#00d4ff';
           card.style.background = 'rgba(0,212,255,0.06)';
