@@ -175,6 +175,18 @@ function injectSidebarCss() {
   document.head.appendChild(style);
 }
 
+function injectTimelineFixCss() {
+  try {
+    var page = currentPage();
+    if (page !== 'emergency.html' && page !== 'incidents.html' && page !== 'emergency' && page !== 'incidents') return;
+    if (document.querySelector('link[href*="timeline-fix.css"]')) return;
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'css/timeline-fix.css?v=2';
+    document.head.appendChild(link);
+  } catch (e) {}
+}
+
 function buildTopbarRightHtml() {
   return '' +
     '<div class="topbar-right" style="display:flex;align-items:center;gap:10px;margin-left:auto;flex-shrink:0;">' +
@@ -235,6 +247,7 @@ function initSharedComponents(opts) {
   opts = opts || {};
   if (!requireAuth()) return;
   injectSidebarCss();
+  injectTimelineFixCss();
   ensureStableSidebar(opts.active);
   ensureTopbar(opts);
   if (!document.getElementById('sr-sidebar-backdrop')) {
@@ -269,7 +282,6 @@ function initSharedComponents(opts) {
   if (!window._srClockTimer) window._srClockTimer = setInterval(tick, 1000);
   applySidebarLabels();
   ensureI18n();
-  /* Auto-load multi-location assign on reports */
   try {
     var page = currentPage();
     if (page === 'reports.html' || page === 'reports') {
