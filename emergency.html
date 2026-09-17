@@ -36,30 +36,31 @@
         .response-item { padding: 6px 8px; margin-bottom: 6px; border-radius: 6px; background: rgba(0,0,0,0.25); border-left: 3px solid #00ff88; color: #c8d8e8; }
         .response-item time { color: #8fa3b8; font-size: 0.7rem; }
 
-        /* Timeline — clear spacing so labels do not merge */
         .timeline {
-          display: flex; flex-direction: column; gap: 14px;
-          margin: 16px 8px 16px 12px; padding: 4px 0 4px 22px;
-          border-left: 2px solid rgba(255,255,255,0.14);
+          display: flex; flex-direction: column; margin: 14px 0 18px; padding: 0; border: none; gap: 0;
         }
         .timeline-node {
-          position: relative; padding-left: 10px;
-          font-size: 0.82rem; line-height: 1.4; color: #8fa3b8;
-          white-space: nowrap; letter-spacing: 0.02em;
+          display: flex; align-items: center; gap: 12px; position: relative;
+          padding: 9px 0; margin: 0; font-size: 0.85rem; line-height: 1.3;
+          color: #8fa3b8; white-space: nowrap; letter-spacing: 0.02em;
         }
-        .timeline-node::before {
-          content: ''; position: absolute; left: -29px; top: 4px;
-          width: 12px; height: 12px; border-radius: 50%;
+        .timeline-node::before { content: none !important; display: none !important; }
+        .timeline-node .tl-dot {
+          flex-shrink: 0; width: 10px; height: 10px; border-radius: 50%;
           background: #2a3548; border: 2px solid #5a6a80; box-sizing: border-box;
+          position: relative; z-index: 1;
+        }
+        .timeline-node .tl-label { display: inline-block; position: relative; z-index: 1; }
+        .timeline-node:not(:last-child)::after {
+          content: ''; position: absolute; left: 4px; top: calc(50% + 6px);
+          width: 2px; height: calc(100% - 4px); background: rgba(255,255,255,0.12); z-index: 0;
         }
         .timeline-node.done { color: #e8f4ff; }
-        .timeline-node.done::before { background: #00ff88; border-color: #00ff88; }
+        .timeline-node.done .tl-dot { background: #00ff88; border-color: #00ff88; }
         .timeline-node.active { color: #00d4ff; font-weight: 700; }
-        .timeline-node.active::before {
-          background: #00d4ff; border-color: #00d4ff;
-          box-shadow: 0 0 10px rgba(0,212,255,0.7);
+        .timeline-node.active .tl-dot {
+          background: #00d4ff; border-color: #00d4ff; box-shadow: 0 0 8px rgba(0,212,255,0.6);
         }
-        .timeline-node .tl-label { display: inline-block; }
 
         .detail-row { display: flex; justify-content: space-between; gap: 12px; font-size: 0.82rem; margin-bottom: 8px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 6px; }
         .detail-label { color: #8fa3b8; flex-shrink: 0; }
@@ -148,13 +149,13 @@
           <div class="header-pulse"><h3 style="margin:0;font-size:0.95rem;color:#ff6b6b;" id="detail-title">Tawang Pass Landslide</h3></div>
           <div class="panel-scroll">
             <div class="timeline" id="timeline">
-              <div class="timeline-node done"><span class="tl-label">Incident Detected</span></div>
-              <div class="timeline-node done"><span class="tl-label">AI Analysis</span></div>
-              <div class="timeline-node done"><span class="tl-label">Authority Alert</span></div>
-              <div class="timeline-node active"><span class="tl-label">Team Assigned</span></div>
-              <div class="timeline-node"><span class="tl-label">Alternate Route</span></div>
-              <div class="timeline-node"><span class="tl-label">Road Clearance</span></div>
-              <div class="timeline-node"><span class="tl-label">Resolved</span></div>
+              <div class="timeline-node done"><span class="tl-dot"></span><span class="tl-label">Incident Detected</span></div>
+              <div class="timeline-node done"><span class="tl-dot"></span><span class="tl-label">AI Analysis</span></div>
+              <div class="timeline-node done"><span class="tl-dot"></span><span class="tl-label">Authority Alert</span></div>
+              <div class="timeline-node active"><span class="tl-dot"></span><span class="tl-label">Team Assigned</span></div>
+              <div class="timeline-node"><span class="tl-dot"></span><span class="tl-label">Alternate Route</span></div>
+              <div class="timeline-node"><span class="tl-dot"></span><span class="tl-label">Road Clearance</span></div>
+              <div class="timeline-node"><span class="tl-dot"></span><span class="tl-label">Resolved</span></div>
             </div>
             <div>
               <div class="detail-row"><span class="detail-label">Severity</span><span class="detail-val" id="d-sev">CRITICAL</span></div>
@@ -190,14 +191,13 @@
   </div>
 </div>
 
-<script src="js/components.js?v=em5"></script>
-<script src="js/map-engine.js?v=em5"></script>
+<script src="js/components.js?v=em6"></script>
+<script src="js/map-engine.js?v=em6"></script>
 <script>
 (function () {
   'use strict';
   var selectedCard = null, modalMode = null, emMap = null, viewMarker = null, viewCircle = null;
   var responseLog = [];
-
   function toast(msg, type) {
     if (window.SmartRoute && SmartRoute.showToast) SmartRoute.showToast(msg, type || 'info', 2800);
   }
@@ -228,7 +228,6 @@
     if (selectedCard && selectedCard.querySelector('.title')) return selectedCard.querySelector('.title').textContent;
     return document.getElementById('detail-title').textContent || 'Incident';
   }
-
   function logResponse(text, incidentTitle) {
     var entry = {
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
@@ -244,7 +243,6 @@
     renderResponseLog();
     document.getElementById('d-last-resp').textContent = entry.time + ' · ' + entry.text;
   }
-
   function renderResponseLog() {
     var list = document.getElementById('response-list');
     if (!list) return;
@@ -256,7 +254,6 @@
       return '<div class="response-item"><time>' + r.time + '</time> · <strong>' + r.incident + '</strong><br>' + r.text + '</div>';
     }).join('');
   }
-
   function showIncidentOnMap(card) {
     if (!card || !emMap || !window.L) return;
     var lat = parseFloat(card.getAttribute('data-lat'));
@@ -266,57 +263,35 @@
     var sev = card.getAttribute('data-sev') || 'HIGH';
     var road = card.getAttribute('data-road') || '';
     var color = sev === 'CRITICAL' ? '#ff3b3b' : (sev === 'HIGH' ? '#ff9500' : '#00d4ff');
-    try {
-      if (viewMarker) emMap.removeLayer(viewMarker);
-      if (viewCircle) emMap.removeLayer(viewCircle);
-    } catch (e) {}
+    try { if (viewMarker) emMap.removeLayer(viewMarker); if (viewCircle) emMap.removeLayer(viewCircle); } catch (e) {}
     viewCircle = L.circle([lat, lng], { radius: 4500, color: color, fillColor: color, fillOpacity: 0.2, weight: 2 }).addTo(emMap);
     viewMarker = L.marker([lat, lng], {
       icon: L.divIcon({
         className: '',
-        html: '<div style="width:36px;height:36px;border-radius:50%;background:' + color +
-              ';border:3px solid #fff;box-shadow:0 0 16px ' + color +
-              ';display:flex;align-items:center;justify-content:center;font-size:16px;">⚠</div>',
+        html: '<div style="width:36px;height:36px;border-radius:50%;background:' + color + ';border:3px solid #fff;box-shadow:0 0 16px ' + color + ';display:flex;align-items:center;justify-content:center;font-size:16px;">⚠</div>',
         iconSize: [36, 36], iconAnchor: [18, 18]
       })
     }).addTo(emMap);
-    viewMarker.bindPopup(
-      '<div style="min-width:190px">' +
-      '<div style="font-weight:800;color:' + color + '">' + title + '</div>' +
-      '<div style="font-size:12px;margin-top:4px">Severity: <strong>' + sev + '</strong></div>' +
-      '<div style="font-size:12px">' + road + '</div></div>'
-    ).openPopup();
+    viewMarker.bindPopup('<div style="min-width:190px"><div style="font-weight:800;color:' + color + '">' + title + '</div><div style="font-size:12px;margin-top:4px">Severity: <strong>' + sev + '</strong></div><div style="font-size:12px">' + road + '</div></div>').openPopup();
     emMap.flyTo([lat, lng], 11, { duration: 1.0 });
   }
-
   function onView(card) {
-    selectCard(card);
-    showIncidentOnMap(card);
-    var title = currentTitle();
-    setStatus('Map focused on: ' + title);
-    toast('Showing on map: ' + title, 'info');
+    selectCard(card); showIncidentOnMap(card);
+    setStatus('Map focused on: ' + currentTitle());
+    toast('Showing on map: ' + currentTitle(), 'info');
   }
-
   function onRespond(card) {
-    selectCard(card);
-    showIncidentOnMap(card);
+    selectCard(card); showIncidentOnMap(card);
     var title = currentTitle();
     var team = card.getAttribute('data-team') || 'Response unit';
     var meta = card.querySelector('.meta');
     if (meta) meta.textContent = meta.textContent.replace(/Response:.*/, 'Response: Unit Dispatched');
     document.getElementById('d-status').textContent = 'Unit Dispatched';
     advanceTimeline(3);
-    var msg = 'Unit dispatched (' + team + ') — response recorded';
-    logResponse(msg, title);
+    logResponse('Unit dispatched (' + team + ') — response recorded', title);
     setStatus('✅ Response recorded for: ' + title);
     toast('Response recorded: ' + title, 'success');
-    var feed = document.getElementById('response-feed');
-    if (feed) {
-      feed.style.boxShadow = '0 0 0 2px #00ff88';
-      setTimeout(function () { feed.style.boxShadow = ''; }, 1200);
-    }
   }
-
   function openModal(mode, title, desc, fieldsHtml) {
     modalMode = mode;
     document.getElementById('modal-title').textContent = title;
@@ -324,53 +299,34 @@
     document.getElementById('modal-fields').innerHTML = fieldsHtml || '';
     document.getElementById('em-modal').classList.add('open');
   }
-  function closeModal() {
-    document.getElementById('em-modal').classList.remove('open');
-    modalMode = null;
-  }
+  function closeModal() { document.getElementById('em-modal').classList.remove('open'); modalMode = null; }
 
   document.addEventListener('DOMContentLoaded', function () {
-    if (window.SmartRoute) {
-      SmartRoute.initSharedComponents({
-        title: 'Emergency Response',
-        subtitle: 'Crisis Command — NER'
-      });
-    }
-
+    if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Emergency Response', subtitle: 'Crisis Command — NER' });
     try {
       var saved = JSON.parse(localStorage.getItem('sr_em_responses') || '[]');
       if (Array.isArray(saved) && saved.length) responseLog = saved.slice(0, 20);
     } catch (e) {}
     renderResponseLog();
-
     selectedCard = document.querySelector('.incident-card.selected') || document.querySelector('.incident-card');
     if (selectedCard) selectCard(selectedCard);
-
-    var mapEl = document.getElementById('emergency-map');
-    if (mapEl && window.L) {
-      emMap = L.map('emergency-map', { zoomControl: true, attributionControl: true }).setView([26.5, 92.5], 7);
-      L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-        maxZoom: 20,
-        attribution: 'Leaflet | SmartRoute NER'
-      }).addTo(emMap);
+    if (document.getElementById('emergency-map') && window.L) {
+      emMap = L.map('emergency-map', { zoomControl: true }).setView([26.5, 92.5], 7);
+      L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20, attribution: 'Leaflet | SmartRoute NER' }).addTo(emMap);
       setTimeout(function () { if (emMap) emMap.invalidateSize(); }, 300);
       if (selectedCard) showIncidentOnMap(selectedCard);
     }
-
     document.getElementById('incident-list').addEventListener('click', function (e) {
       var btn = e.target.closest('button[data-action]');
       var card = e.target.closest('.incident-card');
       if (!card) return;
       if (btn) {
         e.stopPropagation();
-        if (btn.getAttribute('data-action') === 'respond') onRespond(card);
-        else onView(card);
+        if (btn.getAttribute('data-action') === 'respond') onRespond(card); else onView(card);
         return;
       }
-      selectCard(card);
-      showIncidentOnMap(card);
+      selectCard(card); showIncidentOnMap(card);
     });
-
     document.getElementById('btn-assign').onclick = function () {
       if (!selectedCard) { toast('Select an incident first', 'warn'); return; }
       openModal('assign', 'Assign Team', 'Dispatch a response unit to: ' + currentTitle(),
@@ -391,11 +347,8 @@
       openModal('status', 'Update Status', 'Set operational status for: ' + currentTitle(),
         '<label>Status</label><select id="m-stat"><option>In Progress</option><option>Unit Dispatched</option><option>Clearance Ongoing</option><option>Resolved</option></select>');
     };
-
     document.getElementById('modal-cancel').onclick = closeModal;
-    document.getElementById('em-modal').addEventListener('click', function (e) {
-      if (e.target.id === 'em-modal') closeModal();
-    });
+    document.getElementById('em-modal').addEventListener('click', function (e) { if (e.target.id === 'em-modal') closeModal(); });
     document.getElementById('modal-ok').onclick = function () {
       var title = currentTitle();
       if (modalMode === 'assign') {
@@ -405,29 +358,25 @@
         advanceTimeline(3);
         document.getElementById('d-status').textContent = 'Team Assigned';
         logResponse('Team assigned: ' + team, title);
-        setStatus('Team assigned: ' + team);
         toast('Team assigned: ' + team, 'success');
       } else if (modalMode === 'redirect') {
         var alt = (document.getElementById('m-alt') || {}).value || 'Alternate route';
         document.getElementById('d-alt').textContent = alt;
         advanceTimeline(4);
         logResponse('Vehicles redirected via ' + alt, title);
-        setStatus('Redirect active: ' + alt);
         toast('Vehicles redirected', 'success');
       } else if (modalMode === 'alert') {
         var msg = (document.getElementById('m-msg') || {}).value || 'Alert sent';
         advanceTimeline(2);
         logResponse('Alert sent — ' + msg, title);
-        setStatus('Alert broadcast');
         toast('Alert sent', 'success');
       } else if (modalMode === 'status') {
         var st = (document.getElementById('m-stat') || {}).value || 'Updated';
         document.getElementById('d-status').textContent = st;
         if (st === 'Resolved') advanceTimeline(6);
         else if (st === 'Clearance Ongoing') advanceTimeline(5);
-        else if (st === 'Unit Dispatched' || st === 'Team Assigned') advanceTimeline(3);
+        else advanceTimeline(3);
         logResponse('Status → ' + st, title);
-        setStatus('Status updated: ' + st);
         toast('Status: ' + st, 'info');
       }
       closeModal();
