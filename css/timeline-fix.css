@@ -1,0 +1,96 @@
+/* Timeline fix: keep circles and labels separate (emergency + incidents) */
+.timeline {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+  position: relative !important;
+  padding-left: 0 !important;
+  border-left: none !important;
+}
+.timeline::before {
+  content: '' !important;
+  position: absolute !important;
+  left: 6px !important;
+  top: 12px !important;
+  bottom: 12px !important;
+  width: 2px !important;
+  background: rgba(255,255,255,0.12) !important;
+  border-radius: 1px !important;
+  pointer-events: none !important;
+}
+/* Row must NOT be a 30x30 circle */
+.timeline > .timeline-node {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 28px !important;
+  max-width: none !important;
+  padding: 8px 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 0.88rem !important;
+  line-height: 1.35 !important;
+  color: #8fa3b8 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  animation: none !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+.timeline > .timeline-node::before,
+.timeline > .timeline-node::after {
+  content: none !important;
+  display: none !important;
+}
+.timeline > .timeline-node .tl-dot {
+  flex-shrink: 0 !important;
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 50% !important;
+  box-sizing: border-box !important;
+  background: #1e293b !important;
+  border: 2px solid #64748b !important;
+  position: relative !important;
+  z-index: 2 !important;
+  display: block !important;
+}
+.timeline > .timeline-node .tl-label {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  display: block !important;
+  position: relative !important;
+  z-index: 1 !important;
+  color: inherit !important;
+  font-weight: inherit !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+.timeline > .timeline-node.done {
+  color: #e8f4ff !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.timeline > .timeline-node.done .tl-dot {
+  background: #00ff88 !important;
+  border-color: #00ff88 !important;
+  box-shadow: 0 0 10px rgba(0,255,136,0.5) !important;
+}
+.timeline > .timeline-node.active {
+  color: #00d4ff !important;
+  font-weight: 700 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+.timeline > .timeline-node.active .tl-dot {
+  background: #00d4ff !important;
+  border-color: #00d4ff !important;
+  box-shadow: 0 0 10px rgba(0,212,255,0.55) !important;
+}
