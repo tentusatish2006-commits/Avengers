@@ -1,1 +1,480 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - SmartRoute</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    .admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .admin-module {
+      display: flex; align-items: center; padding: 18px; gap: 16px; cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+      border: 1px solid rgba(0,212,255,0.2);
+    }
+    .admin-module:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 24px rgba(0, 212, 255, 0.18);
+      border-color: #00d4ff;
+    }
+    .module-icon {
+      flex-shrink: 0; width: 48px; height: 48px; border-radius: 12px;
+      background: rgba(0, 212, 255, 0.12); color: #00d4ff;
+      display: flex; align-items: center; justify-content: center; font-size: 1.4rem;
+    }
+    .module-info h3 { margin: 0 0 4px; font-size: 0.8rem; letter-spacing: 0.06em; color: #8fa3b8; font-weight: 700; }
+    .module-info p { margin: 0; font-size: 1.45rem; font-weight: 800; color: #00d4ff; }
+
+    .section-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    .section-header h2 {
+      margin: 0; font-size: 1.2rem;
+      background: linear-gradient(90deg, #00d4ff, #00ff88);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .btn-add {
+      padding: 10px 18px; border: none; border-radius: 10px; cursor: pointer;
+      font-weight: 800; font-family: inherit; font-size: 0.9rem;
+      background: linear-gradient(135deg, #00d4ff, #0099cc); color: #031018;
+    }
+    .btn-add:hover { filter: brightness(1.08); }
+
+    .user-table { width: 100%; border-collapse: collapse; min-width: 720px; }
+    .user-table th, .user-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .user-table th { color: #00d4ff; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.04em; }
+    .user-table tr:hover { background: rgba(255,255,255,0.03); }
+    .status-active { color: #00ff88; font-weight: 700; }
+    .status-inactive { color: #ff6b6b; font-weight: 700; }
+
+    .action-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+    .action-btns button {
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+      color: #e8f4ff; padding: 5px 10px; border-radius: 6px; cursor: pointer;
+      font-size: 0.72rem; font-weight: 700; font-family: inherit;
+    }
+    .action-btns button:hover { background: rgba(0,212,255,0.2); border-color: #00d4ff; color: #fff; }
+    .action-btns .btn-del { background: rgba(255,59,59,0.15); border-color: rgba(255,59,59,0.4); color: #ff6b6b; }
+    .action-btns .btn-del:hover { background: #ff3b3b; color: #fff; }
+
+    .modal-bg {
+      display: none; position: fixed; inset: 0; z-index: 10000;
+      background: rgba(0,0,0,0.72); align-items: center; justify-content: center; padding: 16px;
+    }
+    .modal-bg.show { display: flex; }
+    .modal {
+      width: min(440px, 100%); background: #0a1628;
+      border: 1px solid rgba(0,212,255,0.4); border-radius: 14px; padding: 22px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+    .modal h3 { margin: 0 0 6px; color: #00d4ff; font-size: 1.15rem; }
+    .modal .sub { margin: 0 0 16px; color: #8fa3b8; font-size: 0.88rem; }
+    .modal label { display: block; font-size: 0.75rem; font-weight: 700; color: #8fa3b8; text-transform: uppercase; letter-spacing: 0.04em; margin: 10px 0 6px; }
+    .modal input, .modal select {
+      width: 100%; box-sizing: border-box; padding: 11px 12px; border-radius: 8px;
+      border: 1px solid rgba(0,212,255,0.3); background: #061018; color: #fff;
+      font-family: inherit; font-size: 0.95rem;
+    }
+    .modal .row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+    .modal .btn-cancel {
+      padding: 10px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.06); color: #c8d8e8; cursor: pointer; font-weight: 700; font-family: inherit;
+    }
+    .modal .btn-ok {
+      padding: 10px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: 800; font-family: inherit;
+      background: linear-gradient(135deg, #00d4ff, #00ff88); color: #031018;
+    }
+    .empty-users { text-align: center; padding: 28px; color: #8fa3b8; }
+
+    @media (max-width: 700px) {
+      .admin-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="main-content" id="main-content">
+      <main class="page-body">
+        <div class="admin-grid">
+          <div class="glass-card admin-module" data-mod="users">
+            <div class="module-icon">👥</div>
+            <div class="module-info"><h3>USER MANAGEMENT</h3><p id="stat-users">0</p></div>
+          </div>
+          <div class="glass-card admin-module" data-mod="roads">
+            <div class="module-icon">🛣</div>
+            <div class="module-info"><h3>ROAD MANAGEMENT</h3><p>1,248</p></div>
+          </div>
+          <div class="glass-card admin-module" data-mod="bridges">
+            <div class="module-icon">🌉</div>
+            <div class="module-info"><h3>BRIDGE MANAGEMENT</h3><p>342</p></div>
+          </div>
+          <div class="glass-card admin-module" data-mod="vehicles">
+            <div class="module-icon">🚛</div>
+            <div class="module-info"><h3>VEHICLE MANAGEMENT</h3><p>198</p></div>
+          </div>
+          <div class="glass-card admin-module" data-mod="incidents">
+            <div class="module-icon">⚠</div>
+            <div class="module-info"><h3>INCIDENT MANAGEMENT</h3><p style="color:#ff9500;">18</p></div>
+          </div>
+        </div>
+
+        <div class="glass-card" style="padding: 20px; margin-bottom: 20px;" id="user-mgmt-section">
+          <div class="section-header">
+            <h2>User Management</h2>
+            <button type="button" class="btn-add" id="btn-add-user">+ ADD USER</button>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="user-table">
+              <thead>
+                <tr>
+                  <th>User ID</th>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>District</th>
+                  <th>Status</th>
+                  <th>Last Login</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="user-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="add-user-modal" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h3>Add User</h3>
+      <p class="sub">Create an account. Field Officers also appear on the Field Officers page.</p>
+      <label for="au-name">Full name *</label>
+      <input id="au-name" type="text" placeholder="e.g. Swetha Nayak" autocomplete="off">
+      <label for="au-role">Role</label>
+      <select id="au-role">
+        <option value="Field Officer" selected>Field Officer</option>
+        <option value="Local Authority">Local Authority</option>
+        <option value="Administrator">Administrator</option>
+      </select>
+      <label for="au-dist">District / HQ</label>
+      <select id="au-dist">
+        <option>Assam</option>
+        <option>Arunachal Pradesh</option>
+        <option>Nagaland</option>
+        <option>Meghalaya</option>
+        <option>Sikkim</option>
+        <option>Tripura</option>
+        <option>Mizoram</option>
+        <option>Manipur</option>
+        <option>HQ Guwahati</option>
+      </select>
+      <label for="au-pass">Temp password (optional)</label>
+      <input id="au-pass" type="text" placeholder="Leave blank for default">
+      <div class="row">
+        <button type="button" class="btn-cancel" id="btn-cancel-add">Cancel</button>
+        <button type="button" class="btn-ok" id="btn-confirm-add">Create User</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/components.js"></script>
+  <script src="js/auth-users.js"></script>
+  <script>
+  (function () {
+    var DEFAULT_USERS = [
+      { id: 'USR-001', name: 'Admin Officer', role: 'Administrator', dist: 'HQ Guwahati', stat: 'Active', login: '09:05 today' },
+      { id: 'USR-002', name: 'Ravi Kumar', role: 'Field Officer', dist: 'Assam', stat: 'Active', login: '08:30 today' },
+      { id: 'USR-003', name: 'District Collector', role: 'Local Authority', dist: 'Assam', stat: 'Active', login: '07:45 today' },
+      { id: 'USR-004', name: 'Lakshmi Devi', role: 'Field Officer', dist: 'Arunachal Pradesh', stat: 'Active', login: '08:15 today' },
+      { id: 'USR-005', name: 'Suresh Rao', role: 'Field Officer', dist: 'Nagaland', stat: 'Active', login: '09:20 today' },
+      { id: 'USR-006', name: 'Priya Singh', role: 'Field Officer', dist: 'Sikkim', stat: 'Inactive', login: '2026-09-04' },
+      { id: 'USR-007', name: 'Deputy Collector', role: 'Local Authority', dist: 'Meghalaya', stat: 'Active', login: '09:10 today' },
+      { id: 'USR-008', name: 'Mohan Rao', role: 'Field Officer', dist: 'Tripura', stat: 'Active', login: '08:45 today' },
+      { id: 'USR-009', name: 'System Analyst', role: 'Administrator', dist: 'HQ Guwahati', stat: 'Active', login: '07:30 today' },
+      { id: 'USR-010', name: 'Rajesh Varma', role: 'Field Officer', dist: 'Manipur', stat: 'Active', login: '09:00 today' }
+    ];
+
+    var currentUsers = [];
+
+    function toast(msg, type) {
+      if (window.SmartRoute && SmartRoute.showToast) SmartRoute.showToast(msg, type || 'info');
+    }
+
+    function loadUsers() {
+      try {
+        var saved = localStorage.getItem('sr_admin_users');
+        if (saved) {
+          var parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length) {
+            currentUsers = parsed;
+            return;
+          }
+        }
+      } catch (e) {}
+      currentUsers = DEFAULT_USERS.map(function (u) { return Object.assign({}, u); });
+      saveUsers();
+    }
+
+    function saveUsers() {
+      try {
+        localStorage.setItem('sr_admin_users', JSON.stringify(currentUsers));
+      } catch (e) {}
+      var el = document.getElementById('stat-users');
+      if (el) el.textContent = String(currentUsers.length);
+    }
+
+    function nextUserId() {
+      var max = 0;
+      currentUsers.forEach(function (u) {
+        var m = String(u.id || '').match(/(\d+)/);
+        if (m) max = Math.max(max, parseInt(m[1], 10));
+      });
+      return 'USR-' + String(max + 1).padStart(3, '0');
+    }
+
+    function nextFoId() {
+      var max = 100;
+      try {
+        var raw = localStorage.getItem('sr_field_officers');
+        if (raw) {
+          JSON.parse(raw).forEach(function (o) {
+            var m = String(o.id || '').match(/(\d+)/);
+            if (m) max = Math.max(max, parseInt(m[1], 10));
+          });
+        }
+      } catch (e) {}
+      currentUsers.forEach(function (u) {
+        if (u.foId) {
+          var m = String(u.foId).match(/(\d+)/);
+          if (m) max = Math.max(max, parseInt(m[1], 10));
+        }
+      });
+      return 'FO-' + String(max + 1).padStart(3, '0');
+    }
+
+    function syncFieldOfficer(user) {
+      if (user.role !== 'Field Officer') return;
+      try {
+        var list = [];
+        var raw = localStorage.getItem('sr_field_officers');
+        if (raw) list = JSON.parse(raw) || [];
+        if (!Array.isArray(list)) list = [];
+        var foId = user.foId || nextFoId();
+        user.foId = foId;
+        var exists = list.findIndex(function (o) {
+          return o.id === foId || (o.name && o.name.toLowerCase() === user.name.toLowerCase());
+        });
+        var entry = {
+          id: foId,
+          name: user.name,
+          dist: user.dist,
+          status: user.stat === 'Active' ? 'ACTIVE' : 'OFF DUTY',
+          sector: user.dist
+        };
+        if (exists >= 0) list[exists] = Object.assign({}, list[exists], entry);
+        else list.unshift(entry);
+        localStorage.setItem('sr_field_officers', JSON.stringify(list));
+      } catch (e) {}
+    }
+
+    function renderUserTable() {
+      var tbody = document.getElementById('user-tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      if (!currentUsers.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-users">No users yet. Click + ADD USER to create one.</td></tr>';
+        saveUsers();
+        return;
+      }
+      currentUsers.forEach(function (u) {
+        var tr = document.createElement('tr');
+        var statClass = u.stat === 'Active' ? 'status-active' : 'status-inactive';
+        tr.innerHTML =
+          '<td><strong>' + escapeHtml(u.id) + '</strong></td>' +
+          '<td>' + escapeHtml(u.name) + '</td>' +
+          '<td>' + escapeHtml(u.role) + '</td>' +
+          '<td>' + escapeHtml(u.dist) + '</td>' +
+          '<td class="' + statClass + '">● ' + escapeHtml(u.stat) + '</td>' +
+          '<td>' + escapeHtml(u.login || '—') + '</td>' +
+          '<td class="action-btns">' +
+            '<button type="button" class="btn-del" data-act="del" data-id="' + escapeAttr(u.id) + '">Delete</button>' +
+            '<button type="button" data-act="edit" data-id="' + escapeAttr(u.id) + '">Edit</button>' +
+            '<button type="button" data-act="toggle" data-id="' + escapeAttr(u.id) + '">' +
+              (u.stat === 'Active' ? 'Deactivate' : 'Activate') + '</button>' +
+            '<button type="button" data-act="role" data-id="' + escapeAttr(u.id) + '">Role</button>' +
+          '</td>';
+        tbody.appendChild(tr);
+      });
+      saveUsers();
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function escapeAttr(s) {
+      return String(s == null ? '' : s).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function openAddModal() {
+      document.getElementById('au-name').value = '';
+      document.getElementById('au-pass').value = '';
+      document.getElementById('au-role').value = 'Field Officer';
+      document.getElementById('au-dist').value = 'Assam';
+      document.getElementById('add-user-modal').classList.add('show');
+      setTimeout(function () { document.getElementById('au-name').focus(); }, 50);
+    }
+
+    function closeAddModal() {
+      document.getElementById('add-user-modal').classList.remove('show');
+    }
+
+    function confirmAddUser() {
+      var name = (document.getElementById('au-name').value || '').trim();
+      if (!name) {
+        toast('Enter a full name', 'warn');
+        document.getElementById('au-name').focus();
+        return;
+      }
+      var role = document.getElementById('au-role').value;
+      var dist = document.getElementById('au-dist').value;
+      var pass = (document.getElementById('au-pass').value || '').trim() || 'Pass@123';
+
+      var newUser = {
+        id: nextUserId(),
+        name: name,
+        role: role,
+        dist: dist,
+        stat: 'Active',
+        login: 'Just now'
+      };
+
+      if (role === 'Field Officer') {
+        newUser.foId = nextFoId();
+        syncFieldOfficer(newUser);
+      }
+
+      try {
+        if (window.SmartRouteAuth && typeof SmartRouteAuth.createUserWithoutLogin === 'function') {
+          SmartRouteAuth.createUserWithoutLogin({
+            username: name, password: pass, role: role, district: dist
+          });
+        } else {
+          var key = 'sr_users';
+          var users = [];
+          try { users = JSON.parse(localStorage.getItem(key) || '[]') || []; } catch (e) {}
+          if (!Array.isArray(users)) users = [];
+          users.push({ username: name, password: pass, role: role, district: dist, createdAt: Date.now() });
+          localStorage.setItem(key, JSON.stringify(users));
+        }
+      } catch (e) {}
+
+      currentUsers.unshift(newUser);
+      saveUsers();
+      renderUserTable();
+      closeAddModal();
+      toast('User created: ' + name + ' (' + newUser.id + ')', 'success');
+    }
+
+    function findUser(id) {
+      return currentUsers.find(function (u) { return u.id === id; });
+    }
+
+    function deleteUser(id) {
+      var user = findUser(id);
+      if (!user) return;
+      if (!confirm('Delete user "' + user.name + '" (' + id + ')?')) return;
+      currentUsers = currentUsers.filter(function (u) { return u.id !== id; });
+      saveUsers();
+      renderUserTable();
+      toast('Deleted: ' + user.name, 'success');
+    }
+
+    function editUser(id) {
+      var user = findUser(id);
+      if (!user) return;
+      var newName = prompt('Update name for ' + user.id + ':', user.name);
+      if (newName && newName.trim()) {
+        user.name = newName.trim();
+        if (user.role === 'Field Officer') syncFieldOfficer(user);
+        saveUsers();
+        renderUserTable();
+        toast('Updated: ' + user.name, 'success');
+      }
+    }
+
+    function toggleUserStatus(id) {
+      var user = findUser(id);
+      if (!user) return;
+      user.stat = user.stat === 'Active' ? 'Inactive' : 'Active';
+      if (user.role === 'Field Officer') syncFieldOfficer(user);
+      saveUsers();
+      renderUserTable();
+      toast(user.name + ' is now ' + user.stat, user.stat === 'Active' ? 'success' : 'warn');
+    }
+
+    function cycleRole(id) {
+      var user = findUser(id);
+      if (!user) return;
+      var roles = ['Field Officer', 'Local Authority', 'Administrator'];
+      var cur = roles.indexOf(user.role);
+      user.role = roles[(cur + 1) % roles.length];
+      if (user.role === 'Field Officer') {
+        if (!user.foId) user.foId = nextFoId();
+        syncFieldOfficer(user);
+      }
+      saveUsers();
+      renderUserTable();
+      toast(user.name + ' role → ' + user.role, 'info');
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.SmartRoute) {
+        SmartRoute.initSharedComponents({
+          title: 'Admin Panel',
+          subtitle: 'System Administration & User Management'
+        });
+      }
+
+      loadUsers();
+      renderUserTable();
+
+      document.getElementById('btn-add-user').addEventListener('click', function (e) {
+        e.preventDefault();
+        openAddModal();
+      });
+      document.getElementById('btn-cancel-add').addEventListener('click', closeAddModal);
+      document.getElementById('btn-confirm-add').addEventListener('click', confirmAddUser);
+      document.getElementById('add-user-modal').addEventListener('click', function (e) {
+        if (e.target.id === 'add-user-modal') closeAddModal();
+      });
+      document.getElementById('au-name').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') confirmAddUser();
+      });
+
+      document.getElementById('user-tbody').addEventListener('click', function (e) {
+        var btn = e.target.closest('button[data-act]');
+        if (!btn) return;
+        var act = btn.getAttribute('data-act');
+        var id = btn.getAttribute('data-id');
+        if (act === 'del') deleteUser(id);
+        else if (act === 'edit') editUser(id);
+        else if (act === 'toggle') toggleUserStatus(id);
+        else if (act === 'role') cycleRole(id);
+      });
+
+      document.querySelectorAll('.admin-module').forEach(function (m) {
+        m.addEventListener('click', function () {
+          var title = m.querySelector('h3').textContent;
+          if (m.getAttribute('data-mod') === 'users') {
+            document.getElementById('user-mgmt-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+          toast(title, 'info');
+        });
+      });
+    });
+  })();
+  </script>
+</body>
+</html>
