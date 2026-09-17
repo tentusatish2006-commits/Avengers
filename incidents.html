@@ -44,14 +44,46 @@
         .response-box h4 { margin:0 0 8px; color:#00d4ff; font-size:0.85rem; }
         .response-row { display:flex; justify-content:space-between; font-size:0.8rem; color:#c8d8e8; margin:4px 0; }
         .response-row strong { color:#00ff88; font-family:JetBrains Mono,monospace; }
-        .timeline { margin:14px 0; padding-left:18px; border-left:2px solid rgba(255,255,255,0.1); }
-        .timeline-node { position:relative; margin-bottom:12px; font-size:13px; color:#64748b; }
-        .timeline-node::before {
-            content:''; position:absolute; left:-24px; top:3px; width:10px; height:10px;
-            border-radius:50%; background:#1e293b; border:2px solid #475569;
+
+        /* Timeline — clear spacing so labels do not merge */
+        .timeline {
+            margin: 16px 4px 16px 10px;
+            padding: 4px 0 4px 22px;
+            border-left: 2px solid rgba(255,255,255,0.14);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
         }
-        .timeline-node.active { color:#e8f4ff; }
-        .timeline-node.active::before { background:#00ff88; border-color:#00ff88; box-shadow:0 0 8px #00ff88; }
+        .timeline-node {
+            position: relative;
+            padding-left: 10px;
+            margin: 0;
+            font-size: 0.82rem;
+            line-height: 1.4;
+            color: #8fa3b8;
+            white-space: nowrap;
+            letter-spacing: 0.02em;
+        }
+        .timeline-node::before {
+            content: '';
+            position: absolute;
+            left: -29px;
+            top: 4px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #2a3548;
+            border: 2px solid #5a6a80;
+            box-sizing: border-box;
+        }
+        .timeline-node.active { color: #e8f4ff; font-weight: 600; }
+        .timeline-node.active::before {
+            background: #00ff88;
+            border-color: #00ff88;
+            box-shadow: 0 0 10px rgba(0,255,136,0.65);
+        }
+        .timeline-node .tl-label { display: inline-block; }
+
         .officer-chip {
             display:inline-block; margin:4px 4px 0 0; padding:4px 10px; border-radius:20px;
             background:rgba(0,255,136,0.12); border:1px solid rgba(0,255,136,0.35);
@@ -119,13 +151,13 @@
 
                             <div id="assigned-officers"></div>
 
-                            <div class="timeline">
-                                <div class="timeline-node active" id="tl-detected">Detected</div>
-                                <div class="timeline-node" id="tl-verified">Verified</div>
-                                <div class="timeline-node" id="tl-alerted">Alert sent</div>
-                                <div class="timeline-node" id="tl-assigned">Officer assigned</div>
-                                <div class="timeline-node" id="tl-redirect">Vehicles redirected</div>
-                                <div class="timeline-node" id="tl-status">Status updated</div>
+                            <div class="timeline" id="incident-timeline">
+                                <div class="timeline-node active" id="tl-detected"><span class="tl-label">Detected</span></div>
+                                <div class="timeline-node" id="tl-verified"><span class="tl-label">Verified</span></div>
+                                <div class="timeline-node" id="tl-alerted"><span class="tl-label">Alert sent</span></div>
+                                <div class="timeline-node" id="tl-assigned"><span class="tl-label">Officer assigned</span></div>
+                                <div class="timeline-node" id="tl-redirect"><span class="tl-label">Vehicles redirected</span></div>
+                                <div class="timeline-node" id="tl-status"><span class="tl-label">Status updated</span></div>
                             </div>
 
                             <div class="action-grid">
@@ -184,7 +216,7 @@
         ];
 
         let map, markers = {}, selectedIncident = null;
-        const responseState = {}; // per incident id
+        const responseState = {};
 
         function toast(msg, type) {
             if (window.SmartRoute && SmartRoute.showToast) SmartRoute.showToast(msg, type || 'info', 3200);
@@ -318,28 +350,20 @@
             document.getElementById('assign-cancel').onclick = function () {
                 document.getElementById('assign-modal').classList.remove('open');
             };
+            document.getElementById('assign-modal').onclick = function (e) {
+                if (e.target.id === 'assign-modal') document.getElementById('assign-modal').classList.remove('open');
+            };
             document.getElementById('assign-confirm').onclick = function () {
-                if (!selectedIncident) return;
                 var custom = (document.getElementById('officer-custom').value || '').trim();
-                var officer = custom || document.getElementById('officer-select').value;
+                var name = custom || document.getElementById('officer-select').value;
                 var st = ensureState(selectedIncident.id);
                 markFirstAction(st);
-                st.officers.push(officer);
-                st.status = 'Officer Assigned';
+                if (st.officers.indexOf(name) < 0) st.officers.push(name);
+                st.status = 'Officer assigned';
                 document.getElementById('assign-modal').classList.remove('open');
                 document.getElementById('officer-custom').value = '';
                 refreshResponseUI(selectedIncident);
-                toast('Assigned ' + officer + ' to ' + selectedIncident.id, 'success');
-            };
-
-            document.getElementById('btn-send-alert').onclick = function () {
-                if (!selectedIncident) { toast('Select an incident first', 'warn'); return; }
-                var st = ensureState(selectedIncident.id);
-                markFirstAction(st);
-                st.alertSent = true;
-                st.status = st.officers.length ? 'Alerted + Assigned' : 'Alert Broadcast';
-                refreshResponseUI(selectedIncident);
-                toast('Priority alert sent for ' + selectedIncident.id + ' · ' + selectedIncident.road, 'warn');
+                toast('Assigned: ' + name, 'success');
             };
 
             document.getElementById('btn-redirect-vehicles').onclick = function () {
@@ -347,21 +371,31 @@
                 var st = ensureState(selectedIncident.id);
                 markFirstAction(st);
                 st.redirected = true;
-                st.status = 'Vehicles Redirected';
+                st.status = 'Vehicles redirected';
                 refreshResponseUI(selectedIncident);
-                toast('Convoys redirected away from ' + selectedIncident.road + ' via safest alternate corridors', 'info');
+                toast('Vehicles redirected for ' + selectedIncident.id, 'success');
+            };
+
+            document.getElementById('btn-send-alert').onclick = function () {
+                if (!selectedIncident) { toast('Select an incident first', 'warn'); return; }
+                var st = ensureState(selectedIncident.id);
+                markFirstAction(st);
+                st.alertSent = true;
+                if (st.status === 'Pending') st.status = 'Alert sent';
+                refreshResponseUI(selectedIncident);
+                toast('Alert sent for ' + selectedIncident.id, 'success');
             };
 
             document.getElementById('btn-update-status').onclick = function () {
                 if (!selectedIncident) { toast('Select an incident first', 'warn'); return; }
                 var st = ensureState(selectedIncident.id);
                 markFirstAction(st);
-                var flow = ['Pending', 'Acknowledged', 'Response Underway', 'Contained', 'Cleared'];
-                var idx = flow.indexOf(st.status);
-                if (idx < 0) idx = 0;
-                st.status = flow[Math.min(idx + 1, flow.length - 1)];
+                var cycle = ['Pending', 'In progress', 'Clearance ongoing', 'Resolved'];
+                var i = cycle.indexOf(st.status);
+                if (i < 0) i = 0;
+                st.status = cycle[(i + 1) % cycle.length];
                 refreshResponseUI(selectedIncident);
-                toast('Status → ' + st.status + ' · Elapsed ' + formatElapsed(Date.now() - st.detectedAt), 'success');
+                toast('Status: ' + st.status, 'info');
             };
         }
     </script>
