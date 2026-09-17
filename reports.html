@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reports - SmartRoute</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link rel="stylesheet" href="css/design-system.css">
   <link rel="stylesheet" href="css/components.css">
   <style>
@@ -30,12 +32,19 @@
     .btn-view { background:rgba(0,212,255,0.15); border:1px solid #00d4ff; color:#00d4ff; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:700; }
     .modal-bg { display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.72); align-items:center; justify-content:center; padding:16px; }
     .modal-bg.open { display:flex; }
-    .modal { width:min(560px,100%); max-height:90vh; overflow:auto; background:#0a1628; border:1px solid rgba(0,212,255,0.4); border-radius:14px; padding:20px; }
+    .modal { width:min(720px,100%); max-height:92vh; overflow:auto; background:#0a1628; border:1px solid rgba(0,212,255,0.4); border-radius:14px; padding:20px; }
     .modal h2 { margin:0 0 12px; color:#00d4ff; font-size:1.15rem; }
     .modal .row { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:0.9rem; }
     .modal .label { color:#8fa3b8; } .modal .val { font-weight:700; color:#e8f4ff; text-align:right; }
-    .modal img.field-photo { width:100%; max-height:200px; object-fit:cover; border-radius:10px; margin:12px 0; border:1px solid rgba(0,212,255,0.3); background:#122; }
     .modal .close-btn { margin-top:14px; width:100%; padding:12px; border-radius:8px; border:none; background:linear-gradient(90deg,#00d4ff,#00ff88); color:#031018; font-weight:800; cursor:pointer; }
+    .modal-media { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:12px 0 16px; }
+    @media (max-width:640px) { .modal-media { grid-template-columns:1fr; } }
+    .modal-photo-wrap { position:relative; border-radius:12px; overflow:hidden; border:1px solid rgba(0,212,255,0.3); background:#061018; min-height:200px; }
+    .modal-photo-wrap img { width:100%; height:200px; object-fit:cover; display:block; }
+    .modal-photo-badge { position:absolute; top:8px; left:8px; background:rgba(0,0,0,0.75); color:#fff; font-size:10px; font-weight:800; padding:4px 10px; border-radius:20px; letter-spacing:0.06em; }
+    .modal-map-wrap { position:relative; border-radius:12px; overflow:hidden; border:1px solid rgba(0,212,255,0.3); min-height:200px; }
+    #report-mini-map { width:100%; height:200px; background:#030810; }
+    .modal-map-label { position:absolute; top:8px; left:8px; z-index:500; background:rgba(3,8,16,0.9); border:1px solid rgba(0,212,255,0.45); border-radius:4px; padding:3px 8px; font-size:9px; font-weight:700; color:#00d4ff; }
   </style>
 </head>
 <body>
@@ -76,12 +85,27 @@
   <div class="modal" id="report-modal-body"></div>
 </div>
 
-<script src="js/auth-users.js?v=rep2"></script>
-<script src="js/components.js?v=rep2"></script>
+<script src="js/auth-users.js?v=rep3"></script>
+<script src="js/components.js?v=rep3"></script>
+<script src="js/sim-photo-pothole.js?v=rep3"></script>
+<script src="js/sim-photo-landslide.js?v=rep3"></script>
+<script src="js/sim-photo-flood.js?v=rep3"></script>
 <script>
-function svgThumb(label, c1, c2) {
-  var s = '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="'+c1+'"/><stop offset="100%" stop-color="'+c2+'"/></linearGradient></defs><rect width="640" height="360" fill="url(#g)"/><text x="320" y="180" text-anchor="middle" fill="#fff" font-size="28" font-family="Arial" font-weight="700">'+label+'</text><text x="320" y="220" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="16" font-family="Arial">Field Officer Upload</text></svg>';
-  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
+function photoForIncident(type) {
+  var t = String(type || '').toLowerCase();
+  if (t.indexOf('flood') >= 0) return window.SIM_PHOTO_FLOOD || '';
+  if (t.indexOf('landslide') >= 0 || t.indexOf('debris') >= 0) return window.SIM_PHOTO_LANDSLIDE || '';
+  if (t.indexOf('pothole') >= 0 || t.indexOf('road') >= 0 || t.indexOf('crack') >= 0 || t.indexOf('damage') >= 0 || t.indexOf('bridge') >= 0)
+    return window.SIM_PHOTO_POTHOLE || window.SIM_PHOTO_LANDSLIDE || '';
+  return window.SIM_PHOTO_POTHOLE || '';
+}
+
+function photoColor(type) {
+  var t = String(type || '').toLowerCase();
+  if (t.indexOf('flood') >= 0) return '#4cc9f0';
+  if (t.indexOf('landslide') >= 0) return '#ff9500';
+  if (t.indexOf('critical') >= 0) return '#ff3b3b';
+  return '#ff9500';
 }
 
 var OFFICERS = {
@@ -96,38 +120,29 @@ var OFFICERS = {
 
 var reports = [
   { id: 'RPT-2089', incident: 'Flash Flood', loc: 'Brahmaputra — Guwahati', off: 'FO-015', dt: '2026-09-05 09:15', sev: 'High', stat: 'Open', dist: 'Assam',
-    lat: 26.18, lng: 91.75, risk: 74, notes: 'Water level rising on approach road. Convoy hold advised.',
-    photo: svgThumb('FLOOD PHOTO', '#0a3a5c', '#1a6a9c') },
+    lat: 26.18, lng: 91.75, risk: 74, notes: 'Water level rising on approach road. Convoy hold advised.' },
   { id: 'RPT-2088', incident: 'Landslide', loc: 'NH-13 KM62 — Tawang Pass', off: 'FO-042', dt: '2026-09-05 08:32', sev: 'Critical', stat: 'In Progress', dist: 'Arunachal Pradesh',
-    lat: 27.586, lng: 91.859, risk: 88, notes: 'Active slope failure blocking single-lane carriageway.',
-    photo: svgThumb('LANDSLIDE PHOTO', '#5c3a1a', '#8b5a2b') },
+    lat: 27.586, lng: 91.859, risk: 88, notes: 'Active slope failure blocking single-lane carriageway.' },
   { id: 'RPT-2087', incident: 'Road Damage', loc: 'NH-2 — Kohima Pass', off: 'FO-089', dt: '2026-09-05 10:05', sev: 'Medium', stat: 'Verified', dist: 'Nagaland',
-    lat: 25.675, lng: 94.109, risk: 52, notes: 'Surface cracks after heavy rain; speed limit posted.',
-    photo: svgThumb('ROAD DAMAGE', '#3a3a3a', '#6a6a6a') },
+    lat: 25.675, lng: 94.109, risk: 52, notes: 'Surface cracks after heavy rain; speed limit posted.' },
   { id: 'RPT-2086', incident: 'Bridge Warning', loc: 'Teesta Bridge — Gangtok', off: 'FO-061', dt: '2026-09-05 11:05', sev: 'High', stat: 'Open', dist: 'Sikkim',
-    lat: 27.33, lng: 88.61, risk: 71, notes: 'Vibration report; alternate path recommended for heavy trucks.',
-    photo: svgThumb('BRIDGE WARNING', '#4a2a4a', '#7a4a7a') },
+    lat: 27.33, lng: 88.61, risk: 71, notes: 'Vibration report; alternate path recommended for heavy trucks.' },
   { id: 'RPT-2085', incident: 'Road Crack', loc: 'NH-8 — Agartala Route', off: 'FO-015', dt: '2026-09-05 11:48', sev: 'Medium', stat: 'Open', dist: 'Tripura',
-    lat: 23.83, lng: 91.28, risk: 48, notes: 'Longitudinal crack 18m; marked with cones.',
-    photo: svgThumb('ROAD CRACK', '#3a3a3a', '#555') },
+    lat: 23.83, lng: 91.28, risk: 48, notes: 'Longitudinal crack 18m; marked with cones.' },
   { id: 'RPT-2084', incident: 'Flash Flood', loc: 'Barak River — Silchar', off: 'FO-055', dt: '2026-09-05 13:10', sev: 'Critical', stat: 'Open', dist: 'Assam',
-    lat: 24.83, lng: 92.78, risk: 82, notes: 'Embankment overflow; medical convoy diverted.',
-    photo: svgThumb('FLOOD · BARAK', '#0a3a5c', '#0d5a7a') },
+    lat: 24.83, lng: 92.78, risk: 82, notes: 'Embankment overflow; medical convoy diverted.' },
   { id: 'RPT-2083', incident: 'Road Damage', loc: 'NH-306 — Aizawl Approach', off: 'FO-028', dt: '2026-09-04 15:30', sev: 'Low', stat: 'Resolved', dist: 'Mizoram',
-    lat: 23.73, lng: 92.72, risk: 28, notes: 'Potholes patched; reopened.',
-    photo: svgThumb('POTHOLE FIXED', '#2a4a2a', '#3a6a3a') },
+    lat: 23.73, lng: 92.72, risk: 28, notes: 'Potholes patched; reopened.' },
   { id: 'RPT-2082', incident: 'Bridge Crack', loc: 'Brahmaputra Bridge — Jorhat', off: 'FO-061', dt: '2026-09-04 11:20', sev: 'High', stat: 'Resolved', dist: 'Assam',
-    lat: 26.75, lng: 94.20, risk: 65, notes: 'Inspection complete; load limit temporary.',
-    photo: svgThumb('BRIDGE CRACK', '#4a2a4a', '#6a3a6a') },
+    lat: 26.75, lng: 94.20, risk: 65, notes: 'Inspection complete; load limit temporary.' },
   { id: 'RPT-2081', incident: 'Pothole', loc: 'GS-1 — Nongpoh Section', off: 'FO-033', dt: '2026-09-03 09:00', sev: 'Low', stat: 'Resolved', dist: 'Meghalaya',
-    lat: 25.90, lng: 91.88, risk: 22, notes: 'Single pothole filled.',
-    photo: svgThumb('POTHOLE', '#3a3a3a', '#5a5a5a') },
+    lat: 25.90, lng: 91.88, risk: 22, notes: 'Single pothole filled.' },
   { id: 'RPT-2080', incident: 'Landslide', loc: 'NH-10 — Teesta Gorge', off: 'FO-042', dt: '2026-09-03 16:45', sev: 'High', stat: 'Resolved', dist: 'Sikkim',
-    lat: 27.20, lng: 88.55, risk: 70, notes: 'Debris cleared; corridor reopened.',
-    photo: svgThumb('LANDSLIDE CLEARED', '#5c3a1a', '#6a4a2a') }
+    lat: 27.20, lng: 88.55, risk: 70, notes: 'Debris cleared; corridor reopened.' }
 ];
 
 var activeReports = reports.slice();
+var miniMap = null;
 
 function sevClass(sev) {
   var s = String(sev || '').toLowerCase();
@@ -170,14 +185,34 @@ function applyFilters() {
   }));
 }
 
+function destroyMiniMap() {
+  if (miniMap) {
+    try { miniMap.remove(); } catch (e) {}
+    miniMap = null;
+  }
+}
+
 function viewReport(id) {
   var r = reports.find(function (x) { return x.id === id; });
   if (!r) return;
   var o = OFFICERS[r.off] || { name: r.off, role: 'Field Officer', phone: '—', sector: r.dist, status: '—' };
+  var photoUrl = photoForIncident(r.incident);
+  var color = photoColor(r.incident);
   var body = document.getElementById('report-modal-body');
   body.innerHTML =
     '<h2>📋 ' + r.id + ' — ' + r.incident + '</h2>' +
-    '<img class="field-photo" src="' + r.photo + '" alt="Field photo">' +
+    '<div class="modal-media">' +
+      '<div class="modal-photo-wrap">' +
+        (photoUrl
+          ? '<img src="' + photoUrl + '" alt="Field officer upload — ' + r.incident + '">' 
+          : '<div style="height:200px;display:flex;align-items:center;justify-content:center;color:#8fa3b8;">Photo loading…</div>') +
+        '<div class="modal-photo-badge">' + r.incident + ' · Field Officer Upload</div>' +
+      '</div>' +
+      '<div class="modal-map-wrap">' +
+        '<div id="report-mini-map"></div>' +
+        '<div class="modal-map-label">📍 GPS FIELD LOCATION</div>' +
+      '</div>' +
+    '</div>' +
     '<div class="row"><span class="label">Risk score</span><span class="val" style="color:' + (r.risk >= 70 ? '#ff6b6b' : r.risk >= 45 ? '#ff9500' : '#00ff88') + '">' + r.risk + ' / 100</span></div>' +
     '<div class="row"><span class="label">Severity</span><span class="val">' + r.sev + '</span></div>' +
     '<div class="row"><span class="label">Status</span><span class="val">' + r.stat + '</span></div>' +
@@ -194,12 +229,43 @@ function viewReport(id) {
     '<div class="row"><span class="label">Duty status</span><span class="val">' + o.status + '</span></div>' +
     '<div class="row"><span class="label">Field notes</span><span class="val" style="text-align:left;max-width:60%">' + r.notes + '</span></div>' +
     '<button type="button" class="close-btn" id="modal-close">Close</button>';
+
   document.getElementById('report-modal').classList.add('open');
   document.getElementById('modal-close').onclick = closeModal;
+
+  destroyMiniMap();
+  setTimeout(function () {
+    var el = document.getElementById('report-mini-map');
+    if (!el || !window.L) return;
+    miniMap = L.map('report-mini-map', {
+      center: [r.lat, r.lng],
+      zoom: 12,
+      zoomControl: true,
+      attributionControl: false
+    });
+    L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      maxZoom: 18,
+      subdomains: ['mt0','mt1','mt2','mt3']
+    }).addTo(miniMap);
+    L.circleMarker([r.lat, r.lng], {
+      radius: 11,
+      color: color,
+      fillColor: color,
+      fillOpacity: 0.45,
+      weight: 3
+    }).addTo(miniMap).bindPopup(
+      '<b style="color:' + color + '">' + r.incident + '</b><br>' +
+      r.loc + '<br><span style="font-size:11px">GPS: ' + r.lat.toFixed(4) + ', ' + r.lng.toFixed(4) + '</span><br>' +
+      '<span style="font-size:11px">Officer: ' + r.off + ' · ' + o.name + '</span>'
+    ).openPopup();
+    L.circle([r.lat, r.lng], { radius: 350, color: color, fillColor: color, fillOpacity: 0.12, weight: 1 }).addTo(miniMap);
+    setTimeout(function () { try { miniMap.invalidateSize(); } catch (e) {} }, 120);
+  }, 60);
 }
 
 function closeModal() {
   document.getElementById('report-modal').classList.remove('open');
+  destroyMiniMap();
 }
 
 function exportExcel() {
