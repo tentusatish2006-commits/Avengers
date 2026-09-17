@@ -1,1 +1,128 @@
-PLACEHOLDER_RESTORE
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartRoute - Field Officers</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="css/design-system.css"><link rel="stylesheet" href="css/components.css">
+<style>
+.layout-2col{display:grid;grid-template-columns:55% 45%;gap:16px;padding:12px;min-height:70vh}
+#officers-map{height:100%;min-height:360px;border-radius:12px}
+.officers-panel{padding:14px;overflow:auto}
+.officer-card{display:flex;gap:12px;align-items:center;padding:10px;margin:8px 0;border-radius:10px;border:1px solid rgba(255,255,255,.08);cursor:pointer;background:rgba(255,255,255,.03)}
+.officer-card:hover{border-color:#00d4ff}
+.avatar{width:42px;height:42px;border-radius:50%;background:rgba(0,212,255,.15);color:#00d4ff;display:flex;align-items:center;justify-content:center;font-weight:700}
+.fo-btn{display:block;width:100%;padding:12px;margin:6px 0;border-radius:10px;font-weight:800;cursor:pointer;border:none;font-family:Outfit,sans-serif}
+.fo-btn-assign{background:linear-gradient(135deg,#00d4ff,#0099cc);color:#031018}
+.fo-btn-reports{background:rgba(0,255,136,.12);color:#00ff88;border:2px solid rgba(0,255,136,.5)}
+.fo-btn-track{background:rgba(255,149,0,.12);color:#ffb347;border:2px solid rgba(255,149,0,.5)}
+.modal-bg{display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.7);align-items:center;justify-content:center;padding:16px}
+.modal-bg.show{display:flex!important}
+.modal{width:min(520px,100%);max-height:90vh;overflow:auto;background:#0a1628;border:1px solid rgba(0,212,255,.4);border-radius:14px;padding:18px}
+.loc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:200px;overflow:auto;margin:8px 0}
+.loc-item{display:flex;gap:8px;padding:8px;border-radius:8px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);cursor:pointer;font-size:.82rem;color:#e8f4ff}
+</style></head>
+<body>
+<div class="app-shell"><div class="main-content" id="main-content"><main class="page-body">
+<div class="layout-2col">
+<div id="officers-map"></div>
+<div class="officers-panel glass-card">
+<div id="list-view"><h3 style="color:#e8f4ff;margin:0 0 10px">FIELD OFFICERS</h3>
+<input id="officer-search" placeholder="Search..." style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#fff;margin-bottom:10px">
+<div id="officer-list"></div></div>
+<div id="detail-view" style="display:none">
+<button type="button" id="btn-back" style="margin-bottom:10px;padding:8px 12px;border-radius:8px;border:1px solid #00d4ff;background:transparent;color:#00d4ff;cursor:pointer">Back</button>
+<h3 id="det-name" style="color:#e8f4ff;margin:0">-</h3>
+<div id="det-id" style="color:#00d4ff;margin-bottom:8px">-</div>
+<div id="det-loc" style="color:#8fa3b8;margin-bottom:12px">-</div>
+<button type="button" class="fo-btn fo-btn-assign" id="btn-assign">Assign Incident</button>
+<button type="button" class="fo-btn fo-btn-reports" id="btn-reports">View Reports</button>
+<button type="button" class="fo-btn fo-btn-track" id="btn-track">Track Location</button>
+</div></div></div>
+</main></div></div>
+<div class="modal-bg" id="assign-modal"><div class="modal">
+<h3 style="color:#00d4ff;margin:0 0 10px">Assign Incident - Multiple Locations</h3>
+<p id="assign-to" style="color:#8fa3b8;font-size:.9rem">To: -</p>
+<label style="color:#8fa3b8;font-size:.75rem">Incident type</label>
+<select id="as-type" style="width:100%;padding:10px;margin:6px 0 10px;border-radius:8px;background:#061018;color:#fff;border:1px solid rgba(0,212,255,.3)">
+<option>Landslide</option><option>Flash Flood</option><option>Pothole / Road Damage</option><option>Bridge Warning</option>
+</select>
+<label style="color:#8fa3b8;font-size:.75rem">Select one or more locations (NER)</label>
+<div class="loc-grid" id="as-locations"></div>
+<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+<button type="button" id="btn-cancel-assign" style="padding:10px 16px;border-radius:8px;border:none;background:rgba(255,255,255,.1);color:#fff;cursor:pointer">Cancel</button>
+<button type="button" id="btn-confirm-assign" style="padding:10px 16px;border-radius:8px;border:none;background:linear-gradient(90deg,#00d4ff,#00ff88);color:#031018;font-weight:700;cursor:pointer">Confirm Assign</button>
+</div></div></div>
+<script src="js/components.js"></script>
+<script src="js/map-engine.js"></script>
+<script>
+(function(){
+var NER=[{id:'loc-ghy',name:'Guwahati - Brahmaputra Corridor',state:'Assam'},{id:'loc-shl',name:'Shillong - GS-1 / Nongpoh',state:'Meghalaya'},{id:'loc-taw',name:'Tawang Pass - NH-13 KM62',state:'Arunachal Pradesh'},{id:'loc-koh',name:'Kohima Pass - NH-2',state:'Nagaland'},{id:'loc-imp',name:'Imphal Valley Causeway',state:'Manipur'},{id:'loc-aiz',name:'Aizawl Approach - NH-306',state:'Mizoram'},{id:'loc-agt',name:'Agartala Corridor - NH-8',state:'Tripura'},{id:'loc-gtk',name:'Gangtok - Teesta Bridge',state:'Sikkim'},{id:'loc-sil',name:'Silchar - Barak River',state:'Assam'},{id:'loc-jor',name:'Jorhat - Brahmaputra Bridge',state:'Assam'}];
+var officers=[{id:'FO-042',name:'Ravi Kumar',initials:'RK',dist:'Assam',lat:26.1524,lng:91.7510,note:'Guwahati Riverfront'},{id:'FO-015',name:'Lakshmi Devi',initials:'LD',dist:'Arunachal Pradesh',lat:27.584,lng:91.862,note:'NH-13 Tawang Pass'},{id:'FO-028',name:'Suresh Rao',initials:'SR',dist:'Nagaland',lat:25.67,lng:94.1,note:'Kohima pass'},{id:'FO-061',name:'Anand Babu',initials:'AB',dist:'Meghalaya',lat:25.57,lng:91.89,note:'Shillong Plateau'},{id:'FO-033',name:'Priya Singh',initials:'PS',dist:'Sikkim',lat:27.33,lng:88.61,note:'Gangtok depot'},{id:'FO-077',name:'Mohan Rao',initials:'MR',dist:'Tripura',lat:23.83,lng:91.28,note:'Agartala corridor'},{id:'FO-089',name:'Kavitha Reddy',initials:'KR',dist:'Mizoram',lat:23.73,lng:92.71,note:'Aizawl high pass'},{id:'FO-055',name:'Rajesh Varma',initials:'RV',dist:'Manipur',lat:24.817,lng:93.936,note:'Imphal valley'}];
+var map=null, selected=null, markers={};
+function toast(m,t){if(window.SmartRoute&&SmartRoute.showToast)SmartRoute.showToast(m,t||'info');else alert(m);}
+function render(list){
+  var el=document.getElementById('officer-list');el.innerHTML='';
+  list.forEach(function(o){
+    var c=document.createElement('div');c.className='officer-card';
+    c.innerHTML='<div class="avatar">'+o.initials+'</div><div><div style="font-weight:600;color:#e8f4ff">'+o.name+'</div><div style="font-size:.75rem;color:#aaa">'+o.id+' | '+o.dist+'</div></div>';
+    c.onclick=function(){openDetail(o)};el.appendChild(c);
+  });
+}
+function openDetail(o){
+  selected=o;window.selectedOfficer=o;
+  document.getElementById('list-view').style.display='none';
+  document.getElementById('detail-view').style.display='block';
+  document.getElementById('det-name').textContent=o.name;
+  document.getElementById('det-id').textContent=o.id+' | '+o.dist;
+  document.getElementById('det-loc').textContent=o.note;
+  document.getElementById('assign-to').textContent='To: '+o.name+' ('+o.id+') - select one or more locations';
+  if(map){map.flyTo([o.lat,o.lng],13);if(markers[o.id])markers[o.id].openTooltip();}
+  toast('Selected '+o.name,'success');
+}
+function openAssign(){
+  if(!selected){toast('Select an officer first','warn');return;}
+  var box=document.getElementById('as-locations');
+  box.innerHTML=NER.map(function(loc){
+    return '<label class="loc-item"><input type="checkbox" class="assign-loc-cb" data-name="'+loc.name+'"><span><strong>'+loc.name+'</strong><br><span style="color:#8fa3b8;font-size:.75rem">'+loc.state+'</span></span></label>';
+  }).join('');
+  document.getElementById('assign-modal').classList.add('show');
+}
+function confirmAssign(){
+  var checked=[].slice.call(document.querySelectorAll('.assign-loc-cb:checked'));
+  if(!checked.length){toast('Select at least one location','warn');return;}
+  var names=checked.map(function(c){return c.getAttribute('data-name');});
+  var type=document.getElementById('as-type').value;
+  document.getElementById('assign-modal').classList.remove('show');
+  toast(type+' assigned to '+selected.name+' at '+names.length+' location(s): '+names.join('; '),'success');
+  try{var p=JSON.parse(localStorage.getItem('sr_officer_assignments')||'[]');p.push({officerId:selected.id,type:type,locations:names,at:new Date().toISOString()});localStorage.setItem('sr_officer_assignments',JSON.stringify(p));}catch(e){}
+}
+document.addEventListener('DOMContentLoaded',function(){
+  if(window.SmartRoute)SmartRoute.initSharedComponents({title:'Field Officers',subtitle:'GPS Officer Tracking & Deployment'});
+  if(window.L){
+    if(window.MapEngine&&MapEngine.initMap)map=MapEngine.initMap('officers-map',{center:[25.8,91.6],zoom:7});
+    else{map=L.map('officers-map').setView([25.8,91.6],7);L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',{maxZoom:18}).addTo(map);}
+    setTimeout(function(){try{map.invalidateSize(true);}catch(e){}},300);
+    officers.forEach(function(o){
+      var icon=L.divIcon({html:'<div style="width:28px;height:28px;border-radius:50%;background:#0a1628;border:2px solid #00d4ff;display:flex;align-items:center;justify-content:center">O</div>',className:'',iconSize:[28,28],iconAnchor:[14,14]});
+      var m=L.marker([o.lat,o.lng],{icon:icon}).addTo(map).bindTooltip('<b>'+o.name+'</b><br>'+o.id,{direction:'top'});
+      m.on('click',function(){openDetail(o);});markers[o.id]=m;
+    });
+  }
+  render(officers);
+  document.getElementById('officer-search').oninput=function(e){
+    var q=e.target.value.toLowerCase();
+    render(officers.filter(function(o){return o.name.toLowerCase().indexOf(q)>=0||o.id.toLowerCase().indexOf(q)>=0||o.dist.toLowerCase().indexOf(q)>=0;}));
+  };
+  document.getElementById('btn-back').onclick=function(){document.getElementById('detail-view').style.display='none';document.getElementById('list-view').style.display='block';selected=null;};
+  document.getElementById('btn-assign').onclick=openAssign;
+  document.getElementById('btn-reports').onclick=function(){if(!selected)return;window.location.href='reports.html';};
+  document.getElementById('btn-track').onclick=function(){if(!selected||!map)return;map.flyTo([selected.lat,selected.lng],15);toast('Tracking '+selected.name,'success');};
+  document.getElementById('btn-cancel-assign').onclick=function(){document.getElementById('assign-modal').classList.remove('show');};
+  document.getElementById('btn-confirm-assign').onclick=confirmAssign;
+  document.getElementById('assign-modal').onclick=function(e){if(e.target.id==='assign-modal')document.getElementById('assign-modal').classList.remove('show');};
+});
+})();
+</script>
+</body></html>
