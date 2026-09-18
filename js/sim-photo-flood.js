@@ -1,1 +1,1 @@
-window.SIM_PHOTO_FLOOD="PLACEHOLDER_FLOOD";
+LOAD_FROM:/tmp/sim-photo-flood.js
