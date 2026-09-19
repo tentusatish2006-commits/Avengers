@@ -30,6 +30,7 @@ try:
     from .routes.reports_bp import reports_bp
     from .routes.ai_bp import ai_bp
     from .routes.simulation_bp import simulation_bp
+    from .routes.users_bp import users_bp
 except ImportError:
     from backend.database import init_db, query_db
     from backend.seed_data import seed_database
@@ -43,6 +44,7 @@ except ImportError:
     from backend.routes.reports_bp import reports_bp
     from backend.routes.ai_bp import ai_bp
     from backend.routes.simulation_bp import simulation_bp
+    from backend.routes.users_bp import users_bp
 
 START_TIME = time.time()
 FRONTEND_DIR = Path(__file__).resolve().parent.parent
@@ -69,51 +71,23 @@ def create_app():
     app.register_blueprint(reports_bp, url_prefix="/api")
     app.register_blueprint(ai_bp, url_prefix="/api")
     app.register_blueprint(simulation_bp, url_prefix="/api")
+    app.register_blueprint(users_bp, url_prefix="/api")
 
-    @app.route("/api/health", methods=["GET"])
-    def healthcheck():
-        """Health check endpoint providing runtime diagnostics."""
-        uptime_sec = int(time.time() - START_TIME)
-        try:
-            db_check = query_db("SELECT COUNT(*) as c FROM roads;", one=True)
-            db_status = "healthy"
-            total_roads = db_check["c"] if db_check else 0
-        except Exception as e:
-            db_status = f"error: {str(e)}"
-            total_roads = 0
-
+    @app.route("/api/health")
+    def health():
         return jsonify({
             "status": "healthy",
-            "service": "SmartRoute Emergency Command Backend",
-            "version": "1.0.0",
-            "database": db_status,
-            "tracked_roads": total_roads,
-            "uptime_seconds": uptime_sec,
-            "api_endpoints": [
-                "/api/roads",
-                "/api/incidents",
-                "/api/vehicles",
-                "/api/deliveries",
-                "/api/officers",
-                "/api/districts",
-                "/api/infrastructure",
-                "/api/reports",
-                "/api/ai/predict-route",
-                "/api/ai/analyze-photo",
-                "/api/ai/command",
-                "/api/simulation/phases"
-            ]
+            "uptime_sec": int(time.time() - START_TIME),
+            "service": "SmartRoute API"
         })
 
-    # Serve Frontend HTML, CSS, JS
-    @app.route("/", methods=["GET"])
-    def serve_index():
+    @app.route("/")
+    def index():
         return send_from_directory(str(FRONTEND_DIR), "index.html")
 
-    @app.route("/<path:filename>", methods=["GET"])
-    def serve_static_page(filename):
-        target = FRONTEND_DIR / filename
-        if target.exists() and target.is_file():
+    @app.route("/<path:filename>")
+    def serve_file(filename):
+        if (FRONTEND_DIR / filename).is_file():
             return send_from_directory(str(FRONTEND_DIR), filename)
         elif (FRONTEND_DIR / f"{filename}.html").exists():
             return send_from_directory(str(FRONTEND_DIR), f"{filename}.html")
