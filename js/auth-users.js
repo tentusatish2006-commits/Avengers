@@ -16,6 +16,68 @@
     localStorage.setItem(KEY, JSON.stringify(list));
   }
 
+  function apiBase() {
+    try {
+      if (window.SmartRouteAPI && SmartRouteAPI.baseUrl) return SmartRouteAPI.baseUrl;
+    } catch (e) {}
+    var origin = (typeof location !== 'undefined' && location.origin) ? location.origin : '';
+    if (origin && origin.indexOf('http') === 0 && origin.indexOf('127.0.0.1') < 0 && origin.indexOf('localhost') < 0) {
+      return origin + '/api';
+    }
+    return 'http://127.0.0.1:5000/api';
+  }
+
+  function pushUserToServer(user) {
+    try {
+      fetch(apiBase() + '/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: user.username || user.name,
+          username: user.username || user.name,
+          email: user.email || '',
+          password: user.password || '',
+          role: user.role || 'Field Officer',
+          district: user.region || user.district || 'HQ',
+          status: 'Active'
+        })
+      }).catch(function () {});
+    } catch (e) {}
+  }
+
+  function pullUsersFromServer() {
+    try {
+      fetch(apiBase() + '/users', { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (json) {
+          if (!json || !Array.isArray(json.data)) return;
+          var local = readUsers();
+          var byKey = {};
+          local.forEach(function (u) {
+            byKey[normalizeId(u.username || u.email || u.officerId)] = u;
+          });
+          json.data.forEach(function (r) {
+            var uname = r.username || r.name || '';
+            var key = normalizeId(uname);
+            if (!key) return;
+            var rec = {
+              username: uname,
+              email: r.email || '',
+              password: r.password || 'changeme',
+              role: r.role || 'Field Officer',
+              region: r.district || r.dist || '',
+              department: r.role || ''
+            };
+            byKey[key] = Object.assign({}, byKey[key] || {}, rec);
+          });
+          writeUsers(Object.keys(byKey).map(function (k) { return byKey[k]; }));
+        })
+        .catch(function () {});
+    } catch (e) {}
+  }
+
+  try { pullUsersFromServer(); } catch (e) {}
+
   function normalizeId(id) {
     return String(id || '').trim().toLowerCase();
   }
@@ -57,7 +119,6 @@
   function registerUser(user, options) {
     options = options || {};
     var shouldStartSession = options.startSession !== false;
-
     var users = readUsers();
     var username = (user.username || '').trim();
     var officerId = (user.officerId || '').trim();
@@ -65,13 +126,11 @@
     var password = String(user.password || '');
     if (!password) throw new Error('Password required');
     if (!username && !officerId && !email) throw new Error('Name, badge ID, or email required');
-
     var ids = [username, officerId, email].map(normalizeId).filter(Boolean);
     var existing = users.findIndex(function (u) {
       var uids = [u.username, u.officerId, u.email].map(normalizeId);
       return ids.some(function (id) { return uids.indexOf(id) !== -1; });
     });
-
     var record = {
       username: username || officerId || email,
       officerId: officerId,
@@ -81,11 +140,10 @@
       department: user.department || '',
       region: user.region || ''
     };
-
     if (existing >= 0) users[existing] = record;
     else users.push(record);
     writeUsers(users);
-
+    pushUserToServer(record);
     if (shouldStartSession) startSession(record);
     return record;
   }
@@ -94,14 +152,12 @@
     updates = updates || {};
     var session = getSessionUser();
     if (!session) throw new Error('Not logged in');
-
     var users = readUsers();
     var matchIndex = users.findIndex(function (u) {
       return normalizeId(u.username) === normalizeId(session.username) ||
         normalizeId(u.officerId) === normalizeId(session.officerId) ||
         normalizeId(u.email) === normalizeId(session.email);
     });
-
     var next = {
       username: (updates.username != null ? String(updates.username).trim() : session.username) || session.username,
       officerId: (updates.officerId != null ? String(updates.officerId).trim() : session.officerId) || session.officerId,
@@ -111,9 +167,7 @@
       region: (updates.region != null ? String(updates.region).trim() : session.region) || session.region,
       password: matchIndex >= 0 ? users[matchIndex].password : ''
     };
-
     if (updates.password) next.password = String(updates.password);
-
     if (matchIndex >= 0) users[matchIndex] = next;
     else users.push(next);
     writeUsers(users);
@@ -129,15 +183,12 @@
     var id = normalizeId(identifier);
     var pass = String(password || '');
     var users = readUsers();
-
     if (!users.length) return { ok: false, reason: 'no_users' };
-
     var match = users.find(function (u) {
       return normalizeId(u.username) === id ||
         normalizeId(u.officerId) === id ||
         normalizeId(u.email) === id;
     });
-
     if (!match) return { ok: false, reason: 'not_found' };
     if (String(match.password) !== pass) return { ok: false, reason: 'bad_password' };
     return { ok: true, user: match };
@@ -182,6 +233,7 @@
     updateUserProfile: updateUserProfile,
     isLoggedIn: isLoggedInFn,
     readUsers: readUsers,
-    countUsers: function () { return readUsers().length; }
+    countUsers: function () { return readUsers().length; },
+    pullUsersFromServer: pullUsersFromServer
   };
 })(window);
