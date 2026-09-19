@@ -27,7 +27,6 @@
     }
     .module-info h3 { margin: 0 0 4px; font-size: 0.8rem; letter-spacing: 0.06em; color: #8fa3b8; font-weight: 700; }
     .module-info p { margin: 0; font-size: 1.45rem; font-weight: 800; color: #00d4ff; }
-
     .section-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
     .section-header h2 {
       margin: 0; font-size: 1.2rem;
@@ -40,14 +39,12 @@
       background: linear-gradient(135deg, #00d4ff, #0099cc); color: #031018;
     }
     .btn-add:hover { filter: brightness(1.08); }
-
     .user-table { width: 100%; border-collapse: collapse; min-width: 720px; }
     .user-table th, .user-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.06); }
     .user-table th { color: #00d4ff; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.04em; }
     .user-table tr:hover { background: rgba(255,255,255,0.03); }
     .status-active { color: #00ff88; font-weight: 700; }
     .status-inactive { color: #ff6b6b; font-weight: 700; }
-
     .action-btns { display: flex; flex-wrap: wrap; gap: 6px; }
     .action-btns button {
       background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
@@ -57,7 +54,6 @@
     .action-btns button:hover { background: rgba(0,212,255,0.2); border-color: #00d4ff; color: #fff; }
     .action-btns .btn-del { background: rgba(255,59,59,0.15); border-color: rgba(255,59,59,0.4); color: #ff6b6b; }
     .action-btns .btn-del:hover { background: #ff3b3b; color: #fff; }
-
     .modal-bg {
       display: none; position: fixed; inset: 0; z-index: 10000;
       background: rgba(0,0,0,0.72); align-items: center; justify-content: center; padding: 16px;
@@ -86,10 +82,6 @@
       background: linear-gradient(135deg, #00d4ff, #00ff88); color: #031018;
     }
     .empty-users { text-align: center; padding: 28px; color: #8fa3b8; }
-
-    @media (max-width: 700px) {
-      .admin-grid { grid-template-columns: 1fr 1fr; }
-    }
   </style>
 </head>
 <body>
@@ -118,7 +110,6 @@
             <div class="module-info"><h3>INCIDENT MANAGEMENT</h3><p style="color:#ff9500;">18</p></div>
           </div>
         </div>
-
         <div class="glass-card" style="padding: 20px; margin-bottom: 20px;" id="user-mgmt-section">
           <div class="section-header">
             <h2>User Management</h2>
@@ -128,13 +119,7 @@
             <table class="user-table">
               <thead>
                 <tr>
-                  <th>User ID</th>
-                  <th>Name</th>
-                  <th>Role</th>
-                  <th>District</th>
-                  <th>Status</th>
-                  <th>Last Login</th>
-                  <th>Actions</th>
+                  <th>User ID</th><th>Name</th><th>Role</th><th>District</th><th>Status</th><th>Last Login</th><th>Actions</th>
                 </tr>
               </thead>
               <tbody id="user-tbody"></tbody>
@@ -144,7 +129,6 @@
       </main>
     </div>
   </div>
-
   <div class="modal-bg" id="add-user-modal" role="dialog" aria-modal="true">
     <div class="modal">
       <h3>Add User</h3>
@@ -159,15 +143,9 @@
       </select>
       <label for="au-dist">District / HQ</label>
       <select id="au-dist">
-        <option>Assam</option>
-        <option>Arunachal Pradesh</option>
-        <option>Nagaland</option>
-        <option>Meghalaya</option>
-        <option>Sikkim</option>
-        <option>Tripura</option>
-        <option>Mizoram</option>
-        <option>Manipur</option>
-        <option>HQ Guwahati</option>
+        <option>Assam</option><option>Arunachal Pradesh</option><option>Nagaland</option>
+        <option>Meghalaya</option><option>Sikkim</option><option>Tripura</option>
+        <option>Mizoram</option><option>Manipur</option><option>HQ Guwahati</option>
       </select>
       <label for="au-pass">Temp password (optional)</label>
       <input id="au-pass" type="text" placeholder="Leave blank for default">
@@ -177,9 +155,9 @@
       </div>
     </div>
   </div>
-
   <script src="js/components.js"></script>
   <script src="js/auth-users.js"></script>
+  <script src="js/admin-sync.js"></script>
   <script>
   (function () {
     var DEFAULT_USERS = [
@@ -194,36 +172,39 @@
       { id: 'USR-009', name: 'System Analyst', role: 'Administrator', dist: 'HQ Guwahati', stat: 'Active', login: '07:30 today' },
       { id: 'USR-010', name: 'Rajesh Varma', role: 'Field Officer', dist: 'Manipur', stat: 'Active', login: '09:00 today' }
     ];
-
     var currentUsers = [];
-
     function toast(msg, type) {
       if (window.SmartRoute && SmartRoute.showToast) SmartRoute.showToast(msg, type || 'info');
     }
-
     function loadUsers() {
       try {
         var saved = localStorage.getItem('sr_admin_users');
         if (saved) {
           var parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length) {
-            currentUsers = parsed;
-            return;
-          }
+          if (Array.isArray(parsed) && parsed.length) currentUsers = parsed;
         }
       } catch (e) {}
-      currentUsers = DEFAULT_USERS.map(function (u) { return Object.assign({}, u); });
-      saveUsers();
+      if (!currentUsers.length) {
+        currentUsers = DEFAULT_USERS.map(function (u) { return Object.assign({}, u); });
+        saveUsers();
+      }
+      if (window.SRAdminSync && SRAdminSync.pull) {
+        SRAdminSync.pull().then(function (remote) {
+          if (!remote || !remote.length) return;
+          var byId = {};
+          currentUsers.forEach(function (u) { byId[u.id] = u; });
+          remote.forEach(function (r) { if (r.id) byId[r.id] = r; });
+          currentUsers = Object.keys(byId).map(function (k) { return byId[k]; });
+          saveUsers();
+          renderUserTable();
+        });
+      }
     }
-
     function saveUsers() {
-      try {
-        localStorage.setItem('sr_admin_users', JSON.stringify(currentUsers));
-      } catch (e) {}
+      try { localStorage.setItem('sr_admin_users', JSON.stringify(currentUsers)); } catch (e) {}
       var el = document.getElementById('stat-users');
       if (el) el.textContent = String(currentUsers.length);
     }
-
     function nextUserId() {
       var max = 0;
       currentUsers.forEach(function (u) {
@@ -232,27 +213,17 @@
       });
       return 'USR-' + String(max + 1).padStart(3, '0');
     }
-
     function nextFoId() {
       var max = 100;
       try {
         var raw = localStorage.getItem('sr_field_officers');
-        if (raw) {
-          JSON.parse(raw).forEach(function (o) {
-            var m = String(o.id || '').match(/(\d+)/);
-            if (m) max = Math.max(max, parseInt(m[1], 10));
-          });
-        }
-      } catch (e) {}
-      currentUsers.forEach(function (u) {
-        if (u.foId) {
-          var m = String(u.foId).match(/(\d+)/);
+        if (raw) JSON.parse(raw).forEach(function (o) {
+          var m = String(o.id || '').match(/(\d+)/);
           if (m) max = Math.max(max, parseInt(m[1], 10));
-        }
-      });
+        });
+      } catch (e) {}
       return 'FO-' + String(max + 1).padStart(3, '0');
     }
-
     function syncFieldOfficer(user) {
       if (user.role !== 'Field Officer') return;
       try {
@@ -265,19 +236,12 @@
         var exists = list.findIndex(function (o) {
           return o.id === foId || (o.name && o.name.toLowerCase() === user.name.toLowerCase());
         });
-        var entry = {
-          id: foId,
-          name: user.name,
-          dist: user.dist,
-          status: user.stat === 'Active' ? 'ACTIVE' : 'OFF DUTY',
-          sector: user.dist
-        };
+        var entry = { id: foId, name: user.name, dist: user.dist, status: user.stat === 'Active' ? 'ACTIVE' : 'OFF DUTY', sector: user.dist };
         if (exists >= 0) list[exists] = Object.assign({}, list[exists], entry);
         else list.unshift(entry);
         localStorage.setItem('sr_field_officers', JSON.stringify(list));
       } catch (e) {}
     }
-
     function renderUserTable() {
       var tbody = document.getElementById('user-tbody');
       if (!tbody) return;
@@ -295,8 +259,8 @@
           '<td>' + escapeHtml(u.name) + '</td>' +
           '<td>' + escapeHtml(u.role) + '</td>' +
           '<td>' + escapeHtml(u.dist) + '</td>' +
-          '<td class="' + statClass + '">● ' + escapeHtml(u.stat) + '</td>' +
-          '<td>' + escapeHtml(u.login || '—') + '</td>' +
+          '<td class="' + statClass + '">\u25CF ' + escapeHtml(u.stat) + '</td>' +
+          '<td>' + escapeHtml(u.login || '\u2014') + '</td>' +
           '<td class="action-btns">' +
             '<button type="button" class="btn-del" data-act="del" data-id="' + escapeAttr(u.id) + '">Delete</button>' +
             '<button type="button" data-act="edit" data-id="' + escapeAttr(u.id) + '">Edit</button>' +
@@ -308,15 +272,12 @@
       });
       saveUsers();
     }
-
     function escapeHtml(s) {
-      return String(s == null ? '' : s)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
     function escapeAttr(s) {
       return String(s == null ? '' : s).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
-
     function openAddModal() {
       document.getElementById('au-name').value = '';
       document.getElementById('au-pass').value = '';
@@ -325,41 +286,20 @@
       document.getElementById('add-user-modal').classList.add('show');
       setTimeout(function () { document.getElementById('au-name').focus(); }, 50);
     }
-
     function closeAddModal() {
       document.getElementById('add-user-modal').classList.remove('show');
     }
-
     function confirmAddUser() {
       var name = (document.getElementById('au-name').value || '').trim();
-      if (!name) {
-        toast('Enter a full name', 'warn');
-        document.getElementById('au-name').focus();
-        return;
-      }
+      if (!name) { toast('Enter a full name', 'warn'); document.getElementById('au-name').focus(); return; }
       var role = document.getElementById('au-role').value;
       var dist = document.getElementById('au-dist').value;
       var pass = (document.getElementById('au-pass').value || '').trim() || 'Pass@123';
-
-      var newUser = {
-        id: nextUserId(),
-        name: name,
-        role: role,
-        dist: dist,
-        stat: 'Active',
-        login: 'Just now'
-      };
-
-      if (role === 'Field Officer') {
-        newUser.foId = nextFoId();
-        syncFieldOfficer(newUser);
-      }
-
+      var newUser = { id: nextUserId(), name: name, role: role, dist: dist, stat: 'Active', login: 'Just now', password: pass };
+      if (role === 'Field Officer') { newUser.foId = nextFoId(); syncFieldOfficer(newUser); }
       try {
         if (window.SmartRouteAuth && typeof SmartRouteAuth.createUserWithoutLogin === 'function') {
-          SmartRouteAuth.createUserWithoutLogin({
-            username: name, password: pass, role: role, district: dist
-          });
+          SmartRouteAuth.createUserWithoutLogin({ username: name, password: pass, role: role, district: dist });
         } else {
           var key = 'sr_users';
           var users = [];
@@ -369,28 +309,24 @@
           localStorage.setItem(key, JSON.stringify(users));
         }
       } catch (e) {}
-
       currentUsers.unshift(newUser);
       saveUsers();
+      if (window.SRAdminSync) SRAdminSync.push(newUser);
       renderUserTable();
       closeAddModal();
-      toast('User created: ' + name + ' (' + newUser.id + ')', 'success');
+      toast('User created: ' + name + ' (' + newUser.id + ') \u2014 synced to server', 'success');
     }
-
-    function findUser(id) {
-      return currentUsers.find(function (u) { return u.id === id; });
-    }
-
+    function findUser(id) { return currentUsers.find(function (u) { return u.id === id; }); }
     function deleteUser(id) {
       var user = findUser(id);
       if (!user) return;
       if (!confirm('Delete user "' + user.name + '" (' + id + ')?')) return;
       currentUsers = currentUsers.filter(function (u) { return u.id !== id; });
       saveUsers();
+      if (window.SRAdminSync) SRAdminSync.remove(id);
       renderUserTable();
       toast('Deleted: ' + user.name, 'success');
     }
-
     function editUser(id) {
       var user = findUser(id);
       if (!user) return;
@@ -399,21 +335,21 @@
         user.name = newName.trim();
         if (user.role === 'Field Officer') syncFieldOfficer(user);
         saveUsers();
+        if (window.SRAdminSync) SRAdminSync.push(user);
         renderUserTable();
         toast('Updated: ' + user.name, 'success');
       }
     }
-
     function toggleUserStatus(id) {
       var user = findUser(id);
       if (!user) return;
       user.stat = user.stat === 'Active' ? 'Inactive' : 'Active';
       if (user.role === 'Field Officer') syncFieldOfficer(user);
       saveUsers();
+      if (window.SRAdminSync) SRAdminSync.push(user);
       renderUserTable();
       toast(user.name + ' is now ' + user.stat, user.stat === 'Active' ? 'success' : 'warn');
     }
-
     function cycleRole(id) {
       var user = findUser(id);
       if (!user) return;
@@ -425,25 +361,17 @@
         syncFieldOfficer(user);
       }
       saveUsers();
+      if (window.SRAdminSync) SRAdminSync.push(user);
       renderUserTable();
-      toast(user.name + ' role → ' + user.role, 'info');
+      toast(user.name + ' role \u2192 ' + user.role, 'info');
     }
-
     document.addEventListener('DOMContentLoaded', function () {
       if (window.SmartRoute) {
-        SmartRoute.initSharedComponents({
-          title: 'Admin Panel',
-          subtitle: 'System Administration & User Management'
-        });
+        SmartRoute.initSharedComponents({ title: 'Admin Panel', subtitle: 'System Administration & User Management' });
       }
-
       loadUsers();
       renderUserTable();
-
-      document.getElementById('btn-add-user').addEventListener('click', function (e) {
-        e.preventDefault();
-        openAddModal();
-      });
+      document.getElementById('btn-add-user').addEventListener('click', function (e) { e.preventDefault(); openAddModal(); });
       document.getElementById('btn-cancel-add').addEventListener('click', closeAddModal);
       document.getElementById('btn-confirm-add').addEventListener('click', confirmAddUser);
       document.getElementById('add-user-modal').addEventListener('click', function (e) {
@@ -452,7 +380,6 @@
       document.getElementById('au-name').addEventListener('keydown', function (e) {
         if (e.key === 'Enter') confirmAddUser();
       });
-
       document.getElementById('user-tbody').addEventListener('click', function (e) {
         var btn = e.target.closest('button[data-act]');
         if (!btn) return;
@@ -463,7 +390,6 @@
         else if (act === 'toggle') toggleUserStatus(id);
         else if (act === 'role') cycleRole(id);
       });
-
       document.querySelectorAll('.admin-module').forEach(function (m) {
         m.addEventListener('click', function () {
           var title = m.querySelector('h3').textContent;
