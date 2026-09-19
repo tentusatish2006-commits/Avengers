@@ -87,17 +87,24 @@
   </div>
 </div>
 
-<script src="js/components.js?v=sim4"></script>
-<script src="js/map-engine.js?v=sim4"></script>
-<script src="js/gemini-api.js?v=sim4"></script>
+<script src="js/components.js?v=sim5"></script>
+<script src="js/map-engine.js?v=sim5"></script>
+<script src="js/gemini-api.js?v=sim5"></script>
+<script src="js/sim-photo-flood.js?v=sim5"></script>
+<script src="js/sim-photo-landslide.js?v=sim5"></script>
+<script src="js/sim-photo-pothole.js?v=sim5"></script>
 <script>
 (function () {
   var map, simTimer = null, currentPhase = -1, speed = 1, isPlaying = false;
   var layers = { safe: null, alt: null, critical: null, flood: null };
   var vehicleMarker = null, incidentMarker = null, photoMarkers = [], vehiclePath = [], vehicleIdx = 0, moveTimer = null;
 
-  // Realistic road-scene SVGs (always load offline — look like roads / debris / water)
+  // Problem-matched field photos: flood→flood, landslide→landslide, road→pothole (never random)
+  function isPhotoData(u) {
+    return !!(u && String(u).indexOf('data:image') === 0 && String(u).length > 80);
+  }
   function photoFlood() {
+    if (isPhotoData(window.SIM_PHOTO_FLOOD)) return window.SIM_PHOTO_FLOOD;
     var s = '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">' +
       '<rect width="800" height="500" fill="#2a4a3a"/>' +
       '<rect y="280" width="800" height="220" fill="#1a3a5c"/>' +
@@ -105,77 +112,63 @@
       '<path d="M0 340 Q250 320 500 350 T800 330 L800 500 L0 500Z" fill="#3a8abc" opacity="0.7"/>' +
       '<rect x="0" y="200" width="800" height="90" fill="#3a3a3a"/>' +
       '<rect x="0" y="235" width="800" height="8" fill="#f0c040" opacity="0.6"/>' +
-      '<ellipse cx="200" cy="260" rx="40" ry="12" fill="#1a4a6a"/>' +
-      '<ellipse cx="420" cy="255" rx="55" ry="15" fill="#1a4a6a"/>' +
-      '<ellipse cx="620" cy="265" rx="35" ry="10" fill="#1a4a6a"/>' +
       '<text x="400" y="40" text-anchor="middle" fill="#fff" font-family="Arial" font-size="22" font-weight="700">FLOOD · WATERLOGGED ROAD</text>' +
       '<text x="400" y="68" text-anchor="middle" fill="#c8e0ff" font-family="Arial" font-size="14">Guwahati approach · NER field evidence</text>' +
       '</svg>';
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
   }
   function photoLandslide() {
+    if (isPhotoData(window.SIM_PHOTO_LANDSLIDE)) return window.SIM_PHOTO_LANDSLIDE;
     var s = '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">' +
-      '<defs><linearGradient id="hill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4a6a3a"/><stop offset="100%" stop-color="#2a3a20"/></linearGradient></defs>' +
-      '<rect width="800" height="500" fill="url(#hill)"/>' +
+      '<rect width="800" height="500" fill="#3a5030"/>' +
       '<path d="M0 120 L200 80 L350 150 L500 60 L650 130 L800 90 L800 0 L0 0Z" fill="#5a7a4a"/>' +
       '<rect x="0" y="300" width="800" height="100" fill="#4a4a4a"/>' +
       '<rect x="0" y="340" width="800" height="10" fill="#e0c040" opacity="0.5"/>' +
       '<path d="M180 80 L280 300 L420 300 L320 100Z" fill="#6b4423" opacity="0.95"/>' +
       '<path d="M220 120 L300 300 L380 300 L300 140Z" fill="#8b5a2b"/>' +
-      '<circle cx="260" cy="280" r="18" fill="#5a3a1a"/>' +
-      '<circle cx="310" cy="290" r="22" fill="#4a2a10"/>' +
-      '<circle cx="360" cy="275" r="14" fill="#6a4a2a"/>' +
-      '<circle cx="290" cy="250" r="12" fill="#3a2a10"/>' +
-      '<rect x="250" y="300" width="140" height="40" fill="#3a3a3a" opacity="0.8"/>' +
       '<text x="400" y="40" text-anchor="middle" fill="#fff" font-family="Arial" font-size="22" font-weight="700">LANDSLIDE · SLOPE DEBRIS ON ROAD</text>' +
       '<text x="400" y="68" text-anchor="middle" fill="#ffd0a0" font-family="Arial" font-size="14">Tawang Pass NH-13 · NER field evidence</text>' +
       '</svg>';
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
   }
   function photoPothole() {
+    if (isPhotoData(window.SIM_PHOTO_POTHOLE)) return window.SIM_PHOTO_POTHOLE;
     var s = '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">' +
       '<rect width="800" height="500" fill="#3a3a3a"/>' +
       '<rect x="0" y="180" width="800" height="160" fill="#4a4a4a"/>' +
       '<rect x="0" y="250" width="800" height="12" fill="#c9a227" opacity="0.55"/>' +
       '<ellipse cx="280" cy="260" rx="70" ry="35" fill="#1a1a1a"/>' +
-      '<ellipse cx="280" cy="255" rx="55" ry="25" fill="#2a4a5a"/>' +
       '<ellipse cx="480" cy="270" rx="50" ry="28" fill="#1a1a1a"/>' +
-      '<ellipse cx="480" cy="265" rx="38" ry="18" fill="#2a3a4a"/>' +
-      '<ellipse cx="620" cy="245" rx="40" ry="22" fill="#222"/>' +
-      '<path d="M100 220 Q200 210 300 230" stroke="#555" stroke-width="3" fill="none"/>' +
-      '<path d="M400 280 Q500 290 600 275" stroke="#555" stroke-width="3" fill="none"/>' +
       '<text x="400" y="40" text-anchor="middle" fill="#fff" font-family="Arial" font-size="22" font-weight="700">POTHOLES · ROAD SURFACE DAMAGE</text>' +
       '<text x="400" y="68" text-anchor="middle" fill="#ccc" font-family="Arial" font-size="14">Shillong GS-1 section · NER field evidence</text>' +
       '</svg>';
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
   }
 
+  /* Strict mapping: never mix problem types, never use random Unsplash */
   var PHOTO_URLS = {
-    flood: [
-      photoFlood(),
-      'https://images.unsplash.com/photo-1547683905-f686c993aae5?w=800&q=80'
-    ],
-    landslide: [
-      photoLandslide(),
-      'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=800&q=80'
-    ],
-    road_damage: [
-      photoPothole(),
-      'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80'
-    ]
+    flood: [photoFlood()],
+    landslide: [photoLandslide()],
+    road_damage: [photoPothole()]
   };
 
+  function photoForKind(kind) {
+    if (kind === 'flood') return photoFlood();
+    if (kind === 'landslide') return photoLandslide();
+    if (kind === 'road_damage') return photoPothole();
+    return photoFlood();
+  }
   function setImgWithFallback(imgEl, kind) {
-    var list = PHOTO_URLS[kind] || PHOTO_URLS.flood;
-    var idx = 0;
-    function tryNext() {
-      if (idx >= list.length) return;
-      imgEl.onerror = function () { idx++; tryNext(); };
-      imgEl.onload = function () { imgEl.style.background = 'transparent'; };
-      imgEl.src = list[idx];
-    }
-    tryNext();
-    return list[0];
+    var url = photoForKind(kind);
+    PHOTO_URLS[kind] = [url];
+    imgEl.onerror = function () {
+      if (kind === 'flood') imgEl.src = photoFlood();
+      else if (kind === 'landslide') imgEl.src = photoLandslide();
+      else imgEl.src = photoPothole();
+    };
+    imgEl.onload = function () { imgEl.style.background = 'transparent'; };
+    imgEl.src = url;
+    return url;
   }
 
   var PROBLEM_PHOTOS = {
@@ -239,7 +232,7 @@
     var imgEl = document.getElementById('photo-img');
     setImgWithFallback(imgEl, kind);
 
-    var popupImg = PHOTO_URLS[kind][0];
+    var popupImg = photoForKind(kind);
     var html =
       '<div style="min-width:220px;max-width:280px">' +
       '<div style="font-size:10px;color:#ff9500;font-weight:800">FIELD PHOTO · ' + p.problem.toUpperCase() + '</div>' +
@@ -339,56 +332,73 @@
     }
   }
 
-  function stepOnce() {
-    var next = currentPhase + 1;
-    if (next >= phases.length) {
+  function nextPhase() {
+    if (currentPhase >= phases.length - 1) {
       isPlaying = false;
       document.getElementById('btn-play').textContent = '▶ PLAY';
-      if (simTimer) clearInterval(simTimer);
       return;
     }
-    runPhase(next);
+    runPhase(currentPhase + 1);
   }
 
-  function togglePlay() {
-    isPlaying = !isPlaying;
-    document.getElementById('btn-play').textContent = isPlaying ? '⏸ PAUSE' : '▶ PLAY';
-    if (isPlaying) {
-      if (currentPhase < 0) stepOnce();
-      simTimer = setInterval(function () { if (isPlaying) stepOnce(); }, 3200 / speed);
-    } else if (simTimer) { clearInterval(simTimer); simTimer = null; }
+  function startPlay() {
+    if (isPlaying) return;
+    isPlaying = true;
+    document.getElementById('btn-play').textContent = '⏸ PLAYING';
+    if (currentPhase < 0) runPhase(0);
+    if (simTimer) clearInterval(simTimer);
+    simTimer = setInterval(function () {
+      if (!isPlaying) return;
+      if (currentPhase >= phases.length - 1) {
+        isPlaying = false;
+        document.getElementById('btn-play').textContent = '▶ PLAY';
+        clearInterval(simTimer);
+        return;
+      }
+      nextPhase();
+    }, Math.max(1800, 3200 / speed));
   }
 
   function resetSim() {
     isPlaying = false;
-    document.getElementById('btn-play').textContent = '▶ PLAY';
     if (simTimer) clearInterval(simTimer);
     if (moveTimer) clearInterval(moveTimer);
     currentPhase = -1;
-    Object.keys(layers).forEach(function (k) {
-      if (layers[k]) { try { map.removeLayer(layers[k]); } catch (e) {} layers[k] = null; }
-    });
-    if (vehicleMarker) map.removeLayer(vehicleMarker);
-    if (incidentMarker) map.removeLayer(incidentMarker);
-    photoMarkers.forEach(function (m) { try { map.removeLayer(m); } catch (e) {} });
-    photoMarkers = []; vehicleMarker = incidentMarker = null;
+    document.getElementById('btn-play').textContent = '▶ PLAY';
+    document.getElementById('phase-title').textContent = 'Ready';
+    document.getElementById('phase-desc').textContent = 'Play — flood / landslide / pothole each show their photo.';
+    document.getElementById('phase-card').className = 'phase-card';
+    document.getElementById('sim-log').innerHTML = '';
+    document.getElementById('gemini-out').textContent = 'Waiting…';
     var panel = document.getElementById('photo-panel');
     panel.classList.remove('show');
     panel.style.display = 'none';
-    document.getElementById('phase-title').textContent = 'Ready';
-    document.getElementById('sim-log').innerHTML = '';
-    map.setView([26.2, 92.0], 7);
+    photoMarkers.forEach(function (m) { try { map.removeLayer(m); } catch (e) {} });
+    photoMarkers = [];
+    if (layers.safe) { map.removeLayer(layers.safe); layers.safe = null; }
+    if (layers.alt) { map.removeLayer(layers.alt); layers.alt = null; }
+    if (layers.critical) { map.removeLayer(layers.critical); layers.critical = null; }
+    if (layers.flood) { map.removeLayer(layers.flood); layers.flood = null; }
+    if (vehicleMarker) { map.removeLayer(vehicleMarker); vehicleMarker = null; }
+    if (incidentMarker) { map.removeLayer(incidentMarker); incidentMarker = null; }
+    map.setView([26.2, 92.5], 7);
   }
 
-  document.addEventListener('DOMContentLoaded', async function () {
-    if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Live Simulation', subtitle: 'Problem-matched photos' });
-    map = L.map('map').setView([26.2, 92.0], 7);
+  document.addEventListener('DOMContentLoaded', function () {
+    map = L.map('map', { center: [26.2, 92.5], zoom: 7, zoomControl: true });
     L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18 }).addTo(map);
-    setTimeout(function () { try { map.invalidateSize(true); } catch (e) {} }, 300);
-    await drawRoadRoutes();
-    document.getElementById('btn-play').onclick = togglePlay;
+    document.getElementById('btn-play').onclick = function () {
+      if (isPlaying) {
+        isPlaying = false;
+        if (simTimer) clearInterval(simTimer);
+        document.getElementById('btn-play').textContent = '▶ PLAY';
+      } else startPlay();
+    };
     document.getElementById('btn-reset').onclick = resetSim;
-    document.getElementById('btn-step').onclick = stepOnce;
+    document.getElementById('btn-step').onclick = function () {
+      if (currentPhase < 0) runPhase(0);
+      else nextPhase();
+    };
     document.getElementById('sim-speed').onchange = function () { speed = parseFloat(this.value) || 1; };
   });
 })();
