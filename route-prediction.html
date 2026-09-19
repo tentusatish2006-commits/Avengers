@@ -1,1 +1,272 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Route Prediction - SmartRoute</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/components.css">
+    <style>
+        .page-body { display: grid; grid-template-columns: 280px 1fr 300px; gap: 20px; height: calc(100vh - 80px); padding: 20px; box-sizing: border-box; }
+        .input-panel, .analysis-panel { display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+        .form-group select { background: rgba(0, 0, 0, 0.5); border: 1px solid var(--border-color); color: var(--text-light); padding: 10px; border-radius: 6px; font-family: 'Outfit', sans-serif; outline: none; }
+        .form-group select:focus { border-color: var(--accent-cyan); box-shadow: 0 0 10px rgba(0, 212, 255, 0.2); }
+        .map-container { position: relative; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); }
+        #map { width: 100%; height: 100%; background: var(--bg-dark); }
+        .ai-scanner-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(3, 8, 16, 0.7); z-index: 1000; display: none; justify-content: center; align-items: center; flex-direction: column; pointer-events: none; }
+        .ai-scanner-overlay.active { display: flex; }
+        .scan-text { color: var(--accent-cyan); font-size: 1.5rem; font-weight: 600; letter-spacing: 2px; z-index: 10; }
+        .initial-state { text-align: center; color: var(--text-muted); margin-top: 50px; }
+        .results-state { display: none; flex-direction: column; gap: 20px; }
+        .results-state.active { display: flex; animation: fadeIn 0.5s ease forwards; }
+        .risk-gauge { width: 150px; height: 150px; border-radius: 50%; background: conic-gradient(var(--status-danger) 78%, rgba(255,255,255,0.1) 0); display: flex; justify-content: center; align-items: center; margin: 0 auto; position: relative; transition: background 0.6s ease; }
+        .risk-gauge::before { content: ''; position: absolute; width: 130px; height: 130px; background: var(--bg-card); border-radius: 50%; }
+        .risk-gauge-text { position: relative; z-index: 1; text-align: center; }
+        .risk-gauge-text h2 { margin: 0; color: var(--status-danger); font-size: 2rem; transition: color 0.4s ease; }
+        .risk-bar-container { margin-bottom: 10px; }
+        .risk-bar-label { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 5px; }
+        .risk-bar { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+        .risk-bar-fill { height: 100%; border-radius: 3px; transition: width 0.7s ease, background 0.5s ease; }
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .metric-item { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+        .metric-item .label { font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 5px; }
+        .metric-item .value { font-size: 1.1rem; font-weight: 600; color: var(--text-light); }
+        .metric-item.danger .value { color: var(--status-danger); }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <div class="main-content" id="main-content">
+            <main class="page-body">
+                <div class="glass-card input-panel">
+                    <h2 class="gradient-text" style="font-size: 1.2rem; margin-bottom: 10px;">ROUTE ANALYSIS</h2>
+                    <div class="form-group">
+                        <label>Source</label>
+                        <select id="source">
+                            <option value="guwahati">Guwahati (Assam)</option>
+                            <option value="shillong">Shillong (Meghalaya)</option>
+                            <option value="imphal">Imphal (Manipur)</option>
+                            <option value="kohima">Kohima (Nagaland)</option>
+                            <option value="aizawl">Aizawl (Mizoram)</option>
+                            <option value="agartala">Agartala (Tripura)</option>
+                            <option value="itanagar">Itanagar (Arunachal)</option>
+                            <option value="gangtok">Gangtok (Sikkim)</option>
+                            <option value="silchar">Silchar (Assam)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Destination</label>
+                        <select id="dest">
+                            <option value="shillong">Shillong (Meghalaya)</option>
+                            <option value="imphal">Imphal (Manipur)</option>
+                            <option value="kohima">Kohima (Nagaland)</option>
+                            <option value="aizawl">Aizawl (Mizoram)</option>
+                            <option value="agartala">Agartala (Tripura)</option>
+                            <option value="tawang">Tawang (Arunachal)</option>
+                            <option value="gangtok">Gangtok (Sikkim)</option>
+                            <option value="dimapur">Dimapur (Nagaland)</option>
+                            <option value="silchar">Silchar (Assam)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Vehicle Type</label>
+                        <select id="vehicle-type">
+                            <option>Medicine Truck</option>
+                            <option>Food Vehicle</option>
+                            <option>Emergency</option>
+                            <option>Construction</option>
+                            <option>Personnel</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Cargo Priority</label>
+                        <select id="priority">
+                            <option>Critical</option>
+                            <option>High</option>
+                            <option>Normal</option>
+                        </select>
+                    </div>
+                    <button class="btn-primary" style="margin-top: auto;" onclick="analyzeRoute()">ANALYZE ROUTE</button>
+                </div>
+                <div class="map-container">
+                    <div id="map"></div>
+                    <div class="ai-scanner-overlay" id="scanner"><div class="scan-text">AI ANALYZING ROUTE...</div></div>
+                </div>
+                <div class="glass-card analysis-panel">
+                    <div class="initial-state" id="initial-state">Configure route parameters and click Analyze to view AI insights for NER corridors.</div>
+                    <div class="results-state" id="results-state">
+                        <div class="risk-gauge" id="risk-gauge">
+                            <div class="risk-gauge-text">
+                                <h2 class="count-up" id="risk-gauge-val" data-target="78">78</h2>
+                                <span id="risk-gauge-sub">% RISK — HIGH</span>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 style="font-size: 0.9rem; margin-bottom: 10px; color: var(--text-muted);">RISK BREAKDOWN</h3>
+                            <div class="risk-bar-container"><div class="risk-bar-label"><span>Road Condition</span><span id="val-road">65%</span></div><div class="risk-bar"><div id="bar-road" class="risk-bar-fill" style="width: 65%; background: var(--status-warn);"></div></div></div>
+                            <div class="risk-bar-container"><div class="risk-bar-label"><span>Weather Risk</span><span id="val-weather">82%</span></div><div class="risk-bar"><div id="bar-weather" class="risk-bar-fill" style="width: 82%; background: var(--status-danger);"></div></div></div>
+                            <div class="risk-bar-container"><div class="risk-bar-label"><span>Traffic Load</span><span id="val-traffic">45%</span></div><div class="risk-bar"><div id="bar-traffic" class="risk-bar-fill" style="width: 45%; background: var(--status-warn);"></div></div></div>
+                            <div class="risk-bar-container"><div class="risk-bar-label"><span>Flood Risk</span><span id="val-flood">78%</span></div><div class="risk-bar"><div id="bar-flood" class="risk-bar-fill" style="width: 78%; background: var(--status-danger);"></div></div></div>
+                            <div class="risk-bar-container"><div class="risk-bar-label"><span>Landslide Risk</span><span id="val-landslide">71%</span></div><div class="risk-bar"><div id="bar-landslide" class="risk-bar-fill" style="width: 71%; background: var(--status-warn);"></div></div></div>
+                        </div>
+                        <div class="metrics-grid">
+                            <div class="metric-item danger" id="metric-delay"><span class="label">Est. Delay</span><span class="value" id="val-delay">+2h 35m</span></div>
+                            <div class="metric-item" id="metric-access"><span class="label">Road Accessibility</span><span class="value" id="val-access">42%</span></div>
+                            <div class="metric-item danger" id="metric-disrupt"><span class="label">Disruption Prob.</span><span class="value" id="val-disrupt">HIGH</span></div>
+                            <div class="metric-item" id="metric-departure"><span class="label">Rec. Departure</span><span class="value" id="val-departure">06:00 AM</span></div>
+                        </div>
+                        <a href="alternate-routes.html" class="btn-primary" style="text-align: center; text-decoration: none;">VIEW ALTERNATE ROUTES</a>
+                        <button class="btn-secondary" id="btn-gen-report">GENERATE REPORT</button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/components.js"></script>
+    <script src="js/map-engine.js"></script>
+    <script src="js/charts.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'AI Route Prediction', subtitle: 'Machine Learning Route Risk Analysis — NER' });
+            if (window.MapEngine) MapEngine.initMap('map', { center: [25.80, 91.60], zoom: 7 });
+            const btnReport = document.getElementById('btn-gen-report');
+            if (btnReport) btnReport.addEventListener('click', () => {
+                if (window.SmartRoute) SmartRoute.showToast('Compiling Route Risk Dossier (PDF)... Check Reports Center', 'success');
+            });
+        });
+
+        function colorFor(value) {
+            if (value >= 70) return 'var(--status-danger)';
+            if (value >= 40) return 'var(--status-warn)';
+            return 'var(--status-safe)';
+        }
+
+        function setBar(id, value) {
+            const bar = document.getElementById('bar-' + id);
+            const label = document.getElementById('val-' + id);
+            if (bar) {
+                bar.style.width = value + '%';
+                bar.style.background = colorFor(value);
+            }
+            if (label) label.textContent = value + '%';
+        }
+
+        async function analyzeRoute() {
+            const scanner = document.getElementById('scanner');
+            const initialState = document.getElementById('initial-state');
+            const resultsState = document.getElementById('results-state');
+            const srcEl = document.getElementById('source');
+            const dstEl = document.getElementById('dest');
+            const source = srcEl ? srcEl.options[srcEl.selectedIndex].text : 'Guwahati (Assam)';
+            const destination = dstEl ? dstEl.options[dstEl.selectedIndex].text : 'Shillong (Meghalaya)';
+            const vehicleType = document.getElementById('vehicle-type').value;
+            const priority = document.getElementById('priority').value;
+
+            scanner.classList.add('active');
+            initialState.style.display = 'none';
+            resultsState.classList.remove('active');
+
+            let data = null;
+            try {
+                if (window.SmartRouteAPI && window.SmartRouteAPI.predictRouteRisk) {
+                    data = await window.SmartRouteAPI.predictRouteRisk(source, destination, vehicleType, priority);
+                }
+            } catch (err) {
+                console.warn('API call failed:', err);
+            }
+
+            await new Promise(r => setTimeout(r, 1100));
+
+            scanner.classList.remove('active');
+            resultsState.classList.add('active');
+
+            if (!data || data.status !== 'success') {
+                data = {
+                    risk_score: 72,
+                    severity: 'HIGH',
+                    breakdown: {
+                        road_condition: 58,
+                        weather_risk: 76,
+                        traffic_load: 42,
+                        flood_risk: 68,
+                        landslide_risk: 71
+                    },
+                    metrics: {
+                        est_delay: '+1h 50m',
+                        road_accessibility_pct: 38,
+                        disruption_probability: 'HIGH',
+                        rec_departure: '06:00 AM'
+                    }
+                };
+                if (window.SmartRoute) {
+                    SmartRoute.showToast('Backend offline — showing simulated prediction', 'warn');
+                }
+            }
+
+            const score = Math.round(data.risk_score || 0);
+            const sev = (data.severity || 'HIGH').toUpperCase();
+            const gaugeVal = document.getElementById('risk-gauge-val');
+            const gaugeSub = document.getElementById('risk-gauge-sub');
+            const gauge = document.getElementById('risk-gauge');
+
+            if (gaugeVal) gaugeVal.textContent = score;
+            if (gaugeSub) gaugeSub.textContent = '% RISK — ' + sev;
+
+            let gaugeColor = 'var(--status-danger)';
+            if (score < 35) gaugeColor = 'var(--status-safe)';
+            else if (score < 55) gaugeColor = 'var(--status-warn)';
+
+            if (gauge) {
+                gauge.style.background = `conic-gradient(${gaugeColor} ${score}%, rgba(255,255,255,0.1) 0)`;
+            }
+            if (gaugeVal) gaugeVal.style.color = gaugeColor;
+
+            const b = data.breakdown || {};
+            setBar('road', Math.round(b.road_condition || 0));
+            setBar('weather', Math.round(b.weather_risk || 0));
+            setBar('traffic', Math.round(b.traffic_load || 0));
+            setBar('flood', Math.round(b.flood_risk || 0));
+            setBar('landslide', Math.round(b.landslide_risk || 0));
+
+            const m = data.metrics || {};
+            const delayEl = document.getElementById('val-delay');
+            const accessEl = document.getElementById('val-access');
+            const disruptEl = document.getElementById('val-disrupt');
+            const departEl = document.getElementById('val-departure');
+
+            if (delayEl) delayEl.textContent = m.est_delay || '—';
+            if (accessEl) accessEl.textContent = (m.road_accessibility_pct || 0) + '%';
+            if (disruptEl) disruptEl.textContent = m.disruption_probability || '—';
+            if (departEl) departEl.textContent = m.rec_departure || '—';
+
+            const delayMetric = document.getElementById('metric-delay');
+            const disruptMetric = document.getElementById('metric-disrupt');
+            if (delayMetric) delayMetric.classList.toggle('danger', score > 50);
+            if (disruptMetric) disruptMetric.classList.toggle('danger', (m.disruption_probability || '').toUpperCase() === 'HIGH');
+
+            if (window.MapEngine && MapEngine.map) {
+                if (MapEngine.addRoads) MapEngine.addRoads();
+                if (MapEngine.drawAlternateRoutes) MapEngine.drawAlternateRoutes();
+                if (MapEngine.addIncidents) MapEngine.addIncidents();
+                MapEngine.map.setView([25.80, 91.60], 7);
+            }
+
+            if (window.SmartRoute && data.status === 'success') {
+                SmartRoute.showToast('AI prediction ready: ' + source + ' → ' + destination + ' (' + sev + ')', 'success');
+            }
+        }
+    </script>
+    <script src="js/route-prediction-fix.js"></script>
+</body>
+</html>
