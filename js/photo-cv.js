@@ -1,4 +1,4 @@
-/* SmartRoute Photo CV v11 — landslide / pothole / flood; no false reject on debris */
+/* SmartRoute Photo CV v12 — landslide / pothole / flood only; no risk score on invalid */
 (function (global) {
   'use strict';
 
@@ -12,31 +12,33 @@
       var img = new Image();
       img.onload = function () {
         try {
-          var w = 240, h = Math.max(48, Math.round(240 * img.height / Math.max(1, img.width)));
-          var c = document.createElement('canvas');
-          c.width = w; c.height = h;
-          var ctx = c.getContext('2d', { willReadFrequently: true });
+          var canvas = document.createElement('canvas');
+          var maxSide = 320;
+          var scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+          var w = Math.max(1, Math.round(img.width * scale));
+          var h = Math.max(1, Math.round(img.height * scale));
+          canvas.width = w;
+          canvas.height = h;
+          var ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, w, h);
-          var d = ctx.getImageData(0, 0, w, h).data;
-          var n = w * h;
-
-          var brown = 0, gray = 0, dark = 0, blue = 0, green = 0, bright = 0;
-          var wetHole = 0, edge = 0, mudWater = 0, ui = 0;
+          var data = ctx.getImageData(0, 0, w, h).data;
+          var d = data;
+          var n = (w * h);
+          var brown = 0, gray = 0, dark = 0, blue = 0, ui = 0, green = 0, bright = 0, wetHole = 0, mudWater = 0, edge = 0;
 
           for (var i = 0; i < d.length; i += 4) {
             var r = d[i], g = d[i + 1], b = d[i + 2];
             var l = (r + g + b) / 3;
             var max = Math.max(r, g, b), min = Math.min(r, g, b);
             var sat = max ? (max - min) / max : 0;
-
-            if (r > 45 && r >= g - 10 && (r - b) > 8 && l > 22 && l < 210 && sat > 0.05) brown++;
-            if (sat < 0.22 && l > 28 && l < 175 && Math.abs(r - g) < 22 && Math.abs(g - b) < 22) gray++;
-            if (l < 50) dark++;
             if (l > 220) bright++;
-            if (b > r + 6 && b > g - 8 && l > 30 && l < 195 && sat > 0.06) blue++;
-            if (l > 35 && l < 145 && sat < 0.28 && r > 55 && Math.abs(r - g) < 25 && (r - b) < 45) mudWater++;
-            if (g > r + 10 && g > b + 8 && sat > 0.12) green++;
-            if ((b > 180 && b > r + 50 && sat > 0.45) || (r > 220 && g < 60 && b < 60 && sat > 0.5)) ui++;
+            if (l < 45) dark++;
+            if (r > 90 && g > 50 && b < 90 && r > b + 20 && g > b) brown++;
+            if (Math.abs(r - g) < 18 && Math.abs(g - b) < 18 && l > 40 && l < 180) gray++;
+            if (b > r + 15 && b > g + 10 && b > 60) blue++;
+            if (g > r + 15 && g > b + 10 && g > 50) green++;
+            if (r > 200 && g > 200 && b > 200 && sat < 0.1) ui++;
+            if (l < 100 && sat > 0.15 && r > 40 && g > 30 && b < 90) mudWater++;
             if (l < 70 && sat < 0.2 && Math.abs(r - g) < 15) wetHole++;
           }
 
@@ -98,7 +100,7 @@
 
           var best = 'invalid';
           var bestScore = 0;
-          var TH = 35;
+          var TH = 48;
           if (scoreLand >= TH && scoreLand >= scorePot && scoreLand >= scoreFlood) {
             best = 'landslide'; bestScore = scoreLand;
           } else if (scoreFlood >= TH && scoreFlood >= scoreLand && scoreFlood >= scorePot) {
@@ -107,8 +109,8 @@
             best = 'pothole'; bestScore = scorePot;
           }
 
-          if (best === 'invalid') {
-            return resolve(invalidMeta(85, 'Photo does not clearly show landslide, pothole, or flood. Risk score not calculated.'));
+          if (best === 'invalid' || bestScore < TH) {
+            return resolve(invalidMeta(88, 'INVALID PHOTO — not a clear landslide, pothole, or flood. Risk score is NOT calculated.'));
           }
 
           var conf = Math.min(96, Math.round(55 + bestScore * 0.35));
@@ -183,5 +185,5 @@
     };
   }
 
-  global.SmartRoutePhotoCV = { version: 11, classify: classify };
+  global.SmartRoutePhotoCV = { version: 12, classify: classify };
 })(window);
