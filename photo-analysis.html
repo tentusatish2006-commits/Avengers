@@ -47,9 +47,7 @@
         <div class="photo-layout">
           <div class="glass-card" style="position:relative;overflow:hidden;">
             <div id="analysis-map"></div>
-            <div style="position:absolute;top:10px;left:10px;z-index:600;background:rgba(3,8,16,0.85);border:1px solid rgba(0,212,255,0.4);border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700;letter-spacing:0.08em;color:#00d4ff;">
-              LIVE INCIDENT MAP — NE INDIA
-            </div>
+            <div style="position:absolute;top:10px;left:10px;z-index:600;background:rgba(3,8,16,0.85);border:1px solid rgba(0,212,255,0.4);border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700;letter-spacing:0.08em;color:#00d4ff;">LIVE INCIDENT MAP — NE INDIA</div>
             <div id="map-photo-overlay">
               <img id="map-photo-img" alt="">
               <div id="map-photo-label" style="margin-top:4px;font-weight:700;color:#00d4ff;"></div>
@@ -99,10 +97,10 @@
       var card = $('result-card');
       card.className = 'result-card';
       card.style.display = 'block';
-      $('result-title').textContent = (meta.hazard_type || 'Hazard').toUpperCase();
-      $('result-detail').textContent = 'Confidence / risk context: ' + (meta.detail || meta.hazard_type || 'Classified');
+      $('result-title').textContent = (meta.hazard_type || meta.class || 'Hazard').toUpperCase();
+      $('result-detail').textContent = 'Risk ' + (meta.risk_score != null ? meta.risk_score : meta.damage_pct) + '% · ' + (meta.recommended_action || meta.hazard_type || '');
       $('map-photo-img').src = url;
-      $('map-photo-label').textContent = meta.hazard_type || 'Detected';
+      $('map-photo-label').textContent = meta.hazard_type || meta.class;
       $('map-photo-overlay').style.display = 'block';
       try { if (map) map.flyTo([26.15, 91.75], 11, { duration: 1.2 }); } catch (e) {}
     }
@@ -123,13 +121,8 @@
 
     document.addEventListener('DOMContentLoaded', function () {
       if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'AI Photo Analysis', subtitle: 'Landslide · Pothole · Flood only' });
-      // Original incident map: MapEngine + satellite + NER corridors (not plain OSM only)
       if (window.MapEngine && window.MapEngine.initMap) {
-        map = MapEngine.initMap('analysis-map', {
-          center: [25.80, 91.60],
-          zoom: 7,
-          zoomControl: true
-        });
+        map = MapEngine.initMap('analysis-map', { center: [25.80, 91.60], zoom: 7, zoomControl: true });
         try {
           if (MapEngine.addRoads) MapEngine.addRoads(map);
           if (MapEngine.addIncidents) MapEngine.addIncidents(map);
@@ -137,9 +130,7 @@
       } else {
         map = L.map('analysis-map', { zoomControl: true }).setView([25.80, 91.60], 7);
         L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-          maxZoom: 20,
-          subdomains: ['0', '1', '2', '3'],
-          attribution: 'Satellite'
+          maxZoom: 20, subdomains: ['0','1','2','3'], attribution: 'Satellite'
         }).addTo(map);
       }
       setTimeout(function () { try { map.invalidateSize(true); } catch (e) {} }, 300);
@@ -158,43 +149,34 @@
         if (window.SmartRoute) SmartRoute.showToast('Upload a field photo first', 'warn');
         return;
       }
+      var CV = window.SmartRoutePhotoCV || window.PhotoCV;
+      if (!CV || typeof CV.classify !== 'function') {
+        if (window.SmartRoute) SmartRoute.showToast('Photo analyzer not loaded — refresh page', 'warn');
+        return;
+      }
       isScanning = true;
+      $('btn-analyze').disabled = true;
       $('btn-analyze').textContent = 'SCANNING…';
       $('map-photo-img').src = customUrl;
       $('map-photo-label').textContent = 'SCANNING…';
       $('map-photo-overlay').style.display = 'block';
-      try {
-        if (map) map.flyTo([26.15, 91.75], 11, { duration: 1.2 });
-      } catch (e) {}
+      try { if (map) map.flyTo([26.15, 91.75], 11, { duration: 1.2 }); } catch (e) {}
 
-      var img = new Image();
-      img.onload = function () {
-        try {
-          var meta = null;
-          if (window.PhotoCV && typeof PhotoCV.analyze === 'function') {
-            meta = PhotoCV.analyze(img, customFilename);
-          } else if (window.PhotoCV && typeof PhotoCV.classify === 'function') {
-            meta = PhotoCV.classify(img);
-          }
-          if (!meta || meta.invalid || meta.hazard_type === 'invalid') {
-            showInvalid(customUrl);
-          } else {
-            showValid(customUrl, meta);
-            if (window.SmartRoute) SmartRoute.showToast('Detected: ' + (meta.hazard_type || 'hazard'), 'success');
-          }
-        } catch (err) {
-          console.warn(err);
+      CV.classify(customUrl, customFilename).then(function (meta) {
+        if (!meta || meta.class === 'invalid' || meta.invalid === true || meta.no_score === true) {
           showInvalid(customUrl);
+        } else {
+          showValid(customUrl, meta);
+          if (window.SmartRoute) SmartRoute.showToast('Detected: ' + (meta.hazard_type || meta.class), 'success');
         }
-        isScanning = false;
-        $('btn-analyze').textContent = 'ANALYZE WITH AI VISION';
-      };
-      img.onerror = function () {
+      }).catch(function (err) {
+        console.warn(err);
         showInvalid(customUrl);
+      }).then(function () {
         isScanning = false;
+        $('btn-analyze').disabled = false;
         $('btn-analyze').textContent = 'ANALYZE WITH AI VISION';
-      };
-      img.src = customUrl;
+      });
     };
   })();
   </script>
