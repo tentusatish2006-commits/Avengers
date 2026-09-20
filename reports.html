@@ -85,11 +85,11 @@
   <div class="modal" id="report-modal-body"></div>
 </div>
 
-<script src="js/auth-users.js?v=rep7"></script>
-<script src="js/components.js?v=rep7"></script>
-<script src="js/sim-photo-pothole.js?v=rep7"></script>
-<script src="js/sim-photo-landslide.js?v=rep7"></script>
-<script src="js/sim-photo-flood.js?v=rep7"></script>
+<script src="js/auth-users.js?v=rep9"></script>
+<script src="js/components.js?v=rep9"></script>
+<script src="js/sim-photo-pothole.js?v=rep9"></script>
+<script src="js/sim-photo-landslide.js?v=rep9"></script>
+<script src="js/sim-photo-flood.js?v=rep9"></script>
 <script>
 function isPhotoData(u) {
   return !!(u && String(u).indexOf('data:image') === 0 && String(u).length > 100);
@@ -99,12 +99,13 @@ function photoForIncident(type) {
   var flood = window.SIM_PHOTO_FLOOD;
   var slide = window.SIM_PHOTO_LANDSLIDE;
   var hole = window.SIM_PHOTO_POTHOLE;
-  /* STRICT: flood only for flood, landslide only for landslide, pothole only for road */
-  if (t.indexOf('flood') >= 0) return isPhotoData(flood) ? flood : '';
-  if (t.indexOf('landslide') >= 0 || t.indexOf('debris') >= 0) return isPhotoData(slide) ? slide : '';
+  if (t.indexOf('flood') >= 0)
+    return isPhotoData(flood) ? flood : 'assets/flood.jpg';
+  if (t.indexOf('landslide') >= 0 || t.indexOf('debris') >= 0)
+    return isPhotoData(slide) ? slide : 'assets/landslide.jpg';
   if (t.indexOf('pothole') >= 0 || t.indexOf('road') >= 0 || t.indexOf('crack') >= 0 || t.indexOf('damage') >= 0 || t.indexOf('bridge') >= 0)
-    return isPhotoData(hole) ? hole : '';
-  return '';
+    return isPhotoData(hole) ? hole : 'assets/pothole.jpg';
+  return isPhotoData(hole) ? hole : 'assets/pothole.jpg';
 }
 function photoColor(type) {
   var t = String(type || '').toLowerCase();
@@ -184,9 +185,7 @@ function viewReport(id) {
     '<h2>📋 ' + r.id + ' — ' + r.incident + '</h2>' +
     '<div class="modal-media">' +
       '<div class="modal-photo-wrap">' +
-        (photoUrl
-          ? '<img id="m-field-photo" src="' + photoUrl + '" alt="Field officer upload — ' + r.incident + '">' 
-          : '<div style="height:200px;display:flex;align-items:center;justify-content:center;color:#8fa3b8;">Loading field photo…</div>') +
+        '<img id="m-field-photo" src="" alt="Field officer upload — ' + r.incident + '" style="width:100%;height:200px;object-fit:cover;display:block;background:#061018;">' +
         '<div class="modal-photo-badge">' + r.incident + ' · Field Officer Upload</div>' +
       '</div>' +
       '<div class="modal-map-wrap">' +
@@ -211,6 +210,16 @@ function viewReport(id) {
     '<div class="row"><span class="label">Field notes</span><span class="val" style="text-align:left;max-width:60%">' + r.notes + '</span></div>' +
     '<button type="button" class="close-btn" id="modal-close">Close</button>';
   document.getElementById('report-modal').classList.add('open');
+  var photoEl = document.getElementById('m-field-photo');
+  if (photoEl) {
+    photoEl.src = photoUrl || '';
+    photoEl.onerror = function () {
+      var t2 = String(r.incident || '').toLowerCase();
+      if (t2.indexOf('flood') >= 0) photoEl.src = 'assets/flood.jpg';
+      else if (t2.indexOf('landslide') >= 0) photoEl.src = 'assets/landslide.jpg';
+      else photoEl.src = 'assets/pothole.jpg';
+    };
+  }
   document.getElementById('modal-close').onclick = closeModal;
   destroyMiniMap();
   setTimeout(function () {
