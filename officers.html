@@ -56,17 +56,19 @@
 </div></div></div>
 <script src="js/components.js"></script>
 <script src="js/map-engine.js"></script>
+<script src="js/field-officers.js?v=1"></script>
 <script>
 (function(){
 var NER=[{id:'loc-ghy',name:'Guwahati - Brahmaputra Corridor',state:'Assam'},{id:'loc-shl',name:'Shillong - GS-1 / Nongpoh',state:'Meghalaya'},{id:'loc-taw',name:'Tawang Pass - NH-13 KM62',state:'Arunachal Pradesh'},{id:'loc-koh',name:'Kohima Pass - NH-2',state:'Nagaland'},{id:'loc-imp',name:'Imphal Valley Causeway',state:'Manipur'},{id:'loc-aiz',name:'Aizawl Approach - NH-306',state:'Mizoram'},{id:'loc-agt',name:'Agartala Corridor - NH-8',state:'Tripura'},{id:'loc-gtk',name:'Gangtok - Teesta Bridge',state:'Sikkim'},{id:'loc-sil',name:'Silchar - Barak River',state:'Assam'},{id:'loc-jor',name:'Jorhat - Brahmaputra Bridge',state:'Assam'}];
-var officers=[{id:'FO-042',name:'Ravi Kumar',initials:'RK',dist:'Assam',lat:26.1524,lng:91.7510,note:'Guwahati Riverfront'},{id:'FO-015',name:'Lakshmi Devi',initials:'LD',dist:'Arunachal Pradesh',lat:27.584,lng:91.862,note:'NH-13 Tawang Pass'},{id:'FO-028',name:'Suresh Rao',initials:'SR',dist:'Nagaland',lat:25.67,lng:94.1,note:'Kohima pass'},{id:'FO-061',name:'Anand Babu',initials:'AB',dist:'Meghalaya',lat:25.57,lng:91.89,note:'Shillong Plateau'},{id:'FO-033',name:'Priya Singh',initials:'PS',dist:'Sikkim',lat:27.33,lng:88.61,note:'Gangtok depot'},{id:'FO-077',name:'Mohan Rao',initials:'MR',dist:'Tripura',lat:23.83,lng:91.28,note:'Agartala corridor'},{id:'FO-089',name:'Kavitha Reddy',initials:'KR',dist:'Mizoram',lat:23.73,lng:92.71,note:'Aizawl high pass'},{id:'FO-055',name:'Rajesh Varma',initials:'RV',dist:'Manipur',lat:24.817,lng:93.936,note:'Imphal valley'}];
+var officers=(window.SmartRouteFO&&SmartRouteFO.list)?SmartRouteFO.list():[];
+if(!officers.length){officers=[{id:'FO-042',name:'Ravi Kumar',initials:'RK',dist:'Assam',lat:26.1524,lng:91.7510,note:'Guwahati Riverfront'}];}
 var map=null, selected=null, markers={};
 function toast(m,t){if(window.SmartRoute&&SmartRoute.showToast)SmartRoute.showToast(m,t||'info');else alert(m);}
 function render(list){
   var el=document.getElementById('officer-list');el.innerHTML='';
   list.forEach(function(o){
     var c=document.createElement('div');c.className='officer-card';
-    c.innerHTML='<div class="avatar">'+o.initials+'</div><div><div style="font-weight:600;color:#e8f4ff">'+o.name+'</div><div style="font-size:.75rem;color:#aaa">'+o.id+' | '+o.dist+'</div></div>';
+    c.innerHTML='<div class="avatar">'+(o.initials||'FO')+'</div><div><div style="font-weight:600;color:#e8f4ff">'+o.name+'</div><div style="font-size:.75rem;color:#aaa">'+o.id+' | '+o.dist+(o.status?' | '+o.status:'')+'</div></div>';
     c.onclick=function(){openDetail(o)};el.appendChild(c);
   });
 }
@@ -76,9 +78,9 @@ function openDetail(o){
   document.getElementById('detail-view').style.display='block';
   document.getElementById('det-name').textContent=o.name;
   document.getElementById('det-id').textContent=o.id+' | '+o.dist;
-  document.getElementById('det-loc').textContent=o.note;
+  document.getElementById('det-loc').textContent=o.note||o.sector||o.dist;
   document.getElementById('assign-to').textContent='To: '+o.name+' ('+o.id+') - select one or more locations';
-  if(map){map.flyTo([o.lat,o.lng],13);if(markers[o.id])markers[o.id].openTooltip();}
+  if(map&&typeof o.lat==='number'){map.flyTo([o.lat,o.lng],13);if(markers[o.id])markers[o.id].openTooltip();}
   toast('Selected '+o.name,'success');
 }
 function openAssign(){
@@ -98,22 +100,33 @@ function confirmAssign(){
   toast(type+' assigned to '+selected.name+' at '+names.length+' location(s): '+names.join('; '),'success');
   try{var p=JSON.parse(localStorage.getItem('sr_officer_assignments')||'[]');p.push({officerId:selected.id,type:type,locations:names,at:new Date().toISOString()});localStorage.setItem('sr_officer_assignments',JSON.stringify(p));}catch(e){}
 }
+function refreshOfficers(){
+  officers=(window.SmartRouteFO&&SmartRouteFO.list)?SmartRouteFO.list():officers;
+  render(officers);
+  if(map&&window.L){
+    Object.keys(markers).forEach(function(k){try{map.removeLayer(markers[k]);}catch(e){}});
+    markers={};
+    officers.forEach(function(o){
+      if(typeof o.lat!=='number'||typeof o.lng!=='number')return;
+      var icon=L.divIcon({html:'<div style="width:28px;height:28px;border-radius:50%;background:#0a1628;border:2px solid #00d4ff;display:flex;align-items:center;justify-content:center;font-size:10px;color:#00d4ff;font-weight:700">'+(o.initials||'FO')+'</div>',className:'',iconSize:[28,28],iconAnchor:[14,14]});
+      var m=L.marker([o.lat,o.lng],{icon:icon}).addTo(map).bindTooltip('<b>'+o.name+'</b><br>'+o.id,{direction:'top'});
+      m.on('click',function(){openDetail(o);});markers[o.id]=m;
+    });
+  }
+}
 document.addEventListener('DOMContentLoaded',function(){
   if(window.SmartRoute)SmartRoute.initSharedComponents({title:'Field Officers',subtitle:'GPS Officer Tracking & Deployment'});
   if(window.L){
     if(window.MapEngine&&MapEngine.initMap)map=MapEngine.initMap('officers-map',{center:[25.8,91.6],zoom:7});
     else{map=L.map('officers-map').setView([25.8,91.6],7);L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',{maxZoom:18}).addTo(map);}
     setTimeout(function(){try{map.invalidateSize(true);}catch(e){}},300);
-    officers.forEach(function(o){
-      var icon=L.divIcon({html:'<div style="width:28px;height:28px;border-radius:50%;background:#0a1628;border:2px solid #00d4ff;display:flex;align-items:center;justify-content:center">O</div>',className:'',iconSize:[28,28],iconAnchor:[14,14]});
-      var m=L.marker([o.lat,o.lng],{icon:icon}).addTo(map).bindTooltip('<b>'+o.name+'</b><br>'+o.id,{direction:'top'});
-      m.on('click',function(){openDetail(o);});markers[o.id]=m;
-    });
   }
-  render(officers);
+  refreshOfficers();
+  setInterval(refreshOfficers,15000);
   document.getElementById('officer-search').oninput=function(e){
     var q=e.target.value.toLowerCase();
-    render(officers.filter(function(o){return o.name.toLowerCase().indexOf(q)>=0||o.id.toLowerCase().indexOf(q)>=0||o.dist.toLowerCase().indexOf(q)>=0;}));
+    var src=(window.SmartRouteFO&&SmartRouteFO.search)?SmartRouteFO.search(q):officers.filter(function(o){return o.name.toLowerCase().indexOf(q)>=0||o.id.toLowerCase().indexOf(q)>=0||o.dist.toLowerCase().indexOf(q)>=0;});
+    render(src);
   };
   document.getElementById('btn-back').onclick=function(){document.getElementById('detail-view').style.display='none';document.getElementById('list-view').style.display='block';selected=null;};
   document.getElementById('btn-assign').onclick=openAssign;
