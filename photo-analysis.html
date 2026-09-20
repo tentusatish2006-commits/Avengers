@@ -41,7 +41,7 @@
     <main class="page-body" style="padding:16px;">
       <div class="page-header">
         <h1 class="page-title">AI Photo Analysis</h1>
-        <p class="page-subtitle">CV v10 · Scores only for Landslide · Pothole · Flood</p>
+        <p class="page-subtitle">CV v11 · Scores only for Landslide · Pothole · Flood</p>
       </div>
       <div class="photo-layout">
         <div class="left-panel">
@@ -103,13 +103,13 @@
 
 <script src="js/components.js"></script>
 <script src="js/map-engine.js"></script>
-<script src="js/photo-cv.js?v=10"></script>
+<script src="js/photo-cv.js?v=11"></script>
 <script>
 (function () {
   var customUrl = null, customFilename = null, isScanning = false;
   var $ = function (id) { return document.getElementById(id); };
 
-  if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'AI Photo Analysis', subtitle: 'CV v10 · Landslide · Pothole · Flood only' });
+  if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'AI Photo Analysis', subtitle: 'CV v11 · Landslide · Pothole · Flood only' });
   if (window.MapEngine && MapEngine.initMap) MapEngine.initMap('analysis-map', { center: [26.2, 92.0], zoom: 7 });
   else if (window.L) {
     var m = L.map('analysis-map').setView([26.2, 92.0], 7);
@@ -159,7 +159,7 @@
     $('res-issues').innerHTML =
       '<li>Detected: <strong>' + meta.hazard_type + '</strong> (' + meta.confidence + '%)</li>' +
       '<li>Risk / damage score: <strong>' + meta.damage_pct + '%</strong></li>' +
-      '<li>Debris: <strong>' + meta.debris_volume_m3 + ' m³</strong> · Zone: <strong>' + meta.affected_meters + ' m</strong></li>' +
+      '<li>Debris: <strong>' + meta.debris_volume_m3 + ' m3</strong> · Zone: <strong>' + meta.affected_meters + ' m</strong></li>' +
       '<li>CV — brown ' + (f.brown||0) + '% · gray ' + (f.gray||0) + '% · dark ' + (f.dark||0) + '% · blue ' + (f.blue||0) + '%</li>';
     $('res-action').textContent = meta.recommended_action;
     $('initial-msg').style.display = 'none';
@@ -208,7 +208,7 @@
     $('scan-bar').style.display = 'block';
     $('scan-grid-el').style.display = 'block';
     $('initial-msg').style.display = 'block';
-    $('initial-msg').textContent = 'CV v10 analyzing (landslide / pothole / flood only)...';
+    $('initial-msg').textContent = 'CV v11 analyzing (landslide / pothole / flood only)...';
     $('result-content').style.display = 'none';
     $('invalid-banner').style.display = 'none';
     $('map-photo-img').src = customUrl;
