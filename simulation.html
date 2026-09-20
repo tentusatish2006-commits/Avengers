@@ -85,24 +85,25 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="js/components.js"></script>
     <script src="js/map-engine.js"></script>
-    <script src="js/sim-photo-landslide.js?v=9"></script>
-    <script src="js/sim-photo-pothole.js?v=9"></script>
-    <script src="js/sim-photo-flood.js?v=9"></script>
+    <script src="js/sim-photo-landslide.js?v=11"></script>
+    <script src="js/sim-photo-pothole.js?v=11"></script>
+    <script src="js/sim-photo-flood.js?v=11"></script>
+    <script src="js/photo-fix.js?v=11"></script>
     <script>
         let map, simInterval, currentPhase = -1, speed = 1, isPlaying = false;
         let roadLayer, floodLayer, vehicleMarker, incidentMarker, altRouteLayer;
 
         function isPhotoData(s) {
-            return typeof s === 'string' && s.indexOf('data:image') === 0 && s.length > 200;
+            return typeof s === 'string' && (s.indexOf('data:image') === 0 || s.indexOf('http') === 0) && s.length > 10;
         }
         function photoFor(kind) {
             if (kind === 'flood' && isPhotoData(window.SIM_PHOTO_FLOOD)) return window.SIM_PHOTO_FLOOD;
             if (kind === 'landslide' && isPhotoData(window.SIM_PHOTO_LANDSLIDE)) return window.SIM_PHOTO_LANDSLIDE;
             if (kind === 'pothole' && isPhotoData(window.SIM_PHOTO_POTHOLE)) return window.SIM_PHOTO_POTHOLE;
-            if (kind === 'flood') return 'assets/field-flood.jpg';
-            if (kind === 'landslide') return 'assets/field-landslide.jpg';
-            if (kind === 'pothole') return 'assets/field-pothole.jpg';
-            return 'assets/field-landslide.jpg';
+            if (kind === 'flood') return window.SIM_PHOTO_FLOOD || 'https://images.unsplash.com/photo-1547683905-f86c17adf3d6?w=640&q=80';
+            if (kind === 'landslide') return window.SIM_PHOTO_LANDSLIDE || 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=640&q=80';
+            if (kind === 'pothole') return window.SIM_PHOTO_POTHOLE || 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=640&q=80';
+            return window.SIM_PHOTO_LANDSLIDE || 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=640&q=80';
         }
         const PHOTO_META = {
             flood: { header: 'FIELD OFFICER GEO-REPORT #FO-018 (ANITA DAS)', coords: 'LAT 26.182 · LNG 91.748 · GUWAHATI', badge: 'FLOOD HAZARD', ai: 'Vision AI: 94% Flood Inundation Confirmed', meta: 'Muddy floodwater · Road submerged · Brahmaputra sector' },
@@ -250,16 +251,21 @@
                         var vc = L.divIcon({ className: '', html: '<div style="background:rgba(0,212,255,0.3);border:2px solid #00d4ff;border-radius:8px;padding:4px;font-size:20px;">🚛</div>' });
                         vehicleMarker = L.marker(pts[0], { icon: vc }).addTo(map);
                     }
-                    var i = 0, step = Math.max(1, Math.floor(pts.length / 40));
-                    var timer = setInterval(function () {
+                    var i = 0;
+                    var step = Math.max(1, Math.floor(pts.length / 40));
+                    var iv = setInterval(function () {
                         i += step;
-                        if (i >= pts.length) { i = pts.length - 1; clearInterval(timer); }
-                        if (vehicleMarker) vehicleMarker.setLatLng(pts[i]);
+                        if (i >= pts.length) { i = pts.length - 1; clearInterval(iv); }
+                        vehicleMarker.setLatLng(pts[i]);
                     }, 80 / speed);
                 })();
             }
-            if (p.action === 'show_eta') document.getElementById('eta-panel').style.display = 'block';
-            if (p.photo) showFieldPhoto(p.photo, 3800 / speed);
+            if (p.action === 'show_eta') {
+                document.getElementById('eta-panel').style.display = 'block';
+            }
+            if (p.photo) {
+                showFieldPhoto(p.photo, 3800 / speed);
+            }
             if (p.action === 'resolve') {
                 if (floodLayer) map.removeLayer(floodLayer);
                 if (incidentMarker) map.removeLayer(incidentMarker);
