@@ -1,1 +1,218 @@
-SEE_FILE
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - SmartRoute</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    .admin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-bottom:24px}
+    .admin-module{display:flex;align-items:center;padding:18px;gap:16px;cursor:pointer;border:1px solid rgba(0,212,255,.2)}
+    .admin-module:hover{border-color:#00d4ff}
+    .module-icon{width:48px;height:48px;border-radius:12px;background:rgba(0,212,255,.12);color:#00d4ff;display:flex;align-items:center;justify-content:center;font-size:1.4rem}
+    .module-info h3{margin:0 0 4px;font-size:.8rem;color:#8fa3b8}
+    .module-info p{margin:0;font-size:1.45rem;font-weight:800;color:#00d4ff}
+    .section-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+    .section-header h2{margin:0;font-size:1.2rem;background:linear-gradient(90deg,#00d4ff,#00ff88);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .btn-add{padding:10px 18px;border:none;border-radius:10px;cursor:pointer;font-weight:800;font-family:inherit;background:linear-gradient(135deg,#00d4ff,#0099cc);color:#031018}
+    .user-table{width:100%;border-collapse:collapse;min-width:720px}
+    .user-table th,.user-table td{padding:12px 14px;text-align:left;border-bottom:1px solid rgba(255,255,255,.06)}
+    .user-table th{color:#00d4ff;text-transform:uppercase;font-size:.75rem}
+    .status-active{color:#00ff88;font-weight:700}
+    .status-inactive{color:#ff6b6b;font-weight:700}
+    .action-btns{display:flex;flex-wrap:wrap;gap:6px}
+    .action-btns button{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#e0e8f0;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:.8rem}
+    .btn-del{color:#ff6b6b!important;border-color:rgba(255,107,107,.3)!important}
+    .empty-users{text-align:center;padding:28px;color:#8fa3b8}
+    .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:3000;align-items:center;justify-content:center}
+    .modal-bg.show{display:flex}
+    .modal-card{background:#0a1628;border:1px solid rgba(0,212,255,.3);border-radius:14px;padding:24px;width:min(420px,92vw)}
+    .modal-card label{display:block;font-size:.8rem;color:#8fa3b8;margin:10px 0 4px}
+    .modal-card input,.modal-card select{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:#061018;color:#fff;font-family:inherit}
+    .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+  </style>
+</head>
+<body>
+  <div id="app-root"><div id="sidebar-slot"></div><div id="main-content"><div id="topbar-slot"></div>
+  <main style="padding:20px">
+    <div class="glass-card" style="margin-bottom:20px;padding:18px">
+      <h1 style="margin:0 0 6px;font-size:1.4rem;background:linear-gradient(90deg,#00d4ff,#00ff88);-webkit-background-clip:text;background-clip:text;color:transparent">Admin Panel</h1>
+      <p class="sub" style="margin:0;color:#8fa3b8;font-size:.9rem">Users sync to all devices via cloud. Field Officers appear on Officers pages.</p>
+    </div>
+    <div class="admin-grid">
+      <div class="glass-card admin-module" data-mod="users">
+        <div class="module-icon">U</div>
+        <div class="module-info"><h3>USER MANAGEMENT</h3><p id="stat-users">0</p></div>
+      </div>
+    </div>
+    <div class="glass-card" id="user-mgmt-section" style="padding:18px;overflow-x:auto">
+      <div class="section-header">
+        <h2>Users</h2>
+        <div>
+          <button type="button" class="btn-add" id="btn-add-user">+ ADD USER</button>
+          <button type="button" class="btn-add" id="btn-sync-now" style="background:rgba(0,212,255,.15);color:#00d4ff;border:1px solid #00d4ff;margin-left:8px">SYNC NOW</button>
+        </div>
+      </div>
+      <table class="user-table"><thead><tr><th>ID</th><th>Name</th><th>Role</th><th>District</th><th>Status</th><th>Login</th><th>Actions</th></tr></thead>
+      <tbody id="user-tbody"></tbody></table>
+    </div>
+  </main></div></div>
+  <div class="modal-bg" id="add-user-modal">
+    <div class="modal-card">
+      <h3 style="margin:0 0 8px;color:#00d4ff">Add User</h3>
+      <label>Full name</label><input id="au-name" placeholder="Name">
+      <label>Password</label><input id="au-pass" type="password" placeholder="Pass@123">
+      <label>Role</label><select id="au-role"><option>Field Officer</option><option>Local Authority</option><option>Administrator</option></select>
+      <label>District</label><select id="au-dist"><option>Assam</option><option>Meghalaya</option><option>Arunachal Pradesh</option><option>Nagaland</option><option>Manipur</option><option>Mizoram</option><option>Tripura</option><option>Sikkim</option><option>HQ Guwahati</option></select>
+      <div class="modal-actions">
+        <button type="button" id="btn-cancel-add" style="padding:8px 14px;border-radius:8px;border:1px solid #555;background:transparent;color:#aaa;cursor:pointer">Cancel</button>
+        <button type="button" id="btn-confirm-add" class="btn-add">Create</button>
+      </div>
+    </div>
+  </div>
+  <script src="js/components.js"></script>
+  <script src="js/auth-users.js"></script>
+  <script src="js/admin-sync.js?v=3"></script>
+  <script>
+  (function(){
+    var DEFAULT_USERS=[
+      {id:'USR-001',name:'Admin Officer',role:'Administrator',dist:'HQ Guwahati',stat:'Active',login:'-'},
+      {id:'USR-002',name:'Ravi Kumar',role:'Field Officer',dist:'Assam',stat:'Active',login:'-',foId:'FO-101'},
+      {id:'USR-003',name:'District Collector',role:'Local Authority',dist:'Assam',stat:'Active',login:'-'}
+    ];
+    var currentUsers=[];
+    function toast(msg,type){if(window.SmartRoute&&SmartRoute.showToast)SmartRoute.showToast(msg,type||'info');}
+    function loadUsers(){
+      try{var s=localStorage.getItem('sr_admin_users');if(s){var p=JSON.parse(s);if(Array.isArray(p)&&p.length)currentUsers=p;}}catch(e){}
+      if(!currentUsers.length){currentUsers=DEFAULT_USERS.map(function(u){return Object.assign({},u);});saveUsers();}
+      syncFromCloud(true);
+    }
+    function syncFromCloud(showToast){
+      if(!window.SRAdminSync||!SRAdminSync.pull)return;
+      SRAdminSync.pull().then(function(result){
+        var remote=[];
+        if(Array.isArray(result))remote=result;
+        else if(result&&Array.isArray(result.users))remote=result.users;
+        if(!remote||!remote.length)return;
+        var byId={};
+        currentUsers.forEach(function(u){byId[u.id]=u;});
+        remote.forEach(function(r){if(r&&r.id)byId[r.id]=r;});
+        currentUsers=Object.keys(byId).map(function(k){return byId[k];});
+        saveUsers();
+        if(result&&Array.isArray(result.fieldOfficers)&&result.fieldOfficers.length){
+          try{
+            var foMap={},localFO=[];
+            try{localFO=JSON.parse(localStorage.getItem('sr_field_officers')||'[]')||[];}catch(e){}
+            localFO.forEach(function(o){if(o&&o.id)foMap[o.id]=o;});
+            result.fieldOfficers.forEach(function(o){if(o&&o.id)foMap[o.id]=o;});
+            localStorage.setItem('sr_field_officers',JSON.stringify(Object.keys(foMap).map(function(k){return foMap[k];})));
+          }catch(e2){}
+        }
+        renderUserTable();
+        if(showToast)toast('Users synced across devices ('+currentUsers.length+' total)','success');
+      }).catch(function(){});
+    }
+    function saveUsers(){
+      try{localStorage.setItem('sr_admin_users',JSON.stringify(currentUsers));}catch(e){}
+      var el=document.getElementById('stat-users');if(el)el.textContent=String(currentUsers.length);
+    }
+    function nextUserId(){
+      var max=0;currentUsers.forEach(function(u){var m=String(u.id||'').match(/(\d+)/);if(m)max=Math.max(max,parseInt(m[1],10));});
+      return 'USR-'+String(max+1).padStart(3,'0');
+    }
+    function nextFoId(){
+      var max=100;
+      try{var raw=localStorage.getItem('sr_field_officers');if(raw)JSON.parse(raw).forEach(function(o){var m=String(o.id||'').match(/(\d+)/);if(m)max=Math.max(max,parseInt(m[1],10));});}catch(e){}
+      return 'FO-'+String(max+1).padStart(3,'0');
+    }
+    function syncFieldOfficer(user){
+      if(user.role!=='Field Officer')return;
+      try{
+        var list=[],raw=localStorage.getItem('sr_field_officers');
+        if(raw)list=JSON.parse(raw)||[];
+        if(!Array.isArray(list))list=[];
+        var foId=user.foId||nextFoId();user.foId=foId;
+        var exists=list.findIndex(function(o){return o.id===foId||(o.name&&o.name.toLowerCase()===user.name.toLowerCase());});
+        var entry={id:foId,name:user.name,dist:user.dist,status:user.stat==='Active'?'ACTIVE':'OFF DUTY',sector:user.dist};
+        if(exists>=0)list[exists]=Object.assign({},list[exists],entry);else list.unshift(entry);
+        localStorage.setItem('sr_field_officers',JSON.stringify(list));
+      }catch(e){}
+    }
+    function esc(s){return String(s==null?'':s).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'"');}
+    function renderUserTable(){
+      var tbody=document.getElementById('user-tbody');if(!tbody)return;
+      tbody.innerHTML='';
+      if(!currentUsers.length){tbody.innerHTML='<tr><td colspan="7" class="empty-users">No users yet. Click + ADD USER.</td></tr>';saveUsers();return;}
+      currentUsers.forEach(function(u){
+        var tr=document.createElement('tr');
+        var sc=u.stat==='Active'?'status-active':'status-inactive';
+        tr.innerHTML='<td><strong>'+esc(u.id)+'</strong></td><td>'+esc(u.name)+'</td><td>'+esc(u.role)+'</td><td>'+esc(u.dist)+'</td><td class="'+sc+'">* '+esc(u.stat)+'</td><td>'+esc(u.login||'-')+'</td><td class="action-btns"><button type="button" class="btn-del" data-act="del" data-id="'+esc(u.id)+'">Delete</button><button type="button" data-act="edit" data-id="'+esc(u.id)+'">Edit</button><button type="button" data-act="toggle" data-id="'+esc(u.id)+'">'+(u.stat==='Active'?'Deactivate':'Activate')+'</button></td>';
+        tbody.appendChild(tr);
+      });
+      saveUsers();
+    }
+    function pushCloud(){
+      if(!window.SRAdminSync||!SRAdminSync.pushAll)return;
+      var fo=[];try{fo=JSON.parse(localStorage.getItem('sr_field_officers')||'[]')||[];}catch(e){}
+      return SRAdminSync.pushAll(currentUsers,fo);
+    }
+    function confirmAddUser(){
+      var name=(document.getElementById('au-name').value||'').trim();
+      if(!name){toast('Enter a full name','warn');return;}
+      var role=document.getElementById('au-role').value;
+      var dist=document.getElementById('au-dist').value;
+      var pass=(document.getElementById('au-pass').value||'').trim()||'Pass@123';
+      var newUser={id:nextUserId(),name:name,role:role,dist:dist,stat:'Active',login:'Just now',password:pass};
+      if(role==='Field Officer'){newUser.foId=nextFoId();syncFieldOfficer(newUser);}
+      try{
+        var key='sr_users',users=[];
+        try{users=JSON.parse(localStorage.getItem(key)||'[]')||[];}catch(e){}
+        if(!Array.isArray(users))users=[];
+        users.push({username:name,password:pass,role:role,district:dist,createdAt:Date.now()});
+        localStorage.setItem(key,JSON.stringify(users));
+      }catch(e){}
+      currentUsers.unshift(newUser);
+      saveUsers();
+      pushCloud();
+      renderUserTable();
+      document.getElementById('add-user-modal').classList.remove('show');
+      toast('User created: '+name+' — synced to all devices','success');
+    }
+    function findUser(id){return currentUsers.find(function(u){return u.id===id;});}
+    function deleteUser(id){
+      var user=findUser(id);if(!user||!confirm('Delete '+user.name+'?'))return;
+      currentUsers=currentUsers.filter(function(u){return u.id!==id;});
+      saveUsers();pushCloud();renderUserTable();toast('Deleted: '+user.name,'success');
+    }
+    function editUser(id){
+      var user=findUser(id);if(!user)return;
+      var n=prompt('Update name:',user.name);
+      if(n&&n.trim()){user.name=n.trim();if(user.role==='Field Officer')syncFieldOfficer(user);saveUsers();pushCloud();renderUserTable();toast('Updated','success');}
+    }
+    function toggleUserStatus(id){
+      var user=findUser(id);if(!user)return;
+      user.stat=user.stat==='Active'?'Inactive':'Active';
+      if(user.role==='Field Officer')syncFieldOfficer(user);
+      saveUsers();pushCloud();renderUserTable();toast(user.name+' is now '+user.stat,'success');
+    }
+    document.addEventListener('DOMContentLoaded',function(){
+      if(window.SmartRoute)SmartRoute.initSharedComponents({title:'Admin Panel',subtitle:'Users sync across devices'});
+      loadUsers();renderUserTable();
+      setInterval(function(){syncFromCloud(false);},8000);
+      document.getElementById('btn-add-user').addEventListener('click',function(e){e.preventDefault();document.getElementById('au-name').value='';document.getElementById('au-pass').value='';document.getElementById('add-user-modal').classList.add('show');});
+      document.getElementById('btn-cancel-add').addEventListener('click',function(){document.getElementById('add-user-modal').classList.remove('show');});
+      document.getElementById('btn-confirm-add').addEventListener('click',confirmAddUser);
+      document.getElementById('btn-sync-now').addEventListener('click',function(){toast('Syncing...','info');syncFromCloud(true);});
+      document.getElementById('user-tbody').addEventListener('click',function(e){
+        var btn=e.target.closest('button[data-act]');if(!btn)return;
+        var act=btn.getAttribute('data-act'),id=btn.getAttribute('data-id');
+        if(act==='del')deleteUser(id);else if(act==='edit')editUser(id);else if(act==='toggle')toggleUserStatus(id);
+      });
+    });
+  })();
+  </script>
+</body>
+</html>
