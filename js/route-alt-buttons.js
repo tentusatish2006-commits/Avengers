@@ -1,5 +1,14 @@
-/* VIEW ALTERNATE ROUTES + GENERATE REPORT */
+/* VIEW ALTERNATE ROUTES + GENERATE REPORT — always works after source/dest change */
 (function () {
+  'use strict';
+
+  var CITY = {
+    guwahati: [26.1445, 91.7362], shillong: [25.5788, 91.8933], imphal: [24.817, 93.9368],
+    kohima: [25.6751, 94.1086], aizawl: [23.7271, 92.7176], agartala: [23.8315, 91.2868],
+    itanagar: [27.0844, 93.6053], gangtok: [27.3389, 88.6065], silchar: [24.8333, 92.7789],
+    tawang: [27.586, 91.859], dimapur: [25.9063, 93.7276], tezpur: [26.6338, 92.8], nagaon: [26.3464, 92.684]
+  };
+
   async function osrm(a, b) {
     try {
       var url = 'https://router.project-osrm.org/route/v1/driving/' + a[1] + ',' + a[0] + ';' + b[1] + ',' + b[0] + '?overview=full&geometries=geojson';
@@ -11,19 +20,13 @@
   }
 
   async function showSafestRoutesOnMap() {
-    var map = window.MapEngine && MapEngine.map;
-    var CITY = {
-      guwahati: [26.1445, 91.7362], shillong: [25.5788, 91.8933], imphal: [24.817, 93.9368],
-      kohima: [25.6751, 94.1086], aizawl: [23.7271, 92.7176], agartala: [23.8315, 91.2868],
-      itanagar: [27.0844, 93.6053], gangtok: [27.3389, 88.6065], silchar: [24.8333, 92.7789],
-      tawang: [27.586, 91.859], dimapur: [25.9063, 93.7276], tezpur: [26.6338, 92.8], nagaon: [26.3464, 92.684]
-    };
+    var map = (window.MapEngine && MapEngine.map) || window._srPredMap || null;
     var srcEl = document.getElementById('source');
     var dstEl = document.getElementById('dest');
     var sourceKey = srcEl ? srcEl.value : 'guwahati';
     var destKey = dstEl ? dstEl.value : 'shillong';
-    var source = srcEl ? srcEl.options[srcEl.selectedIndex].text : 'Guwahati';
-    var destination = dstEl ? dstEl.options[dstEl.selectedIndex].text : 'Shillong';
+    var source = srcEl && srcEl.options[srcEl.selectedIndex] ? srcEl.options[srcEl.selectedIndex].text : 'Guwahati';
+    var destination = dstEl && dstEl.options[dstEl.selectedIndex] ? dstEl.options[dstEl.selectedIndex].text : 'Shillong';
     var from = CITY[sourceKey] || CITY.guwahati;
     var to = CITY[destKey] || CITY.shillong;
 
@@ -47,19 +50,20 @@
       var leg1 = await osrm(from, vias[i]);
       var leg2 = await osrm(vias[i], to);
       var alt = L.polyline(leg1.concat(leg2.slice(1)), { color: '#ff9500', weight: 5, opacity: 0.8, dashArray: '10 8' }).addTo(map);
-      alt.bindPopup('<b>Alternate corridor ' + (i + 1) + '</b>');
+      alt.bindPopup('<b>Moderate alternate ' + (i + 1) + '</b>');
       window._srAltLayers.push(alt);
     }
 
     try { map.fitBounds(L.latLngBounds(primary), { padding: [50, 50] }); } catch (e) {}
-    if (window.SmartRoute) SmartRoute.showToast('Safest (green) + alternate (orange) routes drawn on map', 'success');
+    if (window.SmartRoute) SmartRoute.showToast('Safest (green) + moderate (orange) routes on map', 'success');
+    else alert('Safest + moderate routes drawn on map');
   }
 
   function generateRouteReport() {
     var srcEl = document.getElementById('source');
     var dstEl = document.getElementById('dest');
-    var source = srcEl ? srcEl.options[srcEl.selectedIndex].text : 'Guwahati';
-    var destination = dstEl ? dstEl.options[dstEl.selectedIndex].text : 'Shillong';
+    var source = srcEl && srcEl.options[srcEl.selectedIndex] ? srcEl.options[srcEl.selectedIndex].text : 'Guwahati';
+    var destination = dstEl && dstEl.options[dstEl.selectedIndex] ? dstEl.options[dstEl.selectedIndex].text : 'Shillong';
     var risk = (document.getElementById('risk-gauge-val') || {}).textContent || '-';
     var sev = (document.getElementById('risk-gauge-sub') || {}).textContent || '';
     var lines = [
@@ -70,40 +74,67 @@
       'Delay: ' + ((document.getElementById('val-delay') || {}).textContent || '-'),
       'Accessibility: ' + ((document.getElementById('val-access') || {}).textContent || '-'),
       'Disruption: ' + ((document.getElementById('val-disrupt') || {}).textContent || '-'),
-      'Region: North Eastern Region (NER)'
+      'Region: North Eastern Region (NER)',
+      '',
+      'Recommendation: Prefer green/safe corridors; use orange moderate alternates when primary is disrupted.'
     ];
     var blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
-    a.download = 'NER-Route-Report.txt';
+    a.download = 'NER-Route-Report-' + (srcEl ? srcEl.value : 'route') + '-to-' + (dstEl ? dstEl.value : 'dest') + '.txt';
     document.body.appendChild(a);
     a.click();
     setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 400);
     if (window.SmartRoute) SmartRoute.showToast('Route report downloaded', 'success');
   }
 
-  function wire() {
-    document.querySelectorAll('a[href="alternate-routes.html"], a[href*="alternate-routes"]').forEach(function (a) {
-      a.onclick = function (e) {
+  window.srViewAlternateRoutes = showSafestRoutesOnMap;
+  window.srGenerateRouteReport = generateRouteReport;
+
+  function bind() {
+    var alt = document.getElementById('btn-view-alt');
+    if (alt) {
+      alt.setAttribute('href', 'javascript:void(0)');
+      alt.onclick = function (e) {
         e.preventDefault();
         e.stopPropagation();
         showSafestRoutesOnMap();
         return false;
       };
-    });
-    var btn = document.getElementById('btn-gen-report');
-    if (btn) {
-      btn.onclick = function (e) {
+    }
+    var alt2 = document.getElementById('btn-view-alt-2');
+    if (alt2) {
+      alt2.onclick = function (e) {
         e.preventDefault();
-        generateRouteReport();
+        showSafestRoutesOnMap();
         return false;
       };
     }
+    document.querySelectorAll('a[href="alternate-routes.html"], a[href*="alternate-routes"]').forEach(function (a) {
+      if (a.id === 'btn-view-alt' || a.id === 'btn-view-alt-2') return;
+      a.onclick = function (e) {
+        e.preventDefault();
+        showSafestRoutesOnMap();
+        return false;
+      };
+    });
+    ['btn-gen-report', 'btn-gen-report-2'].forEach(function (id) {
+      var btn = document.getElementById(id);
+      if (btn) {
+        btn.onclick = function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          generateRouteReport();
+          return false;
+        };
+      }
+    });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
-  else wire();
-  setTimeout(wire, 500);
-  setTimeout(wire, 1500);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
+  setTimeout(bind, 400);
+  setTimeout(bind, 1200);
+  setTimeout(bind, 2500);
 })();
