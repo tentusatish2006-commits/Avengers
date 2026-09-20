@@ -1,106 +1,239 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Live Simulation - SmartRoute NER</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Outfit,sans-serif;background:#0a1628;color:#e8f0f8;min-height:100vh}
-.header{padding:12px 20px;background:#0d1f35;border-bottom:1px solid #1a3a5c;display:flex;align-items:center;gap:12px}
-.header a{color:#00d4ff;text-decoration:none;font-weight:600}
-h1{font-size:1.2rem;color:#00d4ff}
-.wrap{display:grid;grid-template-columns:320px 1fr;gap:12px;padding:12px;height:calc(100vh - 56px)}
-.panel{background:#0d1f35;border-radius:12px;padding:14px;border:1px solid #1a3a5c;overflow:auto}
-#map{height:100%;border-radius:12px;min-height:400px}
-.btn{background:#00d4ff;color:#0a1628;border:none;padding:10px 16px;border-radius:8px;font-weight:700;cursor:pointer;width:100%;margin:6px 0}
-.btn.sec{background:#1a3a5c;color:#c8d8e8}
-.phase{font-size:.85rem;color:#8fa3b8;margin:8px 0}
-.photo-box{margin-top:12px;border:1px solid #ff9500;border-radius:10px;padding:10px;background:#081226;display:none}
-.photo-box.show{display:block}
-.photo-box img{width:100%;height:160px;object-fit:cover;border-radius:8px;display:block;margin-top:8px;background:#1a2a3a}
-.photo-title{color:#00d4ff;font-weight:700}
-.photo-meta{color:#8fa3b8;font-size:.75rem;margin-top:4px}
-.label{font-size:10px;color:#ff9500;font-weight:800}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Simulation - SmartRoute NER</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    .sim-page { display: grid; grid-template-columns: 300px 1fr; gap: 14px; height: calc(100vh - 88px); padding: 14px; box-sizing: border-box; }
+    .sim-side { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+    .sim-map-wrap { position: relative; border-radius: 14px; overflow: hidden; border: 1px solid rgba(0,212,255,0.25); min-height: 420px; }
+    #map-sim { width: 100%; height: 100%; min-height: 420px; background: #031018; }
+    .tracking-chip {
+      position: absolute; left: 14px; bottom: 14px; z-index: 900;
+      background: rgba(6, 18, 32, 0.92); border: 1px solid rgba(0,212,255,0.35);
+      color: #c8e8ff; padding: 8px 14px; border-radius: 999px; font-size: 0.82rem; font-weight: 600;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .tracking-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: #00ff88; box-shadow: 0 0 8px #00ff88; }
+    .ready-chip {
+      position: absolute; right: 14px; bottom: 14px; z-index: 900;
+      background: rgba(0, 40, 28, 0.92); border: 1px solid rgba(0,255,136,0.45);
+      color: #b8ffe0; padding: 8px 14px; border-radius: 999px; font-size: 0.82rem; font-weight: 700;
+    }
+    .map-status {
+      position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 950;
+      background: rgba(0,0,0,0.75); color: #00d4ff; padding: 6px 14px; border-radius: 8px;
+      font-size: 0.85rem; display: none;
+    }
+    .map-status.show { display: block; }
+    .btn-play {
+      width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer;
+      font-weight: 800; font-family: inherit; background: linear-gradient(135deg,#00d4ff,#00ff88); color: #031018;
+    }
+    .btn-reset {
+      width: 100%; padding: 10px; border-radius: 10px; cursor: pointer; font-weight: 700; font-family: inherit;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #c8d8e8;
+    }
+    .phase-desc { font-size: 0.88rem; color: #8fa3b8; line-height: 1.45; }
+    .photo-box {
+      margin-top: 4px; border: 1px solid rgba(255,149,0,0.5); border-radius: 12px; padding: 12px;
+      background: rgba(8,18,38,0.9); display: none;
+    }
+    .photo-box.show { display: block; }
+    .photo-box img { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-top: 8px; background: #1a2a3a; }
+    .photo-kind { font-size: 0.7rem; color: #ff9500; font-weight: 800; letter-spacing: 0.06em; }
+    .photo-title { color: #00d4ff; font-weight: 700; margin-top: 4px; }
+    .photo-meta { color: #8fa3b8; font-size: 0.75rem; margin-top: 4px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.78rem; color: #a8c0d8; }
+    .legend i { display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+    @media (max-width: 900px) {
+      .sim-page { grid-template-columns: 1fr; height: auto; }
+      .sim-map-wrap { height: 55vh; }
+    }
+  </style>
 </head>
 <body>
-<div class="header">
-  <a href="dashboard.html">← Dashboard</a>
-  <h1>Live Simulation · NER</h1>
-</div>
-<div class="wrap">
-  <div class="panel">
-    <p style="font-weight:600;margin-bottom:8px">NER drill · real field photos matched to problem</p>
-    <button class="btn" id="play-btn">▶ Play simulation</button>
-    <button class="btn sec" id="reset-btn">Reset</button>
-    <div class="phase" id="phase-desc">Play — flood / landslide / pothole each show their real field photo.</div>
-    <div class="photo-box" id="photo-panel">
-      <div class="label" id="photo-kind">FIELD PHOTO</div>
-      <div class="photo-title" id="photo-title"></div>
-      <img id="photo-img" alt="Field evidence" width="280" height="160">
-      <div class="photo-meta" id="photo-meta"></div>
+  <div class="app-shell">
+    <div class="main-content" id="main-content">
+      <main class="page-body">
+        <div class="sim-page">
+          <div class="sim-side glass-card" style="padding:16px;">
+            <h2 class="gradient-text" style="font-size:1.1rem;margin:0 0 6px;">LIVE SIMULATION</h2>
+            <p class="phase-desc" id="phase-desc">NER satellite map with safe (green), alternate (orange) and critical (red) road routes. Play to run flood / landslide / pothole drill with matching field photos.</p>
+            <div class="legend" style="margin:10px 0;">
+              <span><i style="background:#00ff88"></i>Safe</span>
+              <span><i style="background:#ff9500"></i>Alternate</span>
+              <span><i style="background:#ff3b3b"></i>Critical</span>
+            </div>
+            <button type="button" class="btn-play" id="play-btn">Play simulation</button>
+            <button type="button" class="btn-reset" id="reset-btn">Reset</button>
+            <div class="photo-box" id="photo-panel">
+              <div class="photo-kind" id="photo-kind">FIELD PHOTO</div>
+              <div class="photo-title" id="photo-title"></div>
+              <img id="photo-img" alt="Field evidence" width="280" height="150">
+              <div class="photo-meta" id="photo-meta"></div>
+            </div>
+          </div>
+          <div class="sim-map-wrap">
+            <div id="map-status" class="map-status">Loading 2D satellite map...</div>
+            <div id="map-sim"></div>
+            <div class="tracking-chip" id="tracking-chip">
+              <span class="dot"></span>2D Live Map · <span id="veh-count">0</span> vehicles on routes
+            </div>
+            <div class="ready-chip" id="ready-chip">2D map ready</div>
+          </div>
+        </div>
+      </main>
     </div>
   </div>
-  <div id="map"></div>
-</div>
-<script src="js/sim-photo-flood.js?v=sim9"></script>
-<script src="js/sim-photo-landslide.js?v=sim9"></script>
-<script src="js/sim-photo-pothole.js?v=sim9"></script>
-<script>
-(function(){
-  var map = L.map('map').setView([26.2, 91.8], 7);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18, attribution:'© OSM'}).addTo(map);
 
-  function isPhoto(u){ return u && typeof u==='string' && u.indexOf('data:image/jpeg')===0 && u.length>500; }
-  function photoFor(kind){
-    if(kind==='flood' && isPhoto(window.SIM_PHOTO_FLOOD)) return window.SIM_PHOTO_FLOOD;
-    if(kind==='landslide' && isPhoto(window.SIM_PHOTO_LANDSLIDE)) return window.SIM_PHOTO_LANDSLIDE;
-    if(isPhoto(window.SIM_PHOTO_POTHOLE)) return window.SIM_PHOTO_POTHOLE;
-    if(kind==='flood') return 'assets/field-flood.jpg';
-    if(kind==='landslide') return 'assets/field-landslide.jpg';
-    return 'assets/field-pothole.jpg';
-  }
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/components.js"></script>
+  <script src="js/map-engine.js"></script>
+  <script src="js/sim-photo-flood.js?v=sim10"></script>
+  <script src="js/sim-photo-landslide.js?v=sim10"></script>
+  <script src="js/sim-photo-pothole.js?v=sim10"></script>
+  <script>
+  (function () {
+    var map = null;
+    var simMarkers = [];
+    var idx = 0, timer = null;
 
-  var phases = [
-    { t:'🌊 FLOOD', kind:'flood', title:'Flooded approach road — Guwahati', note:'FO-018 · 26.18°N 91.75°E', fly:[26.18,91.75] },
-    { t:'⚠ LANDSLIDE', kind:'landslide', title:'Landslide debris on road — Tawang', note:'FO-022 · 27.58°N 91.86°E', fly:[27.58,91.86] },
-    { t:'📷 POTHOLES', kind:'road_damage', title:'Potholes — Shillong GS-1', note:'FO-011 · 25.62°N 91.92°E', fly:[25.62,91.92] }
-  ];
-  var idx=0, timer=null, markers=[];
+    function setStatus(msg, show) {
+      var el = document.getElementById('map-status');
+      if (!el) return;
+      el.textContent = msg || '';
+      el.classList.toggle('show', !!show);
+    }
 
-  function show(kind, title, note){
-    var panel=document.getElementById('photo-panel');
-    panel.classList.add('show');
-    document.getElementById('photo-kind').textContent='FIELD PHOTO · '+(kind==='road_damage'?'POTHOLE':kind.toUpperCase());
-    document.getElementById('photo-title').textContent=title;
-    document.getElementById('photo-meta').textContent=note;
-    document.getElementById('photo-img').src=photoFor(kind);
-  }
+    function isPhoto(u) {
+      return u && typeof u === 'string' && u.indexOf('data:image/jpeg') === 0 && u.length > 500;
+    }
+    function photoFor(kind) {
+      if (kind === 'flood' && isPhoto(window.SIM_PHOTO_FLOOD)) return window.SIM_PHOTO_FLOOD;
+      if (kind === 'landslide' && isPhoto(window.SIM_PHOTO_LANDSLIDE)) return window.SIM_PHOTO_LANDSLIDE;
+      if (kind === 'road_damage' && isPhoto(window.SIM_PHOTO_POTHOLE)) return window.SIM_PHOTO_POTHOLE;
+      if (kind === 'flood') return 'assets/field-flood.jpg';
+      if (kind === 'landslide') return 'assets/field-landslide.jpg';
+      return 'assets/field-pothole.jpg';
+    }
 
-  function run(){
-    if(idx>=phases.length){ document.getElementById('phase-desc').textContent='Done. Real field photos shown for each problem.'; return; }
-    var p=phases[idx++];
-    document.getElementById('phase-desc').textContent=p.t+' — showing matching real field photo';
-    map.flyTo(p.fly, 11);
-    show(p.kind, p.title, p.note);
-    markers.forEach(function(m){ try{map.removeLayer(m);}catch(e){} });
-    markers=[];
-    markers.push(L.marker(p.fly).addTo(map).bindPopup(p.title));
-    timer=setTimeout(run, 3500);
-  }
+    var phases = [
+      { t: 'FLOOD', kind: 'flood', title: 'Flooded approach road - Guwahati', note: 'FO-018 · 26.18N 91.75E', fly: [26.18, 91.75] },
+      { t: 'LANDSLIDE', kind: 'landslide', title: 'Landslide debris on road - Tawang', note: 'FO-022 · 27.58N 91.86E', fly: [27.58, 91.86] },
+      { t: 'POTHOLES', kind: 'road_damage', title: 'Potholes - Shillong GS-1', note: 'FO-011 · 25.62N 91.92E', fly: [25.62, 91.92] }
+    ];
 
-  document.getElementById('play-btn').onclick=function(){ if(timer) clearTimeout(timer); idx=0; run(); };
-  document.getElementById('reset-btn').onclick=function(){
-    if(timer) clearTimeout(timer); idx=0;
-    document.getElementById('photo-panel').classList.remove('show');
-    document.getElementById('phase-desc').textContent='Play — flood / landslide / pothole each show their real field photo.';
-    map.setView([26.2,91.8],7);
-  };
-})();
-</script>
+    function showPhoto(kind, title, note) {
+      var panel = document.getElementById('photo-panel');
+      panel.classList.add('show');
+      document.getElementById('photo-kind').textContent = 'FIELD PHOTO · ' + (kind === 'road_damage' ? 'POTHOLE' : kind.toUpperCase());
+      document.getElementById('photo-title').textContent = title;
+      document.getElementById('photo-meta').textContent = note;
+      document.getElementById('photo-img').src = photoFor(kind);
+    }
+
+    function alertIcon(color) {
+      return L.divIcon({
+        className: '',
+        html: '<div style="width:28px;height:28px;border-radius:50%;background:' + color + ';border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.4);">!</div>',
+        iconSize: [28, 28], iconAnchor: [14, 14]
+      });
+    }
+
+    function clearSimMarkers() {
+      simMarkers.forEach(function (m) { try { map.removeLayer(m); } catch (e) {} });
+      simMarkers = [];
+    }
+
+    function runPhase() {
+      if (!map) return;
+      if (idx >= phases.length) {
+        document.getElementById('phase-desc').textContent = 'Done. Real field photos shown for each problem. Map keeps live NER routes and vehicles.';
+        map.setView([26.2, 92.0], 7);
+        return;
+      }
+      var p = phases[idx++];
+      document.getElementById('phase-desc').textContent = p.t + ' — showing matching real field photo on satellite map';
+      map.flyTo(p.fly, 11, { duration: 1.2 });
+      showPhoto(p.kind, p.title, p.note);
+      clearSimMarkers();
+      var color = p.kind === 'flood' ? '#00d4ff' : (p.kind === 'landslide' ? '#ff3b3b' : '#ff9500');
+      simMarkers.push(L.marker(p.fly, { icon: alertIcon(color) }).addTo(map).bindPopup('<b>' + p.title + '</b><br>' + p.note));
+      timer = setTimeout(runPhase, 3800);
+    }
+
+    function updateVehCount() {
+      var n = 4;
+      try {
+        if (window.MapEngine && MapEngine.VEHICLES) n = MapEngine.VEHICLES.length;
+      } catch (e) {}
+      var el = document.getElementById('veh-count');
+      if (el) el.textContent = String(n);
+    }
+
+    function initSatelliteMap() {
+      setStatus('Loading 2D satellite map...', true);
+      if (window.MapEngine && typeof MapEngine.bootstrapMap === 'function') {
+        MapEngine.bootstrapMap('map-sim').then(function (m) {
+          map = m || MapEngine.map;
+          setStatus('', false);
+          updateVehCount();
+          if (window.SmartRoute) SmartRoute.showToast('2D map ready', 'success', 2500);
+        }).catch(function () { fallbackMap(); });
+      } else {
+        fallbackMap();
+      }
+    }
+
+    function fallbackMap() {
+      if (!window.L) return;
+      map = L.map('map-sim', { zoomControl: true }).setView([26.2, 92.0], 7);
+      L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+        maxZoom: 18, attribution: 'Leaflet | SmartRoute NER'
+      }).addTo(map);
+      if (window.MapEngine) {
+        MapEngine.map = map;
+        if (MapEngine.addRoads) MapEngine.addRoads(map);
+        if (MapEngine.addIncidents) MapEngine.addIncidents(map);
+        if (MapEngine.addVehicles) MapEngine.addVehicles(map);
+      }
+      setStatus('', false);
+      updateVehCount();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.SmartRoute) {
+        SmartRoute.initSharedComponents({
+          title: 'Live Simulation',
+          subtitle: '2D satellite map · NER road routes · field photo drill'
+        });
+      }
+      setTimeout(initSatelliteMap, 120);
+
+      document.getElementById('play-btn').addEventListener('click', function () {
+        if (timer) clearTimeout(timer);
+        idx = 0;
+        if (!map) initSatelliteMap();
+        runPhase();
+      });
+      document.getElementById('reset-btn').addEventListener('click', function () {
+        if (timer) clearTimeout(timer);
+        idx = 0;
+        clearSimMarkers();
+        document.getElementById('photo-panel').classList.remove('show');
+        document.getElementById('phase-desc').textContent =
+          'NER satellite map with safe (green), alternate (orange) and critical (red) road routes. Play to run flood / landslide / pothole drill with matching field photos.';
+        if (map) map.setView([26.2, 92.0], 7);
+      });
+    });
+  })();
+  </script>
 </body>
 </html>
