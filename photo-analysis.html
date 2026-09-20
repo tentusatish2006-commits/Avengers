@@ -41,7 +41,7 @@
     <main class="page-body" style="padding:16px;">
       <div class="page-header">
         <h1 class="page-title">AI Photo Analysis</h1>
-        <p class="page-subtitle">CV v9 · Scores only for Landslide · Pothole · Flood</p>
+        <p class="page-subtitle">CV v10 · Scores only for Landslide · Pothole · Flood</p>
       </div>
       <div class="photo-layout">
         <div class="left-panel">
@@ -62,11 +62,11 @@
             </div>
             <input type="file" id="file-input" accept="image/*" style="display:none">
           </div>
-          <button type="button" class="btn-primary" id="btn-analyze" style="width:100%;padding:12px;font-weight:800;">🔬 ANALYZE WITH AI VISION</button>
+          <button type="button" class="btn-primary" id="btn-analyze" style="width:100%;padding:12px;font-weight:800;">ANALYZE WITH AI VISION</button>
         </div>
         <div class="right-panel">
           <div class="result-panel">
-            <div id="invalid-banner" class="invalid-banner">⛔ INVALID PHOTO — Risk score not calculated</div>
+            <div id="invalid-banner" class="invalid-banner">INVALID PHOTO — Risk score not calculated</div>
             <div id="initial-msg" style="color:#8fa3b8;line-height:1.6;">
               Upload a <strong>landslide</strong>, <strong>pothole</strong>, or <strong>flood</strong> field photo only.<br>
               Other images are rejected with <strong>no risk score</strong>.
@@ -101,15 +101,15 @@
   </div>
 </div>
 
-<script src="js/components.js?v=cv9"></script>
-<script src="js/map-engine.js?v=cv9"></script>
-<script src="js/photo-cv.js?v=cv9"></script>
+<script src="js/components.js"></script>
+<script src="js/map-engine.js"></script>
+<script src="js/photo-cv.js?v=10"></script>
 <script>
 (function () {
   var customUrl = null, customFilename = null, isScanning = false;
   var $ = function (id) { return document.getElementById(id); };
 
-  if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'AI Photo Analysis', subtitle: 'CV v9 · Landslide · Pothole · Flood only' });
+  if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'AI Photo Analysis', subtitle: 'CV v10 · Landslide · Pothole · Flood only' });
   if (window.MapEngine && MapEngine.initMap) MapEngine.initMap('analysis-map', { center: [26.2, 92.0], zoom: 7 });
   else if (window.L) {
     var m = L.map('analysis-map').setView([26.2, 92.0], 7);
@@ -118,12 +118,12 @@
 
   function showInvalid(url, meta) {
     $('invalid-banner').style.display = 'block';
-    $('invalid-banner').innerHTML = '⛔ INVALID PHOTO — not landslide / pothole / flood<br><span style="font-weight:600;font-size:0.9rem">Risk score is NOT calculated for this image.</span>';
+    $('invalid-banner').innerHTML = 'INVALID PHOTO — not landslide / pothole / flood<br><span style="font-weight:600;font-size:0.9rem">Risk score is NOT calculated for this image.</span>';
     $('res-analyzed-photo').src = url;
-    $('res-caption').textContent = '📷 ' + (customFilename || 'Upload') + ' — REJECTED';
+    $('res-caption').textContent = (customFilename || 'Upload') + ' — REJECTED';
     $('res-box-tag').textContent = 'INVALID PHOTO'; $('res-box-tag').style.color = '#ff6b6b';
     $('res-box-conf').textContent = 'NO RISK SCORE · NO DAMAGE %';
-    $('res-title').textContent = '⛔ INVALID PHOTO'; $('res-title').style.color = '#ff6b6b';
+    $('res-title').textContent = 'INVALID PHOTO'; $('res-title').style.color = '#ff6b6b';
     $('res-score-label').innerHTML = 'Risk score: <strong id="res-meter" style="color:#ff6b6b">N/A — not calculated</strong>';
     $('res-sev').textContent = 'REJECTED'; $('res-sev').className = 'badge badge-danger';
     $('res-acc-text').textContent = 'Accessibility: n/a (invalid photo)';
@@ -136,18 +136,18 @@
     $('initial-msg').style.display = 'none';
     $('result-content').style.display = 'flex';
     $('result-content').style.flexDirection = 'column';
-    $('map-photo-img').src = url; $('map-photo-label').textContent = '⛔ INVALID · NO SCORE'; $('map-photo-overlay').style.display = 'block';
+    $('map-photo-img').src = url; $('map-photo-label').textContent = 'INVALID · NO SCORE'; $('map-photo-overlay').style.display = 'block';
     if (window.SmartRoute) SmartRoute.showToast('Invalid photo — no risk score', 'danger', 3200);
   }
 
   function showValid(url, meta) {
     $('invalid-banner').style.display = 'none';
     $('res-analyzed-photo').src = url;
-    $('res-caption').textContent = '📷 ' + (customFilename || 'Field photo');
+    $('res-caption').textContent = (customFilename || 'Field photo');
     $('res-box-tag').style.color = '#00d4ff'; $('res-title').style.color = '';
     $('res-box-tag').textContent = meta.hazard_type.toUpperCase() + ' DETECTED';
     $('res-box-conf').textContent = 'CONF: ' + meta.confidence + '%';
-    $('res-title').textContent = '🚧 ' + meta.hazard_type.toUpperCase();
+    $('res-title').textContent = meta.hazard_type.toUpperCase();
     $('res-score-label').innerHTML = 'Risk score: <strong id="res-meter">' + meta.damage_pct + '%</strong> · confidence ' + meta.confidence + '%';
     $('res-sev').textContent = meta.severity;
     $('res-sev').className = meta.severity === 'CRITICAL' ? 'badge badge-danger' : 'badge badge-warning';
@@ -165,7 +165,7 @@
     $('initial-msg').style.display = 'none';
     $('result-content').style.display = 'flex';
     $('result-content').style.flexDirection = 'column';
-    $('map-photo-img').src = url; $('map-photo-label').textContent = '📷 ' + meta.hazard_type; $('map-photo-overlay').style.display = 'block';
+    $('map-photo-img').src = url; $('map-photo-label').textContent = meta.hazard_type; $('map-photo-overlay').style.display = 'block';
     if (window.SmartRoute) SmartRoute.showToast(meta.hazard_type + ' · risk ' + meta.damage_pct + '%', 'success', 3000);
   }
 
@@ -204,15 +204,15 @@
     }
     isScanning = true;
     $('btn-analyze').disabled = true;
-    $('btn-analyze').textContent = '⏳ ANALYZING...';
+    $('btn-analyze').textContent = 'ANALYZING...';
     $('scan-bar').style.display = 'block';
     $('scan-grid-el').style.display = 'block';
     $('initial-msg').style.display = 'block';
-    $('initial-msg').textContent = '🔬 CV v9 analyzing (landslide / pothole / flood only)...';
+    $('initial-msg').textContent = 'CV v10 analyzing (landslide / pothole / flood only)...';
     $('result-content').style.display = 'none';
     $('invalid-banner').style.display = 'none';
     $('map-photo-img').src = customUrl;
-    $('map-photo-label').textContent = '🔬 SCANNING...';
+    $('map-photo-label').textContent = 'SCANNING...';
     $('map-photo-overlay').style.display = 'block';
 
     var url = customUrl;
@@ -224,7 +224,7 @@
         else showValid(url, meta);
         isScanning = false;
         $('btn-analyze').disabled = false;
-        $('btn-analyze').textContent = '🔬 ANALYZE WITH AI VISION';
+        $('btn-analyze').textContent = 'ANALYZE WITH AI VISION';
       }, 350);
     }).catch(function () {
       $('scan-bar').style.display = 'none';
@@ -232,7 +232,7 @@
       showInvalid(url, { recommended_action: 'Analysis error — upload a clear landslide, pothole, or flood photo.' });
       isScanning = false;
       $('btn-analyze').disabled = false;
-      $('btn-analyze').textContent = '🔬 ANALYZE WITH AI VISION';
+      $('btn-analyze').textContent = 'ANALYZE WITH AI VISION';
     });
   };
 })();
