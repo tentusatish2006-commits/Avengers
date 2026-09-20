@@ -12,68 +12,102 @@
     <link rel="stylesheet" href="css/components.css">
     <style>
         .page-body { display: grid; grid-template-columns: 55% 45%; gap: 20px; height: calc(100vh - 80px); padding: 20px; box-sizing: border-box; }
-        .map-container { border-radius: 12px; overflow: hidden; border: 1px solid rgba(0,212,255,0.25); min-height: 360px; }
+        .map-container { border-radius: 12px; overflow: hidden; border: 1px solid rgba(0,212,255,0.25); min-height: 360px; position: relative; }
         #map { width: 100%; height: 100%; min-height: 360px; background: #061018; }
-        .routes-panel { display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding: 14px; }
-        .recommendation-banner { background: rgba(0, 255, 136, 0.1); border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 8px; padding: 15px; text-align: center; }
-        .recommendation-banner h2 { color: #00ff88; margin: 0 0 5px 0; font-size: 1.15rem; }
-        .route-card { background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 15px; cursor: pointer; }
+        .map-legend { position: absolute; bottom: 12px; left: 12px; z-index: 800; background: rgba(4,12,24,0.92); border: 1px solid rgba(0,212,255,0.3); border-radius: 8px; padding: 10px 12px; font-size: 0.8rem; color: #c8d8e8; }
+        .map-legend span { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+        .map-legend i { width: 28px; height: 4px; border-radius: 2px; display: inline-block; }
+        .routes-panel { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; padding: 14px; }
+        .recommendation-banner { background: rgba(0, 255, 136, 0.1); border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 8px; padding: 12px; text-align: center; }
+        .recommendation-banner h2 { color: #00ff88; margin: 0 0 4px 0; font-size: 1.1rem; }
+        .route-card { background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 14px; cursor: pointer; }
         .route-card.recommended { border-color: #00ff88; }
+        .route-card.moderate { border-color: #ff9500; }
+        .route-card.critical { border-color: #ff3b3b; }
         .route-card.selected { outline: 2px solid #00d4ff; }
-        .route-title { font-size: 1.05rem; font-weight: 600; color: #e8f4ff; margin: 0; }
-        .badge-recommended { background: rgba(0, 255, 136, 0.2); color: #00ff88; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
-        .route-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .route-title { font-size: 1rem; font-weight: 600; color: #e8f4ff; margin: 0; }
+        .badge { padding: 3px 8px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; }
+        .badge-safe { background: rgba(0,255,136,0.2); color: #00ff88; }
+        .badge-mod { background: rgba(255,149,0,0.2); color: #ff9500; }
+        .badge-crit { background: rgba(255,59,59,0.2); color: #ff3b3b; }
+        .route-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
         .stat-line .label { color: #8fa3b8; font-size: 0.75rem; }
         .stat-line .val { font-weight: 500; color: #e8f4ff; }
         .val.safe { color: #00ff88; } .val.warn { color: #ff9500; } .val.danger { color: #ff3b3b; }
-        .action-buttons { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
-        .btn-green { background: linear-gradient(135deg, rgba(0,255,136,0.25), rgba(0,255,136,0.1)); border: 1px solid #00ff88; color: #00ff88; padding: 12px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; flex: 2; font-family: inherit; }
-        .btn-outline { background: transparent; border: 1px solid rgba(0,212,255,0.45); color: #e8f4ff; padding: 12px 15px; border-radius: 8px; cursor: pointer; flex: 1; font-weight: 700; font-family: inherit; }
-        @media(max-width:900px){ .page-body{grid-template-columns:1fr;height:auto;} #map{min-height:280px;} }
+        .action-buttons { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+        .btn-green { background: linear-gradient(135deg, rgba(0,255,136,0.25), rgba(0,255,136,0.1)); border: 1px solid #00ff88; color: #00ff88; padding: 10px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+        .btn-outline { background: transparent; border: 1px solid rgba(0,212,255,0.45); color: #00d4ff; padding: 10px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .toast-sr { position: fixed; bottom: 24px; right: 24px; z-index: 9999; background: #0a1a28; border: 1px solid #00d4ff; color: #e8f4ff; padding: 12px 16px; border-radius: 8px; display: none; max-width: 320px; }
     </style>
 </head>
 <body>
     <div class="app-shell">
         <div class="main-content" id="main-content">
             <main class="page-body">
-                <div class="map-container"><div id="map"></div></div>
+                <div class="map-container">
+                    <div id="map"></div>
+                    <div class="map-legend">
+                        <span><i style="background:#00ff88"></i> Safest (LOW risk)</span>
+                        <span><i style="background:#ff9500"></i> Moderate / alternate</span>
+                        <span><i style="background:#ff3b3b"></i> Critical / high risk</span>
+                    </div>
+                </div>
                 <div class="glass-card routes-panel">
                     <div class="recommendation-banner">
-                        <h2>AI RECOMMENDED ROUTE</h2>
-                        <p style="margin:0;color:#c8d8e8;font-size:0.9rem;">Lowest combined transport risk — North Eastern Region</p>
+                        <h2>AI ROUTE OPTIONS — NER</h2>
+                        <p style="margin:0;color:#c8d8e8;font-size:0.85rem;">Safest + Moderate + Critical corridors on map (OSRM roads)</p>
                     </div>
                     <div class="route-card recommended selected" data-idx="0">
                         <div style="display:flex;justify-content:space-between;align-items:center;">
-                            <h3 class="route-title">Route A — Via GS-1 Guwahati–Shillong</h3>
-                            <span class="badge-recommended">RECOMMENDED</span>
+                            <h3 class="route-title">Route A — Safest: Guwahati → Shillong</h3>
+                            <span class="badge badge-safe">SAFEST</span>
                         </div>
                         <div class="route-stats">
-                            <div class="stat-line"><span class="label">Distance</span><span class="val">98 km</span></div>
+                            <div class="stat-line"><span class="label">Distance</span><span class="val">~98 km</span></div>
                             <div class="stat-line"><span class="label">ETA</span><span class="val safe">2h 15m</span></div>
-                            <div class="stat-line"><span class="label">Risk Score</span><span class="val safe">28/100 (LOW)</span></div>
+                            <div class="stat-line"><span class="label">Risk</span><span class="val safe">28/100 LOW</span></div>
                             <div class="stat-line"><span class="label">Traffic</span><span class="val">Light</span></div>
                         </div>
                     </div>
-                    <div class="route-card" data-idx="1">
-                        <h3 class="route-title">Route B — Via NH-306 Silchar–Aizawl</h3>
+                    <div class="route-card moderate" data-idx="1">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <h3 class="route-title">Route B — Moderate: Guwahati → Silchar → Aizawl</h3>
+                            <span class="badge badge-mod">MODERATE</span>
+                        </div>
                         <div class="route-stats">
-                            <div class="stat-line"><span class="label">Distance</span><span class="val">180 km</span></div>
-                            <div class="stat-line"><span class="label">ETA</span><span class="val warn">4h 10m</span></div>
-                            <div class="stat-line"><span class="label">Risk Score</span><span class="val warn">61/100 (MODERATE)</span></div>
-                            <div class="stat-line"><span class="label">Traffic</span><span class="val warn">Heavy</span></div>
+                            <div class="stat-line"><span class="label">Distance</span><span class="val">~420 km</span></div>
+                            <div class="stat-line"><span class="label">ETA</span><span class="val warn">9h 20m</span></div>
+                            <div class="stat-line"><span class="label">Risk</span><span class="val warn">58/100 MOD</span></div>
+                            <div class="stat-line"><span class="label">Traffic</span><span class="val warn">Medium</span></div>
                         </div>
                     </div>
-                    <div class="route-card" data-idx="2">
-                        <h3 class="route-title">Route C — Via AH-1 Guwahati–Imphal</h3>
+                    <div class="route-card moderate" data-idx="2">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <h3 class="route-title">Route C — Moderate: Guwahati → Dimapur → Kohima</h3>
+                            <span class="badge badge-mod">MODERATE</span>
+                        </div>
                         <div class="route-stats">
-                            <div class="stat-line"><span class="label">Distance</span><span class="val">480 km</span></div>
-                            <div class="stat-line"><span class="label">ETA</span><span class="val danger">11h (TERRAIN)</span></div>
-                            <div class="stat-line"><span class="label">Risk Score</span><span class="val danger">74/100 (HIGH)</span></div>
-                            <div class="stat-line"><span class="label">Traffic</span><span class="val warn">Moderate</span></div>
+                            <div class="stat-line"><span class="label">Distance</span><span class="val">~340 km</span></div>
+                            <div class="stat-line"><span class="label">ETA</span><span class="val warn">7h 40m</span></div>
+                            <div class="stat-line"><span class="label">Risk</span><span class="val warn">52/100 MOD</span></div>
+                            <div class="stat-line"><span class="label">Traffic</span><span class="val">Moderate</span></div>
+                        </div>
+                    </div>
+                    <div class="route-card critical" data-idx="3">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <h3 class="route-title">Route D — Critical: Guwahati → Tawang</h3>
+                            <span class="badge badge-crit">CRITICAL</span>
+                        </div>
+                        <div class="route-stats">
+                            <div class="stat-line"><span class="label">Distance</span><span class="val">~480 km</span></div>
+                            <div class="stat-line"><span class="label">ETA</span><span class="val danger">12h+</span></div>
+                            <div class="stat-line"><span class="label">Risk</span><span class="val danger">82/100 HIGH</span></div>
+                            <div class="stat-line"><span class="label">Traffic</span><span class="val danger">Restricted</span></div>
                         </div>
                     </div>
                     <div class="action-buttons">
-                        <button type="button" class="btn-green" id="btn-start-route">START ROUTE</button>
+                        <button type="button" class="btn-green" id="btn-show-all">SHOW ALL ROUTES ON MAP</button>
+                        <button type="button" class="btn-outline" id="btn-start-route">FOCUS SELECTED</button>
                         <button type="button" class="btn-outline" id="btn-view-details">VIEW DETAILS</button>
                         <button type="button" class="btn-outline" id="btn-export-route">EXPORT PDF</button>
                     </div>
@@ -81,22 +115,27 @@
             </main>
         </div>
     </div>
-    <script src="js/components.js?v=alt4"></script>
+    <div class="toast-sr" id="toast-sr"></div>
+    <script src="js/components.js"></script>
     <script>
     (function () {
-      var map = null, activeLine = null, startMarker = null, endMarker = null, vehicleMarker = null;
+      var map = null, layers = [], selected = 0;
       var ROUTES = [
-        { name: 'Route A — GS-1 Guwahati–Shillong', dist: '98 km', eta: '2h 15m', risk: '28/100 LOW', traffic: 'Light', road: 'Good', color: '#00ff88',
-          waypoints: [[26.1445, 91.7362], [25.90, 91.88], [25.5788, 91.8933]], center: [25.85, 91.81] },
-        { name: 'Route B — NH-306 Silchar–Aizawl', dist: '180 km', eta: '4h 10m', risk: '61/100 MODERATE', traffic: 'Heavy', road: 'Fair', color: '#ff9500',
-          waypoints: [[24.8333, 92.7789], [24.50, 92.75], [23.7271, 92.7176]], center: [24.27, 92.75] },
-        { name: 'Route C — AH-1 Guwahati–Imphal', dist: '480 km', eta: '11h', risk: '74/100 HIGH', traffic: 'Moderate', road: 'Poor', color: '#ff3b3b',
-          waypoints: [[26.1445, 91.7362], [25.90, 93.0], [24.817, 93.936]], center: [25.70, 93.50] }
+        { name: 'Route A — Safest Guwahati→Shillong', dist: '~98 km', eta: '2h 15m', risk: '28/100 LOW', traffic: 'Light', road: 'Good',
+          color: '#00ff88', weight: 7, waypoints: [[26.1445, 91.7362], [25.90, 91.88], [25.5788, 91.8933]], center: [25.85, 91.81] },
+        { name: 'Route B — Moderate Guwahati→Silchar→Aizawl', dist: '~420 km', eta: '9h 20m', risk: '58/100 MOD', traffic: 'Medium', road: 'Fair',
+          color: '#ff9500', weight: 5, waypoints: [[26.1445, 91.7362], [24.8333, 92.7789], [23.7271, 92.7176]], center: [24.9, 92.4] },
+        { name: 'Route C — Moderate Guwahati→Dimapur→Kohima', dist: '~340 km', eta: '7h 40m', risk: '52/100 MOD', traffic: 'Moderate', road: 'Fair',
+          color: '#ff9500', weight: 5, dash: '10 8', waypoints: [[26.1445, 91.7362], [25.9063, 93.7276], [25.6751, 94.1086]], center: [25.9, 93.2] },
+        { name: 'Route D — Critical Guwahati→Tawang', dist: '~480 km', eta: '12h+', risk: '82/100 HIGH', traffic: 'Restricted', road: 'Poor',
+          color: '#ff3b3b', weight: 5, dash: '4 6', waypoints: [[26.1445, 91.7362], [27.0844, 93.6053], [27.586, 91.859]], center: [26.9, 92.5] }
       ];
-      var selected = 0;
       function toast(msg, type) {
-        if (window.SmartRoute && SmartRoute.showToast) SmartRoute.showToast(msg, type || 'info', 2800);
-        else alert(msg);
+        if (window.SmartRoute && SmartRoute.showToast) { SmartRoute.showToast(msg, type || 'info', 2800); return; }
+        var el = document.getElementById('toast-sr');
+        if (!el) return;
+        el.textContent = msg; el.style.display = 'block';
+        setTimeout(function () { el.style.display = 'none'; }, 2800);
       }
       async function resolveCoords(waypoints) {
         try {
@@ -107,106 +146,85 @@
         } catch (e) {}
         return waypoints;
       }
-      function clearRoute() {
+      function clearLayers() {
         if (!map) return;
-        [activeLine, startMarker, endMarker, vehicleMarker].forEach(function (ly) {
-          try { if (ly) map.removeLayer(ly); } catch (e) {}
-        });
-        activeLine = startMarker = endMarker = vehicleMarker = null;
+        layers.forEach(function (ly) { try { map.removeLayer(ly); } catch (e) {} });
+        layers = [];
       }
-      async function drawRouteOnMap(index) {
-        if (!map) return;
+      async function drawOne(index, focus) {
+        if (!map) return null;
         var r = ROUTES[index];
-        clearRoute();
         var coords = await resolveCoords(r.waypoints);
-        activeLine = L.polyline(coords, { color: r.color, weight: 6, opacity: 0.95 }).addTo(map);
-        activeLine.bindPopup('<b>' + r.name + '</b><br>' + r.dist + ' · ETA ' + r.eta).openPopup();
-        startMarker = L.circleMarker(coords[0], { radius: 8, color: '#00d4ff', fillColor: '#00d4ff', fillOpacity: 1 }).addTo(map);
-        endMarker = L.circleMarker(coords[coords.length - 1], { radius: 8, color: r.color, fillColor: r.color, fillOpacity: 1 }).addTo(map);
-        vehicleMarker = L.marker(coords[0], {
-          icon: L.divIcon({ className: '', html: '<div style="font-size:22px">🚛</div>', iconSize: [28, 28], iconAnchor: [14, 14] })
-        }).addTo(map);
-        map.fitBounds(activeLine.getBounds(), { padding: [40, 40] });
-        var i = 0;
-        var t = setInterval(function () {
-          i++;
-          if (i >= coords.length) { clearInterval(t); return; }
-          vehicleMarker.setLatLng(coords[i]);
-        }, 40);
+        var opts = { color: r.color, weight: r.weight || 6, opacity: 0.92, lineCap: 'round', lineJoin: 'round' };
+        if (r.dash) opts.dashArray = r.dash;
+        var line = L.polyline(coords, opts).addTo(map);
+        line.bindPopup('<b>' + r.name + '</b><br>' + r.dist + ' · ETA ' + r.eta + '<br>Risk: ' + r.risk);
+        layers.push(line);
+        layers.push(L.circleMarker(coords[0], { radius: 7, color: '#fff', fillColor: '#00d4ff', fillOpacity: 1, weight: 2 }).addTo(map));
+        layers.push(L.circleMarker(coords[coords.length - 1], { radius: 7, color: '#fff', fillColor: r.color, fillOpacity: 1, weight: 2 }).addTo(map));
+        if (focus) { try { map.fitBounds(line.getBounds(), { padding: [40, 40] }); } catch (err) {} }
+        return line;
       }
-      function focusRoute(index) {
-        selected = index;
-        document.querySelectorAll('.route-card').forEach(function (c, i) {
-          c.classList.toggle('selected', i === index);
-        });
-        if (map) map.flyTo(ROUTES[index].center, 8, { duration: 1.0 });
-        toast('Selected: ' + ROUTES[index].name, index === 0 ? 'success' : 'info');
+      async function drawAllRoutes() {
+        clearLayers();
+        toast('Drawing safest + moderate + critical routes…', 'info');
+        var bounds = null;
+        for (var i = 0; i < ROUTES.length; i++) {
+          var line = await drawOne(i, false);
+          if (line) { try { var b = line.getBounds(); bounds = bounds ? bounds.extend(b) : b; } catch (e) {} }
+        }
+        if (bounds) { try { map.fitBounds(bounds, { padding: [50, 50] }); } catch (e) {} }
+        toast('All routes on map: green=safest, orange=moderate, red=critical', 'success');
       }
       function exportPDF() {
         try {
-          var jsPDF = window.jspdf && window.jspdf.jsPDF;
+          var jsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
           if (!jsPDF) {
-            // Fallback: printable HTML → browser Save as PDF
             var w = window.open('', '_blank');
-            if (!w) { toast('Allow pop-ups for PDF export', 'warn'); return; }
+            if (!w) { toast('Allow pop-ups for PDF', 'warn'); return; }
             var rows = ROUTES.map(function (r, i) {
-              return '<tr><td>' + (i === 0 ? '★ ' : '') + r.name + '</td><td>' + r.dist + '</td><td>' + r.eta + '</td><td>' + r.risk + '</td><td>' + r.traffic + '</td><td>' + r.road + '</td></tr>';
+              return '<tr><td>' + (i + 1) + '</td><td>' + r.name + '</td><td>' + r.dist + '</td><td>' + r.eta + '</td><td>' + r.risk + '</td></tr>';
             }).join('');
-            w.document.write('<!DOCTYPE html><html><head><title>NER Alternate Routes</title><style>body{font-family:Arial;padding:24px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;font-size:12px}th{background:#eef}</style></head><body>' +
-              '<h1>SmartRoute NER — Alternate Routes</h1><p>Generated: ' + new Date().toLocaleString() + '</p>' +
-              '<p><b>Selected:</b> ' + ROUTES[selected].name + '</p>' +
-              '<table><thead><tr><th>Route</th><th>Distance</th><th>ETA</th><th>Risk</th><th>Traffic</th><th>Road</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-              '<script>window.onload=function(){window.print();}<\/script></body></html>');
-            w.document.close();
-            toast('PDF print dialog opened — choose Save as PDF', 'success');
-            return;
+            w.document.write('<html><body><h1>SmartRoute NER Alternate Routes</h1><p>' + new Date().toLocaleString() + '</p><table border="1" cellpadding="6">' + rows + '</table></body></html>');
+            w.document.close(); w.print();
+            toast('Print — Save as PDF', 'success'); return;
           }
           var doc = new jsPDF();
-          doc.setFontSize(16);
-          doc.text('SmartRoute NER — Alternate Routes', 14, 18);
-          doc.setFontSize(10);
-          doc.text('Generated: ' + new Date().toLocaleString(), 14, 26);
-          doc.text('Selected for dispatch: ' + ROUTES[selected].name, 14, 34);
-          var y = 46;
-          ROUTES.forEach(function (r, i) {
-            doc.setFontSize(12);
-            doc.text((i === 0 ? '[RECOMMENDED] ' : '') + r.name, 14, y);
-            y += 7;
-            doc.setFontSize(10);
-            doc.text('Distance: ' + r.dist + '  |  ETA: ' + r.eta + '  |  Risk: ' + r.risk, 14, y);
-            y += 6;
-            doc.text('Traffic: ' + r.traffic + '  |  Road: ' + r.road, 14, y);
-            y += 12;
+          doc.setFontSize(16); doc.text('SmartRoute NER — Alternate Routes', 14, 18);
+          doc.setFontSize(10); doc.text('Generated: ' + new Date().toLocaleString(), 14, 26);
+          var y = 40;
+          ROUTES.forEach(function (r) {
+            doc.setFontSize(11); doc.text(r.name, 14, y); y += 6;
+            doc.setFontSize(9); doc.text(r.dist + ' | ' + r.eta + ' | ' + r.risk, 14, y); y += 10;
           });
           doc.save('NER_Alternate_Routes.pdf');
           toast('PDF downloaded', 'success');
-        } catch (err) {
-          toast('Export error: ' + (err && err.message ? err.message : 'failed'), 'danger');
-        }
+        } catch (err) { toast('Export failed', 'danger'); }
       }
       document.addEventListener('DOMContentLoaded', function () {
-        if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Alternate Routes', subtitle: 'AI-Recommended Safe Route Options — NER' });
+        if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Alternate Routes', subtitle: 'Safest · Moderate · Critical — NER' });
         map = L.map('map').setView([25.80, 91.60], 7);
         L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18 }).addTo(map);
         setTimeout(function () { try { map.invalidateSize(true); } catch (e) {} }, 300);
         document.querySelectorAll('.route-card').forEach(function (card) {
           card.addEventListener('click', function () {
-            focusRoute(parseInt(card.getAttribute('data-idx'), 10));
+            selected = parseInt(card.getAttribute('data-idx'), 10);
+            document.querySelectorAll('.route-card').forEach(function (c, i) { c.classList.toggle('selected', i === selected); });
+            clearLayers();
+            drawOne(selected, true).then(function () { toast('Focused: ' + ROUTES[selected].name, selected === 0 ? 'success' : 'info'); });
           });
         });
+        document.getElementById('btn-show-all').addEventListener('click', drawAllRoutes);
         document.getElementById('btn-start-route').addEventListener('click', async function () {
-          toast('Drawing ' + ROUTES[selected].name + ' on map…', 'info');
-          await drawRouteOnMap(selected);
+          clearLayers(); await drawOne(selected, true);
           toast(ROUTES[selected].name + ' active on map', 'success');
         });
         document.getElementById('btn-view-details').addEventListener('click', function () {
           var r = ROUTES[selected];
           toast(r.name + ' · ' + r.dist + ' · ETA ' + r.eta + ' · Risk ' + r.risk, 'info');
         });
-        document.getElementById('btn-export-route').addEventListener('click', function (e) {
-          e.preventDefault();
-          exportPDF();
-        });
+        document.getElementById('btn-export-route').addEventListener('click', function (e) { e.preventDefault(); exportPDF(); });
+        setTimeout(drawAllRoutes, 600);
       });
     })();
     </script>
