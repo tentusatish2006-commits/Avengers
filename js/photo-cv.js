@@ -1,11 +1,10 @@
-/* SmartRoute Photo CV v10 — landslide / pothole / flood only; analyze pixels, not filename */
+/* SmartRoute Photo CV v11 — landslide / pothole / flood; no false reject on debris */
 (function (global) {
   'use strict';
 
   function classify(dataUrl, filename) {
     return new Promise(function (resolve) {
       var name = String(filename || '').toLowerCase();
-      // Only reject obvious software/UI names — NOT phone Screenshot of real roads
       if (/ansys|autocad|\.dwg|figma|wireframe|spreadsheet|excel\.|powerpoint|\.ppt|mockup-ui|desktop-ui/i.test(name)) {
         return resolve(invalidMeta(99, 'Software / CAD UI file detected from filename.'));
       }
@@ -21,8 +20,8 @@
           var d = ctx.getImageData(0, 0, w, h).data;
           var n = w * h;
 
-          var brown = 0, gray = 0, dark = 0, blue = 0, green = 0, skin = 0, ui = 0, bright = 0;
-          var wetHole = 0, edge = 0, mudWater = 0;
+          var brown = 0, gray = 0, dark = 0, blue = 0, green = 0, bright = 0;
+          var wetHole = 0, edge = 0, mudWater = 0, ui = 0;
 
           for (var i = 0; i < d.length; i += 4) {
             var r = d[i], g = d[i + 1], b = d[i + 2];
@@ -30,14 +29,13 @@
             var max = Math.max(r, g, b), min = Math.min(r, g, b);
             var sat = max ? (max - min) / max : 0;
 
-            if (r > 50 && r >= g - 8 && (r - b) > 10 && l > 25 && l < 200 && sat > 0.06) brown++;
+            if (r > 45 && r >= g - 10 && (r - b) > 8 && l > 22 && l < 210 && sat > 0.05) brown++;
             if (sat < 0.22 && l > 28 && l < 175 && Math.abs(r - g) < 22 && Math.abs(g - b) < 22) gray++;
             if (l < 50) dark++;
-            if (l > 215) bright++;
+            if (l > 220) bright++;
             if (b > r + 6 && b > g - 8 && l > 30 && l < 195 && sat > 0.06) blue++;
-            if (l > 40 && l < 140 && sat < 0.25 && r > 60 && r >= g - 5 && r >= b - 5 && (r - b) < 40) mudWater++;
+            if (l > 35 && l < 145 && sat < 0.28 && r > 55 && Math.abs(r - g) < 25 && (r - b) < 45) mudWater++;
             if (g > r + 10 && g > b + 8 && sat > 0.12) green++;
-            if (r > 100 && g > 65 && r > g + 12 && sat > 0.15 && sat < 0.55 && l > 70 && l < 200) skin++;
             if ((b > 180 && b > r + 50 && sat > 0.45) || (r > 220 && g < 60 && b < 60 && sat > 0.5)) ui++;
             if (l < 70 && sat < 0.2 && Math.abs(r - g) < 15) wetHole++;
           }
@@ -54,13 +52,13 @@
 
           function pct(x) { return (x / n) * 100; }
           var B = pct(brown), G = pct(gray), D = pct(dark), U = pct(blue);
-          var S = pct(skin), UI = pct(ui), GR = pct(green), BR = pct(bright);
+          var UI = pct(ui), GR = pct(green), BR = pct(bright);
           var WH = pct(wetHole), MW = pct(mudWater);
           var edgeRate = edge / Math.max(1, (w * h) / 9);
           var satA = satAvg(d, n);
 
-          if (UI > 14 || S > 18 || BR > 55) {
-            return resolve(invalidMeta(92, 'Looks like a software UI, selfie, or blank image — not a field hazard photo.'));
+          if (UI > 14 || BR > 60) {
+            return resolve(invalidMeta(92, 'Looks like a software UI or blank image — not a field hazard photo.'));
           }
           if (B < 2 && G < 5 && U < 3 && MW < 5 && WH < 3 && GR < 5) {
             return resolve(invalidMeta(88, 'No road / terrain hazard features found.'));
@@ -68,41 +66,45 @@
 
           var scoreLand = 0, scorePot = 0, scoreFlood = 0;
 
-          if (B > 10 && GR < 40) scoreLand += 35;
-          if (B > 8 && D > 4) scoreLand += 25;
-          if (B > 6 && G > 6 && U < 15) scoreLand += 20;
-          if (edgeRate > 0.015 && B > 6) scoreLand += 15;
+          if (B > 12) scoreLand += 40;
+          if (B > 8 && D > 3) scoreLand += 25;
+          if (B > 6 && GR > 2) scoreLand += 15;
+          if (edgeRate > 0.012 && B > 8) scoreLand += 15;
+          if (B > 20) scoreLand += 20;
 
-          if (G > 12 && D > 3) scorePot += 35;
-          if (G > 10 && satA < 0.25) scorePot += 25;
-          if (WH > 4 || (G > 10 && D > 6)) scorePot += 25;
-          if (G > 12 && B < 25) scorePot += 15;
-          if (edgeRate > 0.012 && G > 10) scorePot += 10;
+          if (G > 15 && B < 30) scorePot += 35;
+          if (G > 12 && satA < 0.25 && B < 35) scorePot += 25;
+          if (WH > 5 && G > 10 && B < 40) scorePot += 25;
+          if (G > 18 && B < 25) scorePot += 15;
 
-          if (U > 8) scoreFlood += 35;
-          if (MW > 12) scoreFlood += 35;
-          if (U > 6 && G > 5) scoreFlood += 20;
-          if ((U > 5 || MW > 10) && BR < 35) scoreFlood += 15;
-          if (MW > 8 && D > 3) scoreFlood += 15;
+          if (U > 10) scoreFlood += 40;
+          if (MW > 15) scoreFlood += 35;
+          if (U > 7 && G > 5 && B < 35) scoreFlood += 20;
+          if ((U > 8 || MW > 12) && BR < 40) scoreFlood += 15;
 
-          // Road-dominant: water in holes = pothole, not open flood
-          if (G > 25 && scorePot >= 30) {
-            scorePot += 25;
-            scoreFlood = Math.max(0, scoreFlood - 20);
+          if (B > 25) {
+            scoreLand += 30;
+            scorePot = Math.max(0, scorePot - 35);
+            scoreFlood = Math.max(0, scoreFlood - 15);
           }
-          if ((U > 15 || MW > 15) && G < 20) {
-            scoreFlood += 20;
+          if (G > 30 && B < 20) {
+            scorePot += 20;
+            scoreFlood = Math.max(0, scoreFlood - 25);
+          }
+          if ((U > 12 || MW > 18) && B < 40) {
+            scoreFlood += 25;
+            scorePot = Math.max(0, scorePot - 15);
           }
 
           var best = 'invalid';
           var bestScore = 0;
-          var TH = 40;
+          var TH = 35;
           if (scoreLand >= TH && scoreLand >= scorePot && scoreLand >= scoreFlood) {
             best = 'landslide'; bestScore = scoreLand;
-          } else if (scorePot >= TH && scorePot >= scoreLand && scorePot >= scoreFlood) {
-            best = 'pothole'; bestScore = scorePot;
           } else if (scoreFlood >= TH && scoreFlood >= scoreLand && scoreFlood >= scorePot) {
             best = 'flood'; bestScore = scoreFlood;
+          } else if (scorePot >= TH && scorePot >= scoreLand && scorePot >= scoreFlood) {
+            best = 'pothole'; bestScore = scorePot;
           }
 
           if (best === 'invalid') {
@@ -124,16 +126,7 @@
               affected_meters: Math.round(20 + B),
               recommended_action: 'Landslide debris detected. Close corridor and deploy clearance crew.'
             });
-          } else if (best === 'pothole') {
-            resolve({
-              class: 'pothole', confidence: conf, features: features,
-              risk_score: Math.min(88, Math.round(40 + G / 2 + D)), no_score: false,
-              hazard_type: 'Road Potholes / Surface Damage', severity: 'HIGH',
-              damage_pct: Math.min(85, Math.round(35 + G / 2 + WH)), debris_volume_m3: +(1 + WH / 5).toFixed(1),
-              affected_meters: Math.round(12 + G / 2),
-              recommended_action: 'Potholes / surface damage detected. Slow traffic and schedule patch repair.'
-            });
-          } else {
+          } else if (best === 'flood') {
             resolve({
               class: 'flood', confidence: conf, features: features,
               risk_score: Math.min(92, Math.round(50 + U + MW / 2)), no_score: false,
@@ -141,6 +134,15 @@
               damage_pct: Math.min(90, Math.round(45 + U + MW / 2)), debris_volume_m3: +(4 + (U + MW) / 4).toFixed(1),
               affected_meters: Math.round(25 + U + MW / 2),
               recommended_action: 'Flood / waterlogging detected. Use elevated alternate NER routes.'
+            });
+          } else {
+            resolve({
+              class: 'pothole', confidence: conf, features: features,
+              risk_score: Math.min(88, Math.round(40 + G / 2 + D)), no_score: false,
+              hazard_type: 'Road Potholes / Surface Damage', severity: 'HIGH',
+              damage_pct: Math.min(85, Math.round(35 + G / 2 + WH)), debris_volume_m3: +(1 + WH / 5).toFixed(1),
+              affected_meters: Math.round(12 + G / 2),
+              recommended_action: 'Potholes / surface damage detected. Slow traffic and schedule patch repair.'
             });
           }
         } catch (err) {
@@ -181,5 +183,5 @@
     };
   }
 
-  global.SmartRoutePhotoCV = { version: 10, classify: classify };
+  global.SmartRoutePhotoCV = { version: 11, classify: classify };
 })(window);
