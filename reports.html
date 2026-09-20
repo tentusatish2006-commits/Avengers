@@ -1,1 +1,144 @@
-PLACEHOLDER_WILL_FAIL_IF_TOO_BIG
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reports - SmartRoute NER</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    body { margin:0; font-family:'Outfit',system-ui,sans-serif; background:#031018; color:#e8f4ff; }
+    .reports-table { width:100%; border-collapse:collapse; font-size:0.88rem; }
+    .reports-table th { text-align:left; padding:10px 8px; color:#8fa3b8; border-bottom:1px solid rgba(0,212,255,0.2); }
+    .reports-table td { padding:10px 8px; border-bottom:1px solid rgba(255,255,255,0.06); }
+    .btn-view { background:rgba(0,212,255,0.15); border:1px solid #00d4ff; color:#00d4ff; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:700; }
+    .modal-bg { display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.72); align-items:center; justify-content:center; padding:16px; }
+    .modal-bg.open { display:flex; }
+    .modal { width:min(720px,100%); max-height:92vh; overflow:auto; background:#0a1628; border:1px solid rgba(0,212,255,0.4); border-radius:14px; padding:20px; }
+    .modal h2 { margin:0 0 12px; color:#00d4ff; font-size:1.15rem; }
+    .modal .row { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:0.9rem; }
+    .modal .label { color:#8fa3b8; } .modal .val { font-weight:700; color:#e8f4ff; text-align:right; }
+    .modal .close-btn { margin-top:14px; width:100%; padding:12px; border-radius:8px; border:none; background:linear-gradient(90deg,#00d4ff,#00ff88); color:#031018; font-weight:800; cursor:pointer; }
+    .modal-map-wrap { position:relative; border-radius:12px; overflow:hidden; border:1px solid rgba(0,212,255,0.3); min-height:240px; margin:12px 0 16px; }
+    #report-mini-map { height:240px; width:100%; }
+    .modal-map-label { position:absolute; top:8px; left:8px; z-index:500; background:rgba(3,8,16,0.9); border:1px solid rgba(0,212,255,0.45); border-radius:4px; padding:3px 8px; font-size:9px; font-weight:700; color:#00d4ff; }
+    .sev-critical { color:#ff6b6b; font-weight:800; } .sev-high { color:#ff9500; font-weight:700; } .sev-medium { color:#ffd166; }
+  </style>
+</head>
+<body>
+<div id="app-root">
+  <div id="sidebar-slot"></div>
+  <div id="main-content">
+    <div id="topbar-slot"></div>
+    <main style="padding:18px;">
+      <h1 style="margin:0 0 8px;font-size:1.4rem;color:#00d4ff;">Field Reports</h1>
+      <p style="color:#8fa3b8;margin:0 0 16px;">View incident reports · GPS location · officer details (no photo)</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        <input id="q" placeholder="Search ID / location / incident" style="flex:1;min-width:180px;padding:8px 12px;border-radius:8px;border:1px solid rgba(0,212,255,0.3);background:#061018;color:#e8f4ff;">
+        <select id="sev" style="padding:8px;border-radius:8px;background:#061018;color:#e8f4ff;border:1px solid rgba(0,212,255,0.3);"><option>All Severities</option><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option></select>
+        <select id="stat" style="padding:8px;border-radius:8px;background:#061018;color:#e8f4ff;border:1px solid rgba(0,212,255,0.3);"><option>All Statuses</option><option>Active</option><option>Investigating</option><option>Resolved</option></select>
+      </div>
+      <table class="reports-table">
+        <thead><tr><th>Report ID</th><th>Incident</th><th>Location</th><th>Officer</th><th>Date/Time</th><th>Severity</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="reports-tbody"></tbody>
+      </table>
+    </main>
+  </div>
+</div>
+<div class="modal-bg" id="report-modal"><div class="modal" id="report-modal-body"></div></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/components.js"></script>
+<script>
+(function(){
+  var miniMap = null;
+  var OFFICERS = {
+    'FO-015': { name: 'Lakshmi Devi', role: 'Field Officer', phone: '+91-98765-01015', sector: 'Arunachal / Assam', status: 'ACTIVE' },
+    'FO-042': { name: 'Ravi Kumar', role: 'Field Officer', phone: '+91-98765-01042', sector: 'Assam Guwahati', status: 'ACTIVE' },
+    'FO-089': { name: 'Kavitha Reddy', role: 'Field Officer', phone: '+91-98765-01089', sector: 'Nagaland Kohima', status: 'ACTIVE' }
+  };
+  var reports = [
+    { id:'RPT-2401', incident:'Flood / Waterlogged Road', loc:'Guwahati Riverfront', lat:26.1445, lng:91.7362, off:'FO-042', dt:'2026-09-18 09:12', sev:'CRITICAL', stat:'Active', risk:82, dist:'Kamrup Metro, Assam', notes:'Water over NH stretch; traffic diverted.' },
+    { id:'RPT-2402', incident:'Landslide Debris', loc:'NH-6 Shillong approach', lat:25.5788, lng:91.8933, off:'FO-015', dt:'2026-09-17 14:40', sev:'CRITICAL', stat:'Investigating', risk:88, dist:'East Khasi Hills, Meghalaya', notes:'Debris partially blocking lane.' },
+    { id:'RPT-2403', incident:'Road Potholes / Surface Damage', loc:'Dimapur ring road', lat:25.9063, lng:93.7276, off:'FO-089', dt:'2026-09-16 11:05', sev:'HIGH', stat:'Active', risk:61, dist:'Dimapur, Nagaland', notes:'Multiple potholes; slow traffic.' },
+    { id:'RPT-2404', incident:'Flood / Waterlogged Road', loc:'Silchar low zone', lat:24.8333, lng:92.7789, off:'FO-042', dt:'2026-09-15 08:22', sev:'HIGH', stat:'Resolved', risk:55, dist:'Cachar, Assam', notes:'Water receded after drainage.' }
+  ];
+  var activeReports = reports.slice();
+  function destroyMiniMap(){ if(miniMap){ try{miniMap.remove();}catch(e){} miniMap=null; } }
+  function closeModal(){ document.getElementById('report-modal').classList.remove('open'); destroyMiniMap(); }
+  function viewReport(id){
+    var r = reports.find(function(x){ return x.id===id; });
+    if(!r) return;
+    var o = OFFICERS[r.off] || { name:r.off, role:'Field Officer', phone:'—', sector:r.dist, status:'—' };
+    var color = r.risk>=70 ? '#ff6b6b' : r.risk>=45 ? '#ff9500' : '#00ff88';
+    var body = document.getElementById('report-modal-body');
+    body.innerHTML =
+      '<h2>' + r.id + ' — ' + r.incident + '</h2>' +
+      '<div class="modal-map-wrap">' +
+        '<div id="report-mini-map"></div>' +
+        '<div class="modal-map-label">GPS FIELD LOCATION</div>' +
+      '</div>' +
+      '<div class="row"><span class="label">Risk score</span><span class="val" style="color:'+color+'">' + r.risk + ' / 100</span></div>' +
+      '<div class="row"><span class="label">Severity</span><span class="val">' + r.sev + '</span></div>' +
+      '<div class="row"><span class="label">Status</span><span class="val">' + r.stat + '</span></div>' +
+      '<div class="row"><span class="label">Incident location</span><span class="val">' + r.loc + '</span></div>' +
+      '<div class="row"><span class="label">GPS coordinates</span><span class="val">' + r.lat.toFixed(4) + ' N, ' + r.lng.toFixed(4) + ' E</span></div>' +
+      '<div class="row"><span class="label">District / state</span><span class="val">' + r.dist + '</span></div>' +
+      '<div class="row"><span class="label">Reported at</span><span class="val">' + r.dt + '</span></div>' +
+      '<h2 style="margin-top:16px;font-size:1rem;">Field officer</h2>' +
+      '<div class="row"><span class="label">Officer ID</span><span class="val">' + r.off + '</span></div>' +
+      '<div class="row"><span class="label">Name</span><span class="val">' + o.name + '</span></div>' +
+      '<div class="row"><span class="label">Role</span><span class="val">' + o.role + '</span></div>' +
+      '<div class="row"><span class="label">Phone</span><span class="val">' + o.phone + '</span></div>' +
+      '<div class="row"><span class="label">Sector</span><span class="val">' + o.sector + '</span></div>' +
+      '<div class="row"><span class="label">Duty status</span><span class="val">' + o.status + '</span></div>' +
+      '<div class="row"><span class="label">Field notes</span><span class="val" style="text-align:left;max-width:60%">' + r.notes + '</span></div>' +
+      '<button type="button" class="close-btn" id="modal-close">Close</button>';
+    document.getElementById('report-modal').classList.add('open');
+    document.getElementById('modal-close').onclick = closeModal;
+    destroyMiniMap();
+    setTimeout(function(){
+      if(!window.L) return;
+      miniMap = L.map('report-mini-map', { center:[r.lat,r.lng], zoom:12, zoomControl:true, attributionControl:false });
+      L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom:18 }).addTo(miniMap);
+      L.circleMarker([r.lat,r.lng], { radius:11, color:color, fillColor:color, fillOpacity:0.45, weight:3 }).addTo(miniMap)
+        .bindPopup('<b>' + r.incident + '</b><br>' + r.loc + '<br>GPS: ' + r.lat.toFixed(4) + ', ' + r.lng.toFixed(4)).openPopup();
+      setTimeout(function(){ try{ miniMap.invalidateSize(); }catch(e){} }, 120);
+    }, 60);
+  }
+  function render(list){
+    var tb = document.getElementById('reports-tbody');
+    tb.innerHTML = list.map(function(r){
+      var sevCls = r.sev==='CRITICAL'?'sev-critical':(r.sev==='HIGH'?'sev-high':'sev-medium');
+      return '<tr><td>'+r.id+'</td><td>'+r.incident+'</td><td>'+r.loc+'</td><td>'+r.off+'</td><td>'+r.dt+'</td><td class="'+sevCls+'">'+r.sev+'</td><td>'+r.stat+'</td><td><button type="button" class="btn-view" data-id="'+r.id+'">VIEW</button></td></tr>';
+    }).join('') || '<tr><td colspan="8" style="color:#8fa3b8;">No reports</td></tr>';
+    tb.querySelectorAll('.btn-view').forEach(function(btn){
+      btn.onclick = function(){ viewReport(btn.getAttribute('data-id')); };
+    });
+  }
+  function applyFilter(){
+    var q = (document.getElementById('q').value||'').toLowerCase();
+    var sev = document.getElementById('sev').value;
+    var stat = document.getElementById('stat').value;
+    activeReports = reports.filter(function(r){
+      var ok = true;
+      if(sev !== 'All Severities') ok = ok && r.sev === sev;
+      if(stat !== 'All Statuses') ok = ok && r.stat === stat;
+      if(q) ok = ok && (r.id.toLowerCase().indexOf(q)>=0 || r.loc.toLowerCase().indexOf(q)>=0 || r.incident.toLowerCase().indexOf(q)>=0);
+      return ok;
+    });
+    render(activeReports);
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    if(window.SmartRoute) SmartRoute.initSharedComponents({ title:'Reports', subtitle:'Field reports · GPS only' });
+    render(reports);
+    document.getElementById('q').oninput = applyFilter;
+    document.getElementById('sev').onchange = applyFilter;
+    document.getElementById('stat').onchange = applyFilter;
+    document.getElementById('report-modal').addEventListener('click', function(e){ if(e.target.id==='report-modal') closeModal(); });
+  });
+})();
+</script>
+</body>
+</html>
