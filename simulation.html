@@ -4,8 +4,327 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Simulation - SmartRoute NER</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/components.css">
+    <style>
+        #map { height: 420px; border-radius: 12px; border: 1px solid rgba(0,212,255,0.25); }
+        .sim-controls { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+        .phase-dot { width: 10px; height: 10px; border-radius: 50%; background: #333; display: inline-block; margin: 0 2px; }
+        .phase-dot.active { background: #00d4ff; box-shadow: 0 0 8px #00d4ff; }
+        .log-panel { max-height: 180px; overflow-y: auto; font-size: 0.85rem; }
+        .log-entry { padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .log-entry.critical { color: #ff6b6b; }
+        .log-entry.warning { color: #ffcc00; }
+        .log-entry.success { color: #00ff88; }
+        .eta-card { display: none; text-align: center; margin-top: 12px; padding: 12px; background: rgba(0,255,136,0.08); border-radius: 10px; }
+        .overlay-card { display: none; position: absolute; top: 12px; right: 12px; background: rgba(5,12,28,0.92); border: 1px solid #ff3b3b; border-radius: 10px; padding: 12px 16px; z-index: 1000; }
+        .progress-track { height: 4px; background: #1a2a3a; border-radius: 2px; margin: 10px 0; }
+        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg,#00d4ff,#00ff88); border-radius: 2px; transition: width 0.4s; }
+        .glass-card { background: rgba(8,18,32,0.7); border: 1px solid rgba(0,212,255,0.15); border-radius: 12px; padding: 14px; }
+        .sim-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+        @media (max-width: 800px) { .sim-bottom { grid-template-columns: 1fr; } }
+    </style>
 </head>
 <body>
-<!-- truncated for test -->
+    <div id="app-root">
+        <div id="sidebar-slot"></div>
+        <div id="main-content">
+            <div id="topbar-slot"></div>
+            <main style="padding: 20px;">
+                <div class="glass-card" style="margin-bottom: 16px;">
+                    <h1 style="margin:0 0 8px; font-size:1.4rem; background:linear-gradient(90deg,#00d4ff,#00ff88); -webkit-background-clip:text; background-clip:text; color:transparent;">Live Crisis Simulation</h1>
+                    <p style="margin:0 0 12px; color:#8fa3b8; font-size:0.9rem;">18-phase North-Eastern disaster response demo — flood, landslide & road damage with real field photos.</p>
+                    <div class="sim-controls">
+                        <button id="btn-start" class="btn-primary" onclick="startSim()">▶ START</button>
+                        <button id="btn-pause" class="btn-secondary" onclick="pauseSim()">⏸ PAUSE</button>
+                        <button id="btn-reset" class="btn-secondary" onclick="resetSim()">↺ RESET</button>
+                        <label style="color:#8fa3b8; font-size:0.85rem;">Speed <input type="range" id="speed-range" min="0.5" max="3" step="0.5" value="1" oninput="speed=parseFloat(this.value)"></label>
+                    </div>
+                    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+                    <div id="phase-dots"></div>
+                </div>
+
+                    <div style="position: relative;">
+                        <div id="map"></div>
+
+                        <!-- Field Officer Photo & AI Detection Modal — switches flood / landslide / pothole by phase -->
+                        <div id="sim-photo-modal" style="display:none;position:absolute;top:20px;left:50%;transform:translateX(-50%);z-index:2000;background:rgba(5,12,28,0.95);border:1.5px solid #00d4ff;border-radius:16px;padding:16px;box-shadow:0 10px 40px rgba(0,212,255,0.4);width:340px;text-align:center;backdrop-filter:blur(10px);">
+                            <div id="sim-photo-header" style="font-size:11px;font-weight:700;color:#00d4ff;letter-spacing:1.2px;margin-bottom:8px;">FIELD OFFICER GEO-REPORT</div>
+                            <div style="height:150px;border-radius:8px;position:relative;overflow:hidden;border:1px solid rgba(0,212,255,0.4);box-shadow:0 4px 15px rgba(0,0,0,0.6);">
+                                <img id="sim-field-photo" src="assets/flood.jpg" style="width:100%;height:100%;object-fit:cover;" alt="Field hazard photo">
+                                <div id="sim-photo-coords" style="position:absolute;bottom:6px;left:8px;font-size:10px;color:#fff;font-family:'JetBrains Mono',monospace;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:4px;">LAT · LNG</div>
+                                <div id="sim-photo-badge" style="position:absolute;top:6px;right:8px;background:rgba(255,59,59,0.9);color:#fff;font-size:9px;padding:3px 8px;border-radius:4px;font-weight:800;letter-spacing:0.05em;">CRITICAL HAZARD</div>
+                            </div>
+                            <div id="sim-photo-ai" style="margin-top:10px;font-size:13px;font-weight:700;color:#00ff88;">Vision AI analyzing…</div>
+                            <div id="sim-photo-meta" style="font-size:11px;color:#8fa3b8;margin-top:4px;">Geo-tagged field report</div>
+                        </div>
+
+                        <div class="overlay-card" id="overlay-risk">
+                            <h4 style="margin:0 0 10px 0; color:#ff3b3b;">Brahmaputra Flood Risk Escalating</h4>
+                            <div style="font-size: 2rem; font-weight: bold;" id="risk-val">40%</div>
+                        </div>
+                    </div>
+
+                    <div class="sim-bottom">
+                        <div class="glass-card log-panel" id="log-container">
+                            <div class="log-entry" style="opacity: 0.5;">System initialized. Waiting to start simulation...</div>
+                        </div>
+                        <div class="glass-card status-panel">
+                            <h2 id="phase-title">Ready for Simulation</h2>
+                            <p id="phase-desc" style="color: #aaa; text-align: center; max-width: 80%;">Press START to begin the 18-phase automated disaster response demonstration.</p>
+                            
+                            <div class="eta-card" id="eta-panel">
+                                <h3>Route Optimization Complete</h3>
+                                <p style="margin-bottom: 5px;">Original ETA: <span style="text-decoration: line-through; color: #ff3b3b;">14:30</span></p>
+                                <p style="font-size: 1.5rem; font-weight: bold; color: #00ff88; margin: 0;">New ETA: 16:05</p>
+                                <p style="color: #00d4ff; font-size: 0.9rem;">(+1h 35m via Alternate Route)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/components.js"></script>
+    <script src="js/map-engine.js"></script>
+    <script src="js/sim-photo-landslide.js"></script>
+    <script src="js/sim-photo-pothole.js"></script>
+    <script src="js/sim-photo-flood.js"></script>
+    <script>
+        let map;
+        let simInterval;
+        let currentPhase = -1;
+        let speed = 1;
+        let isPlaying = false;
+        
+        let roadLayer, floodLayer, vehicleMarker, incidentMarker, altRouteLayer;
+
+        function isPhotoData(s) {
+            return typeof s === 'string' && s.indexOf('data:image') === 0 && s.length > 200;
+        }
+        function photoFor(kind) {
+            if (kind === 'flood' && isPhotoData(window.SIM_PHOTO_FLOOD)) return window.SIM_PHOTO_FLOOD;
+            if (kind === 'landslide' && isPhotoData(window.SIM_PHOTO_LANDSLIDE)) return window.SIM_PHOTO_LANDSLIDE;
+            if (kind === 'pothole' && isPhotoData(window.SIM_PHOTO_POTHOLE)) return window.SIM_PHOTO_POTHOLE;
+            if (kind === 'flood') return 'assets/flood.jpg';
+            if (kind === 'landslide') return 'assets/landslide.jpg';
+            if (kind === 'pothole') return 'assets/pothole.jpg';
+            return 'assets/landslide.jpg';
+        }
+        const PHOTO_META = {
+            flood: {
+                header: 'FIELD OFFICER GEO-REPORT #FO-018 (ANITA DAS)',
+                coords: 'LAT 26.182 · LNG 91.748 · GUWAHATI',
+                badge: 'FLOOD HAZARD',
+                ai: 'Vision AI: 94% Flood Inundation Confirmed',
+                meta: 'Muddy floodwater · Road submerged · Brahmaputra sector'
+            },
+            landslide: {
+                header: 'FIELD OFFICER GEO-REPORT #FO-042 (RAVI KUMAR)',
+                coords: 'LAT 27.584 · LNG 91.862 · TAWANG',
+                badge: 'CRITICAL HAZARD',
+                ai: 'Vision AI: 96% Landslide Blockage Confirmed',
+                meta: 'Debris Volume: ~180 m³ · Cleared Lane: 0% · NH-13 KM62'
+            },
+            pothole: {
+                header: 'FIELD OFFICER GEO-REPORT #FO-011 (BIKASH SINGH)',
+                coords: 'LAT 25.620 · LNG 91.920 · SHILLONG',
+                badge: 'ROAD DAMAGE',
+                ai: 'Vision AI: 92% Multiple Potholes Detected',
+                meta: 'Surface failures · Wet holes · GS-1 corridor'
+            }
+        };
+        function showFieldPhoto(kind, durationMs) {
+            const m = PHOTO_META[kind] || PHOTO_META.landslide;
+            const img = document.getElementById('sim-field-photo');
+            if (img) img.src = photoFor(kind);
+            const h = document.getElementById('sim-photo-header');
+            if (h) h.textContent = m.header;
+            const c = document.getElementById('sim-photo-coords');
+            if (c) c.textContent = m.coords;
+            const b = document.getElementById('sim-photo-badge');
+            if (b) b.textContent = m.badge;
+            const a = document.getElementById('sim-photo-ai');
+            if (a) a.textContent = m.ai;
+            const meta = document.getElementById('sim-photo-meta');
+            if (meta) meta.textContent = m.meta;
+            const modal = document.getElementById('sim-photo-modal');
+            if (modal) {
+                modal.style.display = 'block';
+                setTimeout(() => { modal.style.display = 'none'; }, durationMs || 3500);
+            }
+        }
+
+        const phases = [
+            { t: "🌧 HEAVY RAINFALL DETECTED", c: "warning", d: "Weather sensors report extreme precipitation in Brahmaputra / Guwahati sector.", fly: [26.15, 91.75], z: 8 },
+            { t: "🤖 AI TERRAIN ANALYSIS", c: "", d: "Analyzing rainfall accumulation + Himalayan mountain watershed elevation.", fly: [26.15, 91.75], z: 9 },
+            { t: "🌊 FLOOD RISK ESCALATING", c: "warning", d: "Brahmaputra river gauge rising rapidly across riverine lowlands.", action: 'risk_up' },
+            { t: "🛣 ROAD STATUS DEGRADING", c: "critical", d: "AH-1 / NH-27 corridor structural integrity dropping due to saturation — potholes forming.", action: 'road_degrade', photo: 'pothole' },
+            { t: "🌊 FLOOD ZONE APPEARS", c: "critical", d: "Simulation identifies imminent flood inundation zone near Guwahati riverfront.", action: 'show_flood', photo: 'flood' },
+            { t: "⚠ INCIDENT MARKER", c: "critical", d: "AI predicts catastrophic mountain landslide at NH-13 Tawang Pass KM62.", action: 'show_incident', fly: [27.58, 91.86], z: 10, photo: 'landslide' },
+            { t: "🚨 CRITICAL ALERT", c: "critical", d: "System generates automated SOS broadcast for North-Eastern Command." },
+            { t: "🚛 VEHICLES AT RISK", c: "warning", d: "Medicine convoy MED-Convoy-NE1 identified heading toward blocked sector.", action: 'show_vehicle' },
+            { t: "🤖 AI ROUTE CALCULATION", c: "", d: "Computing 3 alternate detour paths avoiding flood zone & landslide pass..." },
+            { t: "🟢 SAFEST ROUTE HIGHLIGHTED", c: "success", d: "Alternative elevated route via GS-1 / Shillong Bypass confirmed 100% accessible.", action: 'show_alt_route' },
+            { t: "🔄 VEHICLE REROUTED", c: "success", d: "Dynamic navigation detour instructions dispatched to MED-Convoy-NE1.", action: 'move_vehicle' },
+            { t: "⏱ ETA UPDATED", c: "success", d: "Regional PHC hospital receiving updated delivery schedule (+1h 35m).", action: 'show_eta' },
+            { t: "📷 FIELD OFFICER PHOTO", c: "", d: "Officer FO-042 Ravi Kumar uploads high-res ground truth photo of rockfall.", photo: 'landslide' },
+            { t: "🤖 AI IMAGE ANALYSIS", c: "success", d: "Vision AI confirms 96% confidence: Massive Landslide Debris Obstruction.", photo: 'landslide' },
+            { t: "📊 STATUS UPDATED", c: "", d: "Global North-Eastern disaster ledger registers complete sector blockage." },
+            { t: "👮 RESPONSE TEAM ASSIGNED", c: "success", d: "NDRF Unit-4 & BRO earthmovers dispatched from Guwahati base station." },
+            { t: "📈 ANALYTICS UPDATED", c: "", d: "Historical logs and predictive route accessibility models synchronized." },
+            { t: "✅ INCIDENT RESOLVED", c: "success", d: "Detour convoy safely arrived. Emergency response active. Demonstrating stability.", action: 'resolve' }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if(window.SmartRoute) SmartRoute.initSharedComponents({title: 'Live Simulation', subtitle: '18-Phase North-Eastern Disaster Response Demonstration'});
+            
+            if (window.MapEngine && window.MapEngine.initMap) {
+                map = MapEngine.initMap('map', {
+                    center: [25.80, 91.60],
+                    zoom: 7,
+                    zoomControl: true
+                });
+            } else {
+                map = L.map('map').setView([25.80, 91.60], 7);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(map);
+            }
+
+            const dots = document.getElementById('phase-dots');
+            if (dots) {
+                for (let i = 0; i < phases.length; i++) {
+                    const d = document.createElement('span');
+                    d.className = 'phase-dot';
+                    dots.appendChild(d);
+                }
+            }
+
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('autoplay') === '1') {
+                setTimeout(() => {
+                    startSim();
+                    if (window.SmartRoute) SmartRoute.showToast('Autoplay: Live Crisis Simulation Launched', 'info');
+                }, 800);
+            }
+        });
+
+        function startSim() {
+            if(currentPhase >= phases.length - 1) return;
+            isPlaying = true;
+            if (window.SmartRoute) SmartRoute.showToast('Live 18-Phase Crisis Simulation Started', 'info');
+            nextPhase();
+            simInterval = setInterval(nextPhase, 4000 / speed);
+        }
+
+        function pauseSim() {
+            isPlaying = false;
+            clearInterval(simInterval);
+        }
+
+        function resetSim() {
+            pauseSim();
+            currentPhase = -1;
+            document.getElementById('log-container').innerHTML = '';
+            document.getElementById('progress-fill').style.width = '0%';
+            document.querySelectorAll('.phase-dot').forEach(d => d.classList.remove('active'));
+            document.getElementById('phase-title').innerText = 'Ready for Simulation';
+            document.getElementById('phase-desc').innerText = 'Press START to begin.';
+            document.getElementById('eta-panel').style.display = 'none';
+            document.getElementById('overlay-risk').style.display = 'none';
+            
+            if(roadLayer) map.removeLayer(roadLayer);
+            if(floodLayer) map.removeLayer(floodLayer);
+            if(incidentMarker) map.removeLayer(incidentMarker);
+            if(vehicleMarker) map.removeLayer(vehicleMarker);
+            if(altRouteLayer) map.removeLayer(altRouteLayer);
+            
+            map.setView([25.80, 91.60], 7);
+            if (window.SmartRoute) SmartRoute.showToast('Simulation state reset', 'info');
+        }
+
+        function nextPhase() {
+            currentPhase++;
+            if(currentPhase >= phases.length) {
+                pauseSim();
+                return;
+            }
+
+            const p = phases[currentPhase];
+
+            document.getElementById('phase-title').innerText = p.t;
+            document.getElementById('phase-desc').innerText = p.d;
+            
+            const log = document.getElementById('log-container');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${p.c}`;
+            entry.innerHTML = `<strong>Phase ${currentPhase+1}:</strong> ${p.d}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+
+            document.getElementById('progress-fill').style.width = `${(currentPhase / 17) * 100}%`;
+            document.querySelectorAll('.phase-dot').forEach((d, i) => {
+                if(i <= currentPhase) d.classList.add('active');
+            });
+
+            if(p.fly) map.flyTo(p.fly, p.z || 9, {duration: 2/speed});
+
+            if(p.action === 'risk_up') {
+                document.getElementById('overlay-risk').style.display = 'block';
+                let r = 40;
+                let rInt = setInterval(() => {
+                    r += 3;
+                    document.getElementById('risk-val').innerText = `${r}%`;
+                    if(r >= 86) clearInterval(rInt);
+                }, 40);
+            }
+            if(p.action === 'road_degrade') {
+                const pts = [[26.72, 88.42], [26.45, 90.10], [26.14, 91.73]];
+                roadLayer = L.polyline(pts, {color: '#00ff88', weight: 6, opacity: 0.9, lineCap: 'round'}).addTo(map);
+                setTimeout(() => { if(roadLayer) roadLayer.setStyle({color: '#ffcc00'}); }, 600 / speed);
+                setTimeout(() => { if(roadLayer) roadLayer.setStyle({color: '#ff9500'}); }, 1200 / speed);
+                setTimeout(() => { if(roadLayer) roadLayer.setStyle({color: '#ff3b3b'}); }, 1800 / speed);
+            }
+            if(p.action === 'show_flood') {
+                floodLayer = L.polygon([
+                    [26.18, 91.70], [26.24, 91.82], [26.14, 91.85], [26.11, 91.72]
+                ], {color: '#00d4ff', fillColor: '#00d4ff', fillOpacity: 0.45, dashArray: '6,6'}).addTo(map);
+            }
+            if(p.action === 'show_incident') {
+                let ic = L.divIcon({className: '', html: '<div style="width:32px;height:32px;background:#ff3b3b;border-radius:50%;box-shadow:0 0 25px #ff3b3b;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;border:2.5px solid #fff;">⚠</div>'});
+                incidentMarker = L.marker([27.58, 91.86], {icon: ic}).addTo(map);
+            }
+            if(p.action === 'show_vehicle') {
+                let vc = L.divIcon({className: '', html: '<div style="background:rgba(0,212,255,0.3);border:2px solid #00d4ff;border-radius:8px;padding:4px;font-size:20px;box-shadow:0 0 16px #00d4ff;">🚛</div>'});
+                vehicleMarker = L.marker([26.14, 91.73], {icon: vc}).addTo(map);
+            }
+            if(p.action === 'show_alt_route') {
+                const pts = [[26.14, 91.73], [25.90, 91.88], [25.57, 91.89]];
+                altRouteLayer = L.polyline(pts, {color: '#00ff88', weight: 5, dashArray: '8, 8', lineCap: 'round'}).addTo(map);
+            }
+            if(p.action === 'move_vehicle') {
+                if (vehicleMarker) vehicleMarker.setLatLng([25.57, 91.89]);
+            }
+
+            if(p.action === 'show_eta') {
+                document.getElementById('eta-panel').style.display = 'block';
+            }
+            if (p.photo) {
+                showFieldPhoto(p.photo, 3800 / speed);
+            }
+            if(p.action === 'resolve') {
+                if(floodLayer) map.removeLayer(floodLayer);
+                if(incidentMarker) map.removeLayer(incidentMarker);
+                if(roadLayer) roadLayer.setStyle({color: '#00ff88'});
+                document.getElementById('overlay-risk').style.display = 'none';
+                document.getElementById('sim-photo-modal').style.display = 'none';
+            }
+        }
+    </script>
 </body>
 </html>
