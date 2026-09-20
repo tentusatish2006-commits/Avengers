@@ -77,7 +77,7 @@
     var color = risk > 70 ? '#ff3b3b' : (risk > 45 ? '#ff9500' : '#00ff88');
     var coords = await fetchOsrm(from, to);
     var line = L.polyline(coords, { color: color, weight: 6, opacity: 0.92, lineCap: 'round', lineJoin: 'round' }).addTo(map);
-    line.bindPopup('<b>' + sourceLabel + ' \u2192 ' + destLabel + '</b><br>Risk: ' + risk + '%');
+    line.bindPopup('<b>' + sourceLabel + ' to ' + destLabel + '</b><br>Risk: ' + risk + '%');
     analysisLayers.push(line);
     var mid = coords[Math.floor(coords.length / 2)] || from;
     var via = [mid[0] + 0.12, mid[1] - 0.1];
@@ -145,7 +145,7 @@
     var gaugeSub = document.getElementById('risk-gauge-sub');
     var gauge = document.getElementById('risk-gauge');
     if (gaugeVal) gaugeVal.textContent = score;
-    if (gaugeSub) gaugeSub.textContent = '% RISK \u2014 ' + sev;
+    if (gaugeSub) gaugeSub.textContent = '% RISK - ' + sev;
     var gaugeColor = score < 35 ? 'var(--status-safe)' : (score < 55 ? 'var(--status-warn)' : 'var(--status-danger)');
     if (gauge) gauge.style.background = 'conic-gradient(' + gaugeColor + ' ' + score + '%, rgba(255,255,255,0.1) 0)';
     if (gaugeVal) gaugeVal.style.color = gaugeColor;
@@ -162,12 +162,105 @@
     var accessEl = document.getElementById('val-access');
     var disruptEl = document.getElementById('val-disrupt');
     var departEl = document.getElementById('val-departure');
-    if (delayEl) delayEl.textContent = m.est_delay || '\u2014';
+    if (delayEl) delayEl.textContent = m.est_delay || '-';
     if (accessEl) accessEl.textContent = (m.road_accessibility_pct || 0) + '%';
-    if (disruptEl) disruptEl.textContent = m.disruption_probability || '\u2014';
-    if (departEl) departEl.textContent = m.rec_departure || '\u2014';
+    if (disruptEl) disruptEl.textContent = m.disruption_probability || '-';
+    if (departEl) departEl.textContent = m.rec_departure || '-';
 
     await drawPair(sourceKey, destKey, score, source, destination);
-    if (window.SmartRoute) SmartRoute.showToast('Route: ' + source + ' \u2192 ' + destination + ' (' + sev + ')', 'success');
+    if (window.SmartRoute) SmartRoute.showToast('Route: ' + source + ' to ' + destination + ' (' + sev + ')', 'success');
   };
+})();
+
+(function () {
+  function generateRouteReport() {
+    var srcEl = document.getElementById('source');
+    var dstEl = document.getElementById('dest');
+    var source = srcEl ? srcEl.options[srcEl.selectedIndex].text : 'Guwahati';
+    var destination = dstEl ? dstEl.options[dstEl.selectedIndex].text : 'Shillong';
+    var vehicle = (document.getElementById('vehicle-type') || {}).value || 'Medicine Truck';
+    var priority = (document.getElementById('priority') || {}).value || 'Critical';
+    var risk = (document.getElementById('risk-gauge-val') || {}).textContent || '-';
+    var sev = (document.getElementById('risk-gauge-sub') || {}).textContent || '';
+    var delay = (document.getElementById('val-delay') || {}).textContent || '-';
+    var access = (document.getElementById('val-access') || {}).textContent || '-';
+    var disrupt = (document.getElementById('val-disrupt') || {}).textContent || '-';
+    var depart = (document.getElementById('val-departure') || {}).textContent || '-';
+    var road = (document.getElementById('val-road') || {}).textContent || '-';
+    var weather = (document.getElementById('val-weather') || {}).textContent || '-';
+    var traffic = (document.getElementById('val-traffic') || {}).textContent || '-';
+    var flood = (document.getElementById('val-flood') || {}).textContent || '-';
+    var landslide = (document.getElementById('val-landslide') || {}).textContent || '-';
+    var lines = [
+      'SmartRoute NER - AI Route Risk Report',
+      '=====================================',
+      'Generated: ' + new Date().toLocaleString(),
+      '',
+      'Corridor: ' + source + ' to ' + destination,
+      'Vehicle: ' + vehicle,
+      'Priority: ' + priority,
+      '',
+      'Overall Risk: ' + risk + '%  ' + sev,
+      'Est. Delay: ' + delay,
+      'Road Accessibility: ' + access,
+      'Disruption Probability: ' + disrupt,
+      'Recommended Departure: ' + depart,
+      '',
+      'Risk Breakdown',
+      '--------------',
+      'Road Condition: ' + road,
+      'Weather Risk: ' + weather,
+      'Traffic Load: ' + traffic,
+      'Flood Risk: ' + flood,
+      'Landslide Risk: ' + landslide,
+      '',
+      'Recommendation: Prefer green/safe corridors; use orange alternate when primary is disrupted.',
+      'Region: North Eastern Region (NER)'
+    ];
+    var blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'NER-Route-Report.txt';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 400);
+    if (window.SmartRoute) SmartRoute.showToast('Route report downloaded', 'success');
+    try {
+      var list = JSON.parse(localStorage.getItem('sr_route_reports') || '[]');
+      list.unshift({ id: 'RR-' + Date.now(), source: source, destination: destination, risk: risk, at: new Date().toISOString() });
+      localStorage.setItem('sr_route_reports', JSON.stringify(list.slice(0, 50)));
+    } catch (e) {}
+  }
+
+  function wireButtons() {
+    document.querySelectorAll('a[href="alternate-routes.html"], a[href*="alternate-routes"]').forEach(function (a) {
+      if (a._srAltWired) return;
+      a._srAltWired = true;
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        var src = document.getElementById('source');
+        var dst = document.getElementById('dest');
+        var q = '';
+        if (src && dst) q = '?from=' + encodeURIComponent(src.value) + '&to=' + encodeURIComponent(dst.value);
+        window.location.href = 'alternate-routes.html' + q;
+      });
+    });
+    var btn = document.getElementById('btn-gen-report');
+    if (btn && !btn._srWired) {
+      btn._srWired = true;
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        generateRouteReport();
+      });
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wireButtons);
+  } else {
+    wireButtons();
+  }
+  setTimeout(wireButtons, 1000);
 })();
