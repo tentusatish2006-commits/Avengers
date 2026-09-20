@@ -122,151 +122,24 @@
                             <div class="metric-item danger" id="metric-disrupt"><span class="label">Disruption Prob.</span><span class="value" id="val-disrupt">HIGH</span></div>
                             <div class="metric-item" id="metric-departure"><span class="label">Rec. Departure</span><span class="value" id="val-departure">06:00 AM</span></div>
                         </div>
-                        <a href="alternate-routes.html" class="btn-primary" style="text-align: center; text-decoration: none;">VIEW ALTERNATE ROUTES</a>
-                        <button class="btn-secondary" id="btn-gen-report">GENERATE REPORT</button>
+                        <a href="alternate-routes.html" class="btn-primary" id="btn-view-alt" style="text-align: center; text-decoration: none;">VIEW ALTERNATE ROUTES</a>
+                        <button type="button" class="btn-secondary" id="btn-gen-report">GENERATE REPORT</button>
                     </div>
                 </div>
             </main>
         </div>
     </div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
     <script src="js/api.js"></script>
     <script src="js/components.js"></script>
     <script src="js/map-engine.js"></script>
-    <script src="js/charts.js"></script>
+    <script src="js/route-prediction-fix.js"></script>
+    <script src="js/route-alt-buttons.js?v=2"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', function () {
             if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'AI Route Prediction', subtitle: 'Machine Learning Route Risk Analysis — NER' });
             if (window.MapEngine) MapEngine.initMap('map', { center: [25.80, 91.60], zoom: 7 });
-            const btnReport = document.getElementById('btn-gen-report');
-            if (btnReport) btnReport.addEventListener('click', () => {
-                if (window.SmartRoute) SmartRoute.showToast('Compiling Route Risk Dossier (PDF)... Check Reports Center', 'success');
-            });
         });
-
-        function colorFor(value) {
-            if (value >= 70) return 'var(--status-danger)';
-            if (value >= 40) return 'var(--status-warn)';
-            return 'var(--status-safe)';
-        }
-
-        function setBar(id, value) {
-            const bar = document.getElementById('bar-' + id);
-            const label = document.getElementById('val-' + id);
-            if (bar) {
-                bar.style.width = value + '%';
-                bar.style.background = colorFor(value);
-            }
-            if (label) label.textContent = value + '%';
-        }
-
-        async function analyzeRoute() {
-            const scanner = document.getElementById('scanner');
-            const initialState = document.getElementById('initial-state');
-            const resultsState = document.getElementById('results-state');
-            const srcEl = document.getElementById('source');
-            const dstEl = document.getElementById('dest');
-            const source = srcEl ? srcEl.options[srcEl.selectedIndex].text : 'Guwahati (Assam)';
-            const destination = dstEl ? dstEl.options[dstEl.selectedIndex].text : 'Shillong (Meghalaya)';
-            const vehicleType = document.getElementById('vehicle-type').value;
-            const priority = document.getElementById('priority').value;
-
-            scanner.classList.add('active');
-            initialState.style.display = 'none';
-            resultsState.classList.remove('active');
-
-            let data = null;
-            try {
-                if (window.SmartRouteAPI && window.SmartRouteAPI.predictRouteRisk) {
-                    data = await window.SmartRouteAPI.predictRouteRisk(source, destination, vehicleType, priority);
-                }
-            } catch (err) {
-                console.warn('API call failed:', err);
-            }
-
-            await new Promise(r => setTimeout(r, 1100));
-
-            scanner.classList.remove('active');
-            resultsState.classList.add('active');
-
-            if (!data || data.status !== 'success') {
-                data = {
-                    risk_score: 72,
-                    severity: 'HIGH',
-                    breakdown: {
-                        road_condition: 58,
-                        weather_risk: 76,
-                        traffic_load: 42,
-                        flood_risk: 68,
-                        landslide_risk: 71
-                    },
-                    metrics: {
-                        est_delay: '+1h 50m',
-                        road_accessibility_pct: 38,
-                        disruption_probability: 'HIGH',
-                        rec_departure: '06:00 AM'
-                    }
-                };
-                if (window.SmartRoute) {
-                    SmartRoute.showToast('Backend offline — showing simulated prediction', 'warn');
-                }
-            }
-
-            const score = Math.round(data.risk_score || 0);
-            const sev = (data.severity || 'HIGH').toUpperCase();
-            const gaugeVal = document.getElementById('risk-gauge-val');
-            const gaugeSub = document.getElementById('risk-gauge-sub');
-            const gauge = document.getElementById('risk-gauge');
-
-            if (gaugeVal) gaugeVal.textContent = score;
-            if (gaugeSub) gaugeSub.textContent = '% RISK — ' + sev;
-
-            let gaugeColor = 'var(--status-danger)';
-            if (score < 35) gaugeColor = 'var(--status-safe)';
-            else if (score < 55) gaugeColor = 'var(--status-warn)';
-
-            if (gauge) {
-                gauge.style.background = `conic-gradient(${gaugeColor} ${score}%, rgba(255,255,255,0.1) 0)`;
-            }
-            if (gaugeVal) gaugeVal.style.color = gaugeColor;
-
-            const b = data.breakdown || {};
-            setBar('road', Math.round(b.road_condition || 0));
-            setBar('weather', Math.round(b.weather_risk || 0));
-            setBar('traffic', Math.round(b.traffic_load || 0));
-            setBar('flood', Math.round(b.flood_risk || 0));
-            setBar('landslide', Math.round(b.landslide_risk || 0));
-
-            const m = data.metrics || {};
-            const delayEl = document.getElementById('val-delay');
-            const accessEl = document.getElementById('val-access');
-            const disruptEl = document.getElementById('val-disrupt');
-            const departEl = document.getElementById('val-departure');
-
-            if (delayEl) delayEl.textContent = m.est_delay || '—';
-            if (accessEl) accessEl.textContent = (m.road_accessibility_pct || 0) + '%';
-            if (disruptEl) disruptEl.textContent = m.disruption_probability || '—';
-            if (departEl) departEl.textContent = m.rec_departure || '—';
-
-            const delayMetric = document.getElementById('metric-delay');
-            const disruptMetric = document.getElementById('metric-disrupt');
-            if (delayMetric) delayMetric.classList.toggle('danger', score > 50);
-            if (disruptMetric) disruptMetric.classList.toggle('danger', (m.disruption_probability || '').toUpperCase() === 'HIGH');
-
-            if (window.MapEngine && MapEngine.map) {
-                if (MapEngine.addRoads) MapEngine.addRoads();
-                if (MapEngine.drawAlternateRoutes) MapEngine.drawAlternateRoutes();
-                if (MapEngine.addIncidents) MapEngine.addIncidents();
-                MapEngine.map.setView([25.80, 91.60], 7);
-            }
-
-            if (window.SmartRoute && data.status === 'success') {
-                SmartRoute.showToast('AI prediction ready: ' + source + ' → ' + destination + ' (' + sev + ')', 'success');
-            }
-        }
     </script>
-    <script src="js/route-prediction-fix.js"></script>
 </body>
 </html>
