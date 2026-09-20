@@ -132,7 +132,7 @@
   <div class="modal-bg" id="add-user-modal" role="dialog" aria-modal="true">
     <div class="modal">
       <h3>Add User</h3>
-      <p class="sub">Create an account. Field Officers also appear on the Field Officers page.</p>
+      <p class="sub">Create an account. Field Officers also appear on the Field Officers page. Users sync to all devices.</p>
       <label for="au-name">Full name *</label>
       <input id="au-name" type="text" placeholder="e.g. Swetha Nayak" autocomplete="off">
       <label for="au-role">Role</label>
@@ -157,7 +157,7 @@
   </div>
   <script src="js/components.js"></script>
   <script src="js/auth-users.js"></script>
-  <script src="js/admin-sync.js"></script>
+  <script src="js/admin-sync.js?v=2"></script>
   <script>
   (function () {
     var DEFAULT_USERS = [
@@ -188,17 +188,23 @@
         currentUsers = DEFAULT_USERS.map(function (u) { return Object.assign({}, u); });
         saveUsers();
       }
-      if (window.SRAdminSync && SRAdminSync.pull) {
-        SRAdminSync.pull().then(function (remote) {
-          if (!remote || !remote.length) return;
-          var byId = {};
-          currentUsers.forEach(function (u) { byId[u.id] = u; });
-          remote.forEach(function (r) { if (r.id) byId[r.id] = r; });
-          currentUsers = Object.keys(byId).map(function (k) { return byId[k]; });
-          saveUsers();
-          renderUserTable();
-        });
-      }
+      syncFromCloud(true);
+    }
+    function syncFromCloud(showToast) {
+      if (!window.SRAdminSync || !SRAdminSync.pull) return;
+      SRAdminSync.pull().then(function (remote) {
+        if (!remote || !remote.length) return;
+        var before = currentUsers.length;
+        var byId = {};
+        currentUsers.forEach(function (u) { byId[u.id] = u; });
+        remote.forEach(function (r) { if (r && r.id) byId[r.id] = r; });
+        currentUsers = Object.keys(byId).map(function (k) { return byId[k]; });
+        saveUsers();
+        renderUserTable();
+        if (showToast && currentUsers.length !== before) {
+          toast('Users synced from cloud (' + currentUsers.length + ' total)', 'success');
+        }
+      }).catch(function () {});
     }
     function saveUsers() {
       try { localStorage.setItem('sr_admin_users', JSON.stringify(currentUsers)); } catch (e) {}
@@ -273,10 +279,10 @@
       saveUsers();
     }
     function escapeHtml(s) {
-      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      return String(s == null ? '' : s).replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"');
     }
     function escapeAttr(s) {
-      return String(s == null ? '' : s).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      return String(s == null ? '' : s).replace(/"/g, '"').replace(/'/g, '&#39;');
     }
     function openAddModal() {
       document.getElementById('au-name').value = '';
@@ -311,10 +317,13 @@
       } catch (e) {}
       currentUsers.unshift(newUser);
       saveUsers();
-      if (window.SRAdminSync) SRAdminSync.push(newUser);
+      if (window.SRAdminSync) {
+        if (SRAdminSync.pushAll) SRAdminSync.pushAll(currentUsers);
+        else if (SRAdminSync.push) SRAdminSync.push(newUser);
+      }
       renderUserTable();
       closeAddModal();
-      toast('User created: ' + name + ' (' + newUser.id + ') \u2014 synced to server', 'success');
+      toast('User created: ' + name + ' (' + newUser.id + ') \u2014 synced to all devices', 'success');
     }
     function findUser(id) { return currentUsers.find(function (u) { return u.id === id; }); }
     function deleteUser(id) {
@@ -323,7 +332,10 @@
       if (!confirm('Delete user "' + user.name + '" (' + id + ')?')) return;
       currentUsers = currentUsers.filter(function (u) { return u.id !== id; });
       saveUsers();
-      if (window.SRAdminSync) SRAdminSync.remove(id);
+      if (window.SRAdminSync) {
+        if (SRAdminSync.pushAll) SRAdminSync.pushAll(currentUsers);
+        else if (SRAdminSync.remove) SRAdminSync.remove(id);
+      }
       renderUserTable();
       toast('Deleted: ' + user.name, 'success');
     }
@@ -335,7 +347,10 @@
         user.name = newName.trim();
         if (user.role === 'Field Officer') syncFieldOfficer(user);
         saveUsers();
-        if (window.SRAdminSync) SRAdminSync.push(user);
+        if (window.SRAdminSync) {
+          if (SRAdminSync.pushAll) SRAdminSync.pushAll(currentUsers);
+          else SRAdminSync.push(user);
+        }
         renderUserTable();
         toast('Updated: ' + user.name, 'success');
       }
@@ -346,7 +361,10 @@
       user.stat = user.stat === 'Active' ? 'Inactive' : 'Active';
       if (user.role === 'Field Officer') syncFieldOfficer(user);
       saveUsers();
-      if (window.SRAdminSync) SRAdminSync.push(user);
+      if (window.SRAdminSync) {
+        if (SRAdminSync.pushAll) SRAdminSync.pushAll(currentUsers);
+        else SRAdminSync.push(user);
+      }
       renderUserTable();
       toast(user.name + ' is now ' + user.stat, user.stat === 'Active' ? 'success' : 'warn');
     }
@@ -361,7 +379,10 @@
         syncFieldOfficer(user);
       }
       saveUsers();
-      if (window.SRAdminSync) SRAdminSync.push(user);
+      if (window.SRAdminSync) {
+        if (SRAdminSync.pushAll) SRAdminSync.pushAll(currentUsers);
+        else SRAdminSync.push(user);
+      }
       renderUserTable();
       toast(user.name + ' role \u2192 ' + user.role, 'info');
     }
@@ -371,6 +392,7 @@
       }
       loadUsers();
       renderUserTable();
+      setInterval(function () { syncFromCloud(false); }, 20000);
       document.getElementById('btn-add-user').addEventListener('click', function (e) { e.preventDefault(); openAddModal(); });
       document.getElementById('btn-cancel-add').addEventListener('click', closeAddModal);
       document.getElementById('btn-confirm-add').addEventListener('click', confirmAddUser);
