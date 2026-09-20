@@ -55,8 +55,6 @@
             <h1 class="page-title" style="margin:0;font-size:1.35rem;">Field Report</h1>
             <p class="page-subtitle" style="margin:4px 0 0;color:#8fa3b8;font-size:0.9rem;">Search officer first — then file incident</p>
           </div>
-
-          <!-- Officer search (no default) -->
           <div class="glass-card" style="padding:14px;">
             <label class="form-group" style="margin:0 0 8px;">
               <span style="font-size:0.75rem;font-weight:700;color:#8fa3b8;text-transform:uppercase;letter-spacing:0.05em;">Officer</span>
@@ -66,15 +64,13 @@
                 placeholder="Search by name, FO-ID or district..." autocomplete="off">
               <div id="search-results" class="search-results"></div>
             </div>
-            <p style="margin:8px 0 0;font-size:0.8rem;color:#6a8ea8;">No officer is loaded by default. Type a name (e.g. Ravi) or ID (FO-042).</p>
+            <p style="margin:8px 0 0;font-size:0.8rem;color:#6a8ea8;">Includes officers added from Admin Panel. Type a name or FO-ID.</p>
           </div>
-
           <div id="empty-hint" class="empty-hint">
             <div style="font-size:1.5rem;margin-bottom:8px;">👮</div>
             <strong style="color:#e8f4ff;">Select an officer to continue</strong>
             <p style="margin:8px 0 0;">Location, photo and submit appear only after you choose an officer from search.</p>
           </div>
-
           <div id="report-body">
             <div class="glass-card officer-info" style="padding:14px;">
               <div>
@@ -86,38 +82,28 @@
                 <span class="text-sm" id="current-time"></span>
               </div>
             </div>
-
             <div class="glass-card" style="padding:14px;">
               <button class="btn btn-primary btn-large" id="btn-location" type="button">📍 GET LOCATION</button>
               <div id="location-data" class="text-sm text-cyan" style="margin-top: 10px; font-family:'JetBrains Mono',monospace;">—</div>
               <div id="mini-map" style="height:200px; border-radius:10px; margin-top:10px; border:1px solid rgba(0,212,255,0.3); overflow:hidden;"></div>
             </div>
-
             <div class="glass-card" style="padding:14px;">
               <button class="btn btn-primary btn-large" id="btn-photo" type="button">📷 TAKE PHOTO / UPLOAD</button>
               <input type="file" id="file-input" accept="image/*" style="display:none;">
               <div id="photo-preview" style="background-size:cover; background-position:center; height:150px; border-radius:8px; margin-top:10px; display:flex; align-items:center; justify-content:center; background-color:#0d1b2a; border:1px dashed rgba(0,212,255,0.4); color:#8fa3b8; font-size:12px;">No photo selected</div>
             </div>
-
             <div class="glass-card" style="padding:14px;">
               <div class="form-group">
                 <label>Incident Type</label>
                 <select id="inc-type" class="form-control">
-                  <option>Landslide</option>
-                  <option>Flood</option>
-                  <option>Road Damage</option>
-                  <option>Bridge Issue</option>
-                  <option>Tree Fall</option>
-                  <option>Other</option>
+                  <option>Landslide</option><option>Flood</option><option>Road Damage</option>
+                  <option>Bridge Issue</option><option>Tree Fall</option><option>Other</option>
                 </select>
               </div>
               <div class="form-group">
                 <label>Severity</label>
                 <select id="inc-severity" class="form-control">
-                  <option>Critical</option>
-                  <option>High</option>
-                  <option>Medium</option>
-                  <option>Low</option>
+                  <option>Critical</option><option>High</option><option>Medium</option><option>Low</option>
                 </select>
               </div>
               <div class="form-group">
@@ -132,12 +118,10 @@
             </div>
           </div>
         </div>
-
         <div class="loading-overlay" id="loading">
           <div class="spinner"></div>
           <h3 style="margin-top: 20px;">Submitting Report to Command Center...</h3>
         </div>
-
         <div class="mobile-container success-screen" id="success-screen">
           <div class="glass-card" style="padding: 40px 20px;">
             <div style="font-size:3rem;">✅</div>
@@ -149,48 +133,42 @@
       </main>
     </div>
   </div>
-
   <script src="js/components.js"></script>
+  <script src="js/field-officers.js?v=1"></script>
   <script>
   (function () {
-    var OFFICERS = [
-      { id: 'FO-042', name: 'Ravi Kumar', dist: 'Assam', lat: 26.1524, lng: 91.7510,
-        sector: 'North-Eastern Command (Assam Sector)', place: 'Guwahati Riverfront Base, Assam' },
-      { id: 'FO-015', name: 'Lakshmi Devi', dist: 'Arunachal Pradesh', lat: 27.584, lng: 91.862,
-        sector: 'North-Eastern Command (Tawang Sector)', place: 'NH-13 Tawang Pass' },
-      { id: 'FO-028', name: 'Suresh Rao', dist: 'Nagaland', lat: 25.67, lng: 94.10,
-        sector: 'North-Eastern Command (Nagaland Sector)', place: 'Kohima Pass' },
-      { id: 'FO-061', name: 'Anand Babu', dist: 'Meghalaya', lat: 25.57, lng: 91.89,
-        sector: 'North-Eastern Command (Meghalaya Sector)', place: 'Shillong Plateau' },
-      { id: 'FO-033', name: 'Priya Singh', dist: 'Sikkim', lat: 27.33, lng: 88.61,
-        sector: 'North-Eastern Command (Sikkim Sector)', place: 'Gangtok Depot' },
-      { id: 'FO-077', name: 'Mohan Rao', dist: 'Tripura', lat: 23.83, lng: 91.28,
-        sector: 'North-Eastern Command (Tripura Sector)', place: 'Agartala Corridor' },
-      { id: 'FO-089', name: 'Kavitha Reddy', dist: 'Mizoram', lat: 23.73, lng: 92.71,
-        sector: 'North-Eastern Command (Mizoram Sector)', place: 'Aizawl High Pass' },
-      { id: 'FO-055', name: 'Rajesh Varma', dist: 'Manipur', lat: 24.817, lng: 93.936,
-        sector: 'North-Eastern Command (Manipur Sector)', place: 'Imphal Valley' }
-    ];
+    function mapOfficer(o) {
+      return {
+        id: o.id, name: o.name, dist: o.dist, lat: o.lat, lng: o.lng,
+        sector: o.sector || ('North-Eastern Command (' + o.dist + ' Sector)'),
+        place: o.place || o.note || (o.dist + ' sector')
+      };
+    }
+    var OFFICERS = (window.SmartRouteFO && SmartRouteFO.list)
+      ? SmartRouteFO.list().map(mapOfficer)
+      : [{ id: 'FO-042', name: 'Ravi Kumar', dist: 'Assam', lat: 26.1524, lng: 91.7510,
+          sector: 'North-Eastern Command (Assam Sector)', place: 'Guwahati Riverfront Base, Assam' }];
 
-    var current = null;
-    var acquiredLat = null;
-    var acquiredLng = null;
-    var fieldMap = null;
+    var current = null, acquiredLat = null, acquiredLng = null, fieldMap = null;
 
     function toast(msg, type) {
       if (window.SmartRoute && SmartRoute.showToast) SmartRoute.showToast(msg, type || 'info');
     }
-
+    function refreshOfficerCache() {
+      if (window.SmartRouteFO && SmartRouteFO.list) {
+        OFFICERS = SmartRouteFO.list().map(mapOfficer);
+      }
+    }
     function filterOfficers(q) {
+      refreshOfficerCache();
       q = (q || '').toLowerCase().trim();
       if (!q) return OFFICERS.slice();
       return OFFICERS.filter(function (o) {
         return o.name.toLowerCase().indexOf(q) >= 0 ||
           o.id.toLowerCase().indexOf(q) >= 0 ||
-          o.dist.toLowerCase().indexOf(q) >= 0;
+          (o.dist || '').toLowerCase().indexOf(q) >= 0;
       });
     }
-
     function renderResults(list) {
       var box = document.getElementById('search-results');
       if (!list.length) {
@@ -214,114 +192,63 @@
         };
       });
     }
-
     function renderMapLoc(lat, lng, placeLabel, officerId) {
       var locEl = document.getElementById('location-data');
-      locEl.innerHTML =
-        'Lat: ' + lat.toFixed(4) + '° N, Lng: ' + lng.toFixed(4) + '° E · ' +
-        (placeLabel || 'NER Sector');
-
+      locEl.innerHTML = 'Lat: ' + lat.toFixed(4) + '° N, Lng: ' + lng.toFixed(4) + '° E · ' + (placeLabel || 'NER Sector');
       var mapEl = document.getElementById('mini-map');
-      if (fieldMap) {
-        try { fieldMap.remove(); } catch (e) {}
-        fieldMap = null;
-      }
+      if (fieldMap) { try { fieldMap.remove(); } catch (e) {} fieldMap = null; }
       mapEl.innerHTML = '';
-      fieldMap = L.map('mini-map', {
-        center: [lat, lng],
-        zoom: 11,
-        zoomControl: true,
-        attributionControl: false
-      });
+      fieldMap = L.map('mini-map', { center: [lat, lng], zoom: 11, zoomControl: true, attributionControl: false });
       L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20 }).addTo(fieldMap);
-      L.marker([lat, lng]).addTo(fieldMap)
-        .bindPopup('<b>Officer ' + (officerId || '') + '</b><br>' + (placeLabel || '')).openPopup();
-      setTimeout(function () {
-        if (fieldMap) fieldMap.invalidateSize();
-      }, 150);
+      L.marker([lat, lng]).addTo(fieldMap).bindPopup('<b>Officer ' + (officerId || '') + '</b><br>' + (placeLabel || '')).openPopup();
+      setTimeout(function () { if (fieldMap) fieldMap.invalidateSize(); }, 150);
     }
-
     function selectOfficer(off) {
       current = off;
       acquiredLat = off.lat;
       acquiredLng = off.lng;
-
       document.getElementById('empty-hint').style.display = 'none';
       var body = document.getElementById('report-body');
       body.classList.add('show');
       body.style.display = 'flex';
-
       document.getElementById('oi-title').textContent = off.id + ' | ' + off.name;
       document.getElementById('oi-sector').textContent = off.sector;
       document.getElementById('oi-status').textContent = 'Online';
-
-      // Clear previous road default — use officer place as hint only
       var road = document.getElementById('inc-road');
       if (!road.value) road.placeholder = 'e.g. near ' + off.place;
-
       renderMapLoc(off.lat, off.lng, off.place, off.id);
       toast('Reporting as ' + off.name + ' (' + off.id + ')', 'success');
     }
-
     document.addEventListener('DOMContentLoaded', function () {
-      if (window.SmartRoute) {
-        SmartRoute.initSharedComponents({
-          title: 'Field Report',
-          subtitle: 'NER Officer Incident Reporting'
-        });
-      }
-
+      if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Field Report', subtitle: 'NER Officer Incident Reporting' });
       document.getElementById('current-time').textContent = new Date().toLocaleTimeString();
       setInterval(function () {
         var el = document.getElementById('current-time');
         if (el) el.textContent = new Date().toLocaleTimeString();
       }, 1000);
-
-      // No default officer — form body stays hidden until search select
-
       var search = document.getElementById('officer-search');
-      search.addEventListener('input', function () {
-        renderResults(filterOfficers(search.value));
-      });
-      search.addEventListener('focus', function () {
-        renderResults(filterOfficers(search.value));
-      });
+      search.addEventListener('input', function () { renderResults(filterOfficers(search.value)); });
+      search.addEventListener('focus', function () { renderResults(filterOfficers(search.value)); });
       document.addEventListener('click', function (e) {
-        if (!e.target.closest('.search-wrap')) {
-          document.getElementById('search-results').classList.remove('show');
-        }
+        if (!e.target.closest('.search-wrap')) document.getElementById('search-results').classList.remove('show');
       });
-
       document.getElementById('btn-location').addEventListener('click', function () {
-        if (!current) {
-          toast('Select an officer first', 'warn');
-          return;
-        }
+        if (!current) { toast('Select an officer first', 'warn'); return; }
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             function (pos) {
-              acquiredLat = pos.coords.latitude;
-              acquiredLng = pos.coords.longitude;
+              acquiredLat = pos.coords.latitude; acquiredLng = pos.coords.longitude;
               renderMapLoc(acquiredLat, acquiredLng, 'Device GPS · ' + current.dist, current.id);
             },
-            function () {
-              renderMapLoc(current.lat, current.lng, current.place, current.id);
-            },
+            function () { renderMapLoc(current.lat, current.lng, current.place, current.id); },
             { timeout: 4000 }
           );
-        } else {
-          renderMapLoc(current.lat, current.lng, current.place, current.id);
-        }
+        } else renderMapLoc(current.lat, current.lng, current.place, current.id);
       });
-
       document.getElementById('btn-photo').addEventListener('click', function () {
-        if (!current) {
-          toast('Select an officer first', 'warn');
-          return;
-        }
+        if (!current) { toast('Select an officer first', 'warn'); return; }
         document.getElementById('file-input').click();
       });
-
       document.getElementById('file-input').addEventListener('change', function (e) {
         var file = e.target.files[0];
         if (file) {
@@ -334,12 +261,8 @@
           reader.readAsDataURL(file);
         }
       });
-
       document.getElementById('btn-submit').addEventListener('click', async function () {
-        if (!current) {
-          toast('Select an officer before submitting', 'warn');
-          return;
-        }
+        if (!current) { toast('Select an officer before submitting', 'warn'); return; }
         var type = document.getElementById('inc-type').value;
         var road = document.getElementById('inc-road').value.trim() || current.place;
         document.getElementById('loading').style.display = 'flex';
