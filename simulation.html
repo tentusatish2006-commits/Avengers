@@ -1,1 +1,210 @@
-SEE_FILE2
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Simulation - SmartRoute NER</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="css/design-system.css">
+<link rel="stylesheet" href="css/animations.css">
+<link rel="stylesheet" href="css/components.css">
+<style>
+body{margin:0;font-family:'Outfit',system-ui,sans-serif}
+#map{height:440px;border-radius:12px;border:1px solid rgba(0,212,255,.25)}
+.sim-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.phase-dot{width:9px;height:9px;border-radius:50%;background:#333;display:inline-block;margin:0 2px}
+.phase-dot.active{background:#00d4ff;box-shadow:0 0 8px #00d4ff}
+.log-panel{max-height:200px;overflow-y:auto;font-size:.84rem}
+.log-entry{padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.log-entry.critical{color:#ff6b6b}.log-entry.warning{color:#ffb020}.log-entry.success{color:#00ff88}.log-entry.info{color:#00d4ff}
+.eta-card{display:none;text-align:left;margin-top:12px;padding:12px 14px;background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.28);border-radius:10px}
+.overlay-risk{display:none;position:absolute;top:12px;right:12px;background:rgba(5,12,28,.94);border:1px solid #ff3b3b;border-radius:10px;padding:10px 14px;z-index:1000;min-width:140px}
+.overlay-routes{display:none;position:absolute;top:12px;left:12px;background:rgba(5,12,28,.95);border:1px solid rgba(0,212,255,.35);border-radius:10px;padding:12px 14px;z-index:1000;max-width:300px}
+.progress-track{height:4px;background:#1a2a3a;border-radius:2px;margin:10px 0 6px}
+.progress-fill{height:100%;width:0%;background:linear-gradient(90deg,#00d4ff,#00ff88);border-radius:2px;transition:width .4s}
+.glass-card{background:rgba(8,18,32,.75);border:1px solid rgba(0,212,255,.15);border-radius:12px;padding:14px}
+.sim-bottom{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.status-panel h2{margin:0 0 6px;font-size:1.2rem}
+.route-row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:.82rem;color:#e0e8f0}
+.route-swatch{width:22px;height:5px;border-radius:2px;flex-shrink:0}
+.score-badge{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:2px 7px;border-radius:4px;font-weight:600}
+.score-red{background:rgba(255,59,59,.2);color:#ff6b6b;border:1px solid rgba(255,59,59,.4)}
+.score-orange{background:rgba(255,149,0,.2);color:#ffb020;border:1px solid rgba(255,149,0,.4)}
+.score-green{background:rgba(0,255,136,.15);color:#00ff88;border:1px solid rgba(0,255,136,.4)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:.78rem;color:#8fa3b8}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:16px;height:4px;border-radius:2px;display:inline-block}
+@media(max-width:800px){.sim-bottom{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="app-root">
+<div id="sidebar-slot"></div>
+<div id="main-content">
+<div id="topbar-slot"></div>
+<main style="padding:18px">
+<div class="glass-card" style="margin-bottom:14px">
+<h1 style="margin:0 0 6px;font-size:1.35rem;background:linear-gradient(90deg,#00d4ff,#00ff88);-webkit-background-clip:text;background-clip:text;color:transparent">Live Crisis Simulation</h1>
+<p style="margin:0 0 10px;color:#8fa3b8;font-size:.88rem"><b>SOURCE:</b> Guwahati Central Logistics Hub &nbsp;→&nbsp; <b>DESTINATION:</b> Shillong Civil Hospital &nbsp;·&nbsp; 3 routes (red / orange / green)</p>
+<div class="sim-controls">
+<button id="btn-start" class="btn-primary" onclick="startSim()">START</button>
+<button id="btn-pause" class="btn-secondary" onclick="pauseSim()">PAUSE</button>
+<button id="btn-reset" class="btn-secondary" onclick="resetSim()">RESET</button>
+<label style="color:#8fa3b8;font-size:.84rem">Speed <input type="range" id="speed-range" min="0.5" max="3" step="0.5" value="1" oninput="speed=parseFloat(this.value)"></label>
+</div>
+<div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+<div id="phase-dots"></div>
+<div class="legend">
+<span><i style="background:#ff3b3b"></i> High risk</span>
+<span><i style="background:#ff9500"></i> Medium risk</span>
+<span><i style="background:#00ff88"></i> Safest route</span>
+</div>
+</div>
+<div style="position:relative">
+<div id="map"></div>
+<div id="route-od-bar" style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:1100;background:rgba(5,12,28,.94);border:1px solid rgba(0,212,255,.4);border-radius:12px;padding:10px 18px;display:flex;align-items:center;gap:12px;box-shadow:0 6px 24px rgba(0,0,0,.5);max-width:92%">
+<div style="text-align:center"><div style="font-size:9px;color:#00d4ff;font-weight:700;letter-spacing:.08em">SOURCE</div><div style="font-size:13px;font-weight:700;color:#fff">Guwahati Central Logistics Hub</div></div>
+<div style="font-size:18px;color:#8fa3b8">→</div>
+<div style="text-align:center"><div style="font-size:9px;color:#00ff88;font-weight:700;letter-spacing:.08em">DESTINATION</div><div style="font-size:13px;font-weight:700;color:#fff">Shillong Civil Hospital</div></div>
+</div>
+<div class="overlay-risk" id="overlay-risk"><div style="font-size:.75rem;color:#ff6b6b;font-weight:600;margin-bottom:4px">FLOOD RISK</div><div style="font-size:1.7rem;font-weight:700" id="risk-val">40%</div></div>
+<div class="overlay-routes" id="overlay-routes"><div style="font-size:.72rem;color:#00d4ff;font-weight:700;letter-spacing:.06em;margin-bottom:8px">ALTERNATE ROUTES · RISK SCORES</div><div id="route-list"></div></div>
+</div>
+<div class="sim-bottom">
+<div class="glass-card log-panel" id="log-container"><div class="log-entry" style="opacity:.5">Ready. SOURCE Guwahati → DESTINATION Shillong.</div></div>
+<div class="glass-card status-panel">
+<h2 id="phase-title">Ready for Simulation</h2>
+<p id="phase-desc" style="color:#aaa;margin:0;font-size:.9rem">Press START. Map shows Guwahati → Shillong with 3 real-road routes.</p>
+<div class="eta-card" id="eta-panel"><div style="font-weight:600;color:#00ff88;margin-bottom:6px">Selected safest route</div><div id="eta-detail" style="font-size:.88rem;color:#c8d4e0"></div></div>
+</div>
+</div>
+</main></div></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/components.js"></script>
+<script src="js/map-engine.js"></script>
+<script>
+let map,simInterval,currentPhase=-1,speed=1,isPlaying=false;
+let floodLayer,vehicleMarker,incidentMarker,routeLayers=[];
+async function osrmRoute(waypoints){
+ try{var coords=waypoints.map(function(p){return p[1]+','+p[0];}).join(';');
+ var res=await fetch('https://router.project-osrm.org/route/v1/driving/'+coords+'?overview=full&geometries=geojson');
+ var json=await res.json();
+ if(json.routes&&json.routes[0]&&json.routes[0].geometry)return json.routes[0].geometry.coordinates.map(function(c){return [c[1],c[0]];});
+ }catch(e){}return waypoints;
+}
+const SRC=[26.1445,91.7362];
+const DST=[25.5788,91.8933];
+let sourceMarker=null,destMarker=null;
+function placeSourceDest(){
+ if(sourceMarker)try{map.removeLayer(sourceMarker);}catch(e){}
+ if(destMarker)try{map.removeLayer(destMarker);}catch(e){}
+ var srcIcon=L.divIcon({className:'',html:'<div style="background:#00d4ff;color:#031018;font-weight:800;font-size:12px;padding:8px 12px;border-radius:10px;border:2px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.55);white-space:nowrap;text-align:center;line-height:1.25"><div style="font-size:9px;letter-spacing:.08em;opacity:.85">SOURCE</div><div>Guwahati Central Logistics Hub</div></div>',iconAnchor:[90,28]});
+ var dstIcon=L.divIcon({className:'',html:'<div style="background:#00ff88;color:#031018;font-weight:800;font-size:12px;padding:8px 12px;border-radius:10px;border:2px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.55);white-space:nowrap;text-align:center;line-height:1.25"><div style="font-size:9px;letter-spacing:.08em;opacity:.85">DESTINATION</div><div>Shillong Civil Hospital</div></div>',iconAnchor:[85,28]});
+ sourceMarker=L.marker(SRC,{icon:srcIcon}).addTo(map).bindPopup('<b>SOURCE</b><br>Guwahati Central Logistics Hub');
+ destMarker=L.marker(DST,{icon:dstIcon}).addTo(map).bindPopup('<b>DESTINATION</b><br>Shillong Civil Hospital');
+}
+function pickRouteSet(){
+ var jitter=function(base,spread){return Math.max(5,Math.min(98,Math.round(base+(Math.random()*2-1)*spread)));};
+ return [
+ {id:'R1',name:'Primary NH-6 / GS Road',color:'#ff3b3b',score:jitter(86,6),label:'High risk',className:'score-red',waypoints:[SRC,[26.05,91.75],[25.90,91.80],[25.75,91.85],DST],weight:6,dash:null},
+ {id:'R2',name:'NH-37 via Nagaon-Jorabat',color:'#ff9500',score:jitter(48,8),label:'Medium risk',className:'score-orange',waypoints:[SRC,[26.20,91.90],[26.00,92.00],[25.80,91.95],[25.65,91.90],DST],weight:5,dash:'8,6'},
+ {id:'R3',name:'Elevated Shillong Bypass',color:'#00ff88',score:jitter(16,5),label:'Safest',className:'score-green',waypoints:[SRC,[26.10,91.82],[25.95,91.92],[25.78,91.98],[25.65,91.92],DST],weight:6,dash:'10,8'}
+ ];
+}
+let currentRoutes=[];
+function clearRoutes(){routeLayers.forEach(function(ly){try{map.removeLayer(ly);}catch(e){}});routeLayers=[];}
+function renderRoutePanel(routes){
+ var box=document.getElementById('route-list');if(!box)return;
+ var sorted=routes.slice().sort(function(a,b){return a.score-b.score;});
+ box.innerHTML=sorted.map(function(r){return '<div class="route-row"><span class="route-swatch" style="background:'+r.color+'"></span><span style="flex:1">'+r.name+'</span><span class="score-badge '+r.className+'">'+r.score+'</span></div>';}).join('');
+ document.getElementById('overlay-routes').style.display='block';
+}
+async function drawAllRoutes(routes){
+ clearRoutes();placeSourceDest();
+ var bounds=L.latLngBounds([SRC,DST]);
+ for(var i=0;i<routes.length;i++){
+  var r=routes[i];var pts=await osrmRoute(r.waypoints);
+  if(pts&&pts.length){pts[0]=SRC.slice();pts[pts.length-1]=DST.slice();}
+  r._pts=pts;
+  var ly=L.polyline(pts,{color:r.color,weight:r.weight,opacity:.92,dashArray:r.dash,lineCap:'round'}).addTo(map);
+  ly.bindPopup('<b style="color:'+r.color+'">'+r.name+'</b><br>SOURCE: Guwahati Central Logistics Hub → DESTINATION: Shillong Civil Hospital<br>Risk: <b>'+r.score+'</b>');
+  routeLayers.push(ly);try{bounds.extend(ly.getBounds());}catch(e){}
+ }
+ try{map.fitBounds(bounds,{padding:[50,50]});}catch(e){}
+ renderRoutePanel(routes);
+ var safest=routes.slice().sort(function(a,b){return a.score-b.score;})[0];
+ window._safestPts=safest&&safest._pts?safest._pts:null;window._safestMeta=safest;
+}
+const phases=[
+{t:'PROBLEM: Heavy Rainfall',c:'warning',d:'Extreme precipitation across Brahmaputra / Guwahati sector.',fly:[26.15,91.75],z:8},
+{t:'AI Terrain Analysis',c:'info',d:'Analyzing rainfall and corridor integrity.',fly:[26.15,91.75],z:9},
+{t:'PROBLEM: Flood Risk Rising',c:'warning',d:'River gauges rising. Primary corridor at risk.',action:'risk_up'},
+{t:'PROBLEM: Landslide',c:'critical',d:'Landslide NH-13. Primary corridor degrading.',action:'show_incident',fly:[27.58,91.86],z:10},
+{t:'PROBLEM: Flood Zone',c:'critical',d:'Inundation near Guwahati. Primary route submerged.',action:'show_flood'},
+{t:'PROBLEM: Convoy At Risk',c:'warning',d:'MED-Convoy-NE1: Guwahati Hub → Shillong Hospital at risk.',action:'show_vehicle'},
+{t:'Computing Multiple Routes',c:'info',d:'AI evaluates 3 corridors Guwahati → Shillong.',action:'compute_routes'},
+{t:'Multiple Routes on Map',c:'success',d:'Red / Orange / Green routes from SOURCE to DESTINATION.',action:'show_routes'},
+{t:'Safest Route Selected',c:'success',d:'Lowest risk score chosen for convoy.',action:'select_safest'},
+{t:'Convoy Rerouted',c:'success',d:'Convoy follows green path Guwahati → Shillong.',action:'move_vehicle'},
+{t:'ETA Updated',c:'success',d:'Hospital schedule updated via alternate.',action:'show_eta'},
+{t:'Response Teams',c:'success',d:'NDRF and BRO assigned.'},
+{t:'Incident Managed',c:'success',d:'Convoy on safest route SOURCE → DESTINATION.',action:'resolve'}
+];
+document.addEventListener('DOMContentLoaded',function(){
+ if(window.SmartRoute)SmartRoute.initSharedComponents({title:'Live Simulation',subtitle:'Guwahati → Shillong'});
+ if(window.MapEngine&&MapEngine.initMap)map=MapEngine.initMap('map',{center:[25.90,91.80],zoom:8,zoomControl:true});
+ else{map=L.map('map').setView([25.90,91.80],8);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'OSM'}).addTo(map);}
+ var dots=document.getElementById('phase-dots');
+ if(dots)for(var i=0;i<phases.length;i++){var d=document.createElement('span');d.className='phase-dot';dots.appendChild(d);}
+ placeSourceDest();
+});
+function startSim(){if(currentPhase>=phases.length-1)return;isPlaying=true;if(window.SmartRoute)SmartRoute.showToast('Simulation started','info');nextPhase();simInterval=setInterval(nextPhase,3600/speed);}
+function pauseSim(){isPlaying=false;clearInterval(simInterval);}
+function resetSim(){
+ pauseSim();currentPhase=-1;
+ document.getElementById('log-container').innerHTML='<div class="log-entry" style="opacity:.5">Ready. SOURCE Guwahati → DESTINATION Shillong.</div>';
+ document.getElementById('progress-fill').style.width='0%';
+ document.querySelectorAll('.phase-dot').forEach(function(d){d.classList.remove('active');});
+ document.getElementById('phase-title').innerText='Ready for Simulation';
+ document.getElementById('phase-desc').innerText='Press START. Map shows Guwahati → Shillong with 3 real-road routes.';
+ document.getElementById('eta-panel').style.display='none';
+ document.getElementById('overlay-risk').style.display='none';
+ document.getElementById('overlay-routes').style.display='none';
+ clearRoutes();
+ if(floodLayer)try{map.removeLayer(floodLayer);}catch(e){}
+ if(incidentMarker)try{map.removeLayer(incidentMarker);}catch(e){}
+ if(vehicleMarker)try{map.removeLayer(vehicleMarker);}catch(e){}
+ floodLayer=incidentMarker=vehicleMarker=null;
+ if(sourceMarker)try{map.removeLayer(sourceMarker);}catch(e){}
+ if(destMarker)try{map.removeLayer(destMarker);}catch(e){}
+ sourceMarker=destMarker=null;currentRoutes=[];
+ map.setView([25.90,91.80],8);placeSourceDest();
+}
+function nextPhase(){
+ currentPhase++;if(currentPhase>=phases.length){pauseSim();return;}
+ var p=phases[currentPhase];
+ document.getElementById('phase-title').innerText=p.t;
+ document.getElementById('phase-desc').innerText=p.d;
+ var log=document.getElementById('log-container');
+ var entry=document.createElement('div');entry.className='log-entry '+(p.c||'');
+ entry.innerHTML='<strong>Phase '+(currentPhase+1)+':</strong> '+p.d;log.appendChild(entry);log.scrollTop=log.scrollHeight;
+ document.getElementById('progress-fill').style.width=((currentPhase/(phases.length-1))*100)+'%';
+ document.querySelectorAll('.phase-dot').forEach(function(d,i){if(i<=currentPhase)d.classList.add('active');});
+ if(p.fly)map.flyTo(p.fly,p.z||9,{duration:1.6/speed});
+ if(p.action==='risk_up'){document.getElementById('overlay-risk').style.display='block';var r=38;var rInt=setInterval(function(){r+=4;document.getElementById('risk-val').innerText=r+'%';if(r>=84)clearInterval(rInt);},45);}
+ if(p.action==='show_incident'){var ic=L.divIcon({className:'',html:'<div style="width:30px;height:30px;background:#ff3b3b;border-radius:50%;box-shadow:0 0 20px #ff3b3b;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;border:2px solid #fff">!</div>'});incidentMarker=L.marker([27.58,91.86],{icon:ic}).addTo(map);}
+ if(p.action==='show_flood'){if(floodLayer)try{map.removeLayer(floodLayer);}catch(e){}floodLayer=L.polygon([[26.18,91.70],[26.24,91.82],[26.14,91.85],[26.11,91.72]],{color:'#00d4ff',fillColor:'#00d4ff',fillOpacity:.35,weight:2,dashArray:'5,5'}).addTo(map);map.flyTo([26.16,91.78],11,{duration:1.4/speed});}
+ if(p.action==='show_vehicle'){var vc=L.divIcon({className:'',html:'<div style="background:rgba(0,212,255,.25);border:2px solid #00d4ff;border-radius:8px;padding:3px 5px;font-size:14px;font-weight:700">TRUCK</div>'});vehicleMarker=L.marker(SRC,{icon:vc}).addTo(map).bindPopup('<b>MED-Convoy-NE1</b><br>SOURCE → DESTINATION');
+ }
+ if(p.action==='compute_routes'){placeSourceDest();currentRoutes=pickRouteSet();logEntryInfo('SOURCE Guwahati → DESTINATION Shillong · 3 corridors');try{map.fitBounds(L.latLngBounds([SRC,DST]),{padding:[60,60]});}catch(e){}}
+ if(p.action==='show_routes'){if(!currentRoutes.length)currentRoutes=pickRouteSet();drawAllRoutes(currentRoutes);}
+ if(p.action==='select_safest'){if(!currentRoutes.length)currentRoutes=pickRouteSet();var safest=currentRoutes.slice().sort(function(a,b){return a.score-b.score;})[0];logEntryInfo('Selected: '+safest.name+' · score '+safest.score);}
+ if(p.action==='move_vehicle'){(async function(){var pts=window._safestPts;if(!pts||!pts.length){var set=currentRoutes.length?currentRoutes:pickRouteSet();var s=set.slice().sort(function(a,b){return a.score-b.score;})[0];pts=await osrmRoute(s.waypoints);window._safestPts=pts;window._safestMeta=s;}if(!vehicleMarker){var vc=L.divIcon({className:'',html:'<div style="background:rgba(0,212,255,.25);border:2px solid #00d4ff;border-radius:8px;padding:3px 5px;font-size:14px;font-weight:700">TRUCK</div>'});vehicleMarker=L.marker(pts[0],{icon:vc}).addTo(map);}var i=0;var step=Math.max(1,Math.floor(pts.length/40));var iv=setInterval(function(){i+=step;if(i>=pts.length){i=pts.length-1;clearInterval(iv);}vehicleMarker.setLatLng(pts[i]);},65/speed);})();}
+ if(p.action==='show_eta'){var meta=window._safestMeta;var detail=document.getElementById('eta-detail');if(meta){detail.innerHTML='<div><b style="color:'+meta.color+'">'+meta.name+'</b></div><div style="margin-top:4px">Guwahati Central Logistics Hub → Shillong Civil Hospital</div><div style="margin-top:4px">Risk score: <span class="score-badge '+meta.className+'">'+meta.score+'</span></div><div style="margin-top:6px">ETA <span style="text-decoration:line-through;color:#ff6b6b">14:30</span> → <b style="color:#00ff88">16:05</b></div>';}document.getElementById('eta-panel').style.display='block';}
+ if(p.action==='resolve'){if(floodLayer)try{map.removeLayer(floodLayer);}catch(e){}if(incidentMarker)try{map.removeLayer(incidentMarker);}catch(e){}document.getElementById('overlay-risk').style.display='none';}
+}
+function logEntryInfo(msg){var log=document.getElementById('log-container');var entry=document.createElement('div');entry.className='log-entry info';entry.textContent=msg;log.appendChild(entry);log.scrollTop=log.scrollHeight;}
+</script>
+</body>
+</html>
