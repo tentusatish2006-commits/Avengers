@@ -39,6 +39,7 @@
         .metric-item .label { font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 5px; }
         .metric-item .value { font-size: 1.1rem; font-weight: 600; color: var(--text-light); }
         .metric-item.danger .value { color: var(--status-danger); }
+        .action-row button, .action-row a { width: 100%; margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -94,6 +95,10 @@
                         </select>
                     </div>
                     <button class="btn-primary" style="margin-top: auto;" onclick="analyzeRoute()">ANALYZE ROUTE</button>
+                    <div class="action-row" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
+                        <button type="button" class="btn-primary" id="btn-view-alt-2" onclick="window.srViewAlternateRoutes && srViewAlternateRoutes()">VIEW ALTERNATE ROUTES</button>
+                        <button type="button" class="btn-secondary" id="btn-gen-report-2" onclick="window.srGenerateRouteReport && srGenerateRouteReport()">GENERATE REPORT</button>
+                    </div>
                 </div>
                 <div class="map-container">
                     <div id="map"></div>
@@ -122,8 +127,8 @@
                             <div class="metric-item danger" id="metric-disrupt"><span class="label">Disruption Prob.</span><span class="value" id="val-disrupt">HIGH</span></div>
                             <div class="metric-item" id="metric-departure"><span class="label">Rec. Departure</span><span class="value" id="val-departure">06:00 AM</span></div>
                         </div>
-                        <a href="alternate-routes.html" class="btn-primary" id="btn-view-alt" style="text-align: center; text-decoration: none;">VIEW ALTERNATE ROUTES</a>
-                        <button type="button" class="btn-secondary" id="btn-gen-report">GENERATE REPORT</button>
+                        <a href="javascript:void(0)" class="btn-primary" id="btn-view-alt" onclick="window.srViewAlternateRoutes && srViewAlternateRoutes()" style="text-align: center; text-decoration: none; cursor:pointer;">VIEW ALTERNATE ROUTES</a>
+                        <button type="button" class="btn-secondary" id="btn-gen-report" onclick="window.srGenerateRouteReport && srGenerateRouteReport()">GENERATE REPORT</button>
                     </div>
                 </div>
             </main>
@@ -134,7 +139,7 @@
     <script src="js/components.js"></script>
     <script src="js/map-engine.js"></script>
     <script src="js/route-prediction-fix.js"></script>
-    <script src="js/route-alt-buttons.js?v=2"></script>
+    <script src="js/route-alt-buttons.js?v=3"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'AI Route Prediction', subtitle: 'Machine Learning Route Risk Analysis — NER' });
