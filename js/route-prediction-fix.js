@@ -1,4 +1,4 @@
-/* Unique OSRM routes per source/destination for AI Route Prediction */
+/* AI Route Prediction — road geometry via backend OpenRouteService proxy */
 (function () {
   var CITY_COORDS = {
     guwahati: [26.1445, 91.7362], shillong: [25.5788, 91.8933], imphal: [24.817, 93.9368],
@@ -42,22 +42,66 @@
     };
   }
 
-  async function fetchOsrm(from, to) {
-    var url = 'https://router.project-osrm.org/route/v1/driving/' +
-      from[1] + ',' + from[0] + ';' + to[1] + ',' + to[0] + '?overview=full&geometries=geojson';
+  async function fetchRoadGeometry(from, to, withAlts) {
     try {
-      var res = await fetch(url);
-      var json = await res.json();
-      if (json && json.routes && json.routes[0] && json.routes[0].geometry) {
-        return json.routes[0].geometry.coordinates.map(function (c) { return [c[1], c[0]]; });
+      if (window.SmartRouteAPI && SmartRouteAPI.getRouteDirections) {
+        var res = await SmartRouteAPI.getRouteDirections(from, to, { alternatives: !!withAlts, alternative_count: 2 });
+        if (res && res.status === 'success' && res.primary && res.primary.coordinates && res.primary.coordinates.length > 1) {
+          return {
+            coordinates: res.primary.coordinates,
+            distance_km: res.primary.distance_km,
+            duration_min: res.primary.duration_min,
+            alternates: (res.routes || []).slice(1),
+            provider: 'openrouteservice'
+          };
+        }
+      } else {
+        var base = (window.SmartRouteAPI && SmartRouteAPI.baseUrl) || 'http://127.0.0.1:5000/api';
+        var r = await fetch(base + '/routing/directions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            start: { lat: from[0], lng: from[1] },
+            end: { lat: to[0], lng: to[1] },
+            alternatives: !!withAlts
+          })
+        });
+        var res2 = await r.json();
+        if (res2 && res2.status === 'success' && res2.primary && res2.primary.coordinates && res2.primary.coordinates.length > 1) {
+          return {
+            coordinates: res2.primary.coordinates,
+            distance_km: res2.primary.distance_km,
+            duration_min: res2.primary.duration_min,
+            alternates: (res2.routes || []).slice(1),
+            provider: 'openrouteservice'
+          };
+        }
       }
-    } catch (e) {}
+    } catch (e) { console.warn('[routing] backend unavailable', e); }
+
+    try {
+      var url = 'https://router.project-osrm.org/route/v1/driving/' +
+        from[1] + ',' + from[0] + ';' + to[1] + ',' + to[0] + '?overview=full&geometries=geojson';
+      var res3 = await fetch(url);
+      var json = await res3.json();
+      if (json && json.routes && json.routes[0] && json.routes[0].geometry) {
+        var coords = json.routes[0].geometry.coordinates.map(function (c) { return [c[1], c[0]]; });
+        return {
+          coordinates: coords,
+          distance_km: json.routes[0].distance ? +(json.routes[0].distance / 1000).toFixed(2) : null,
+          duration_min: json.routes[0].duration ? +(json.routes[0].duration / 60).toFixed(1) : null,
+          alternates: [],
+          provider: 'osrm-fallback'
+        };
+      }
+    } catch (e2) {}
+
     var pts = [];
     for (var s = 0; s <= 40; s++) {
       var t = s / 40, offset = Math.sin(t * Math.PI) * 0.04;
       pts.push([from[0] + (to[0] - from[0]) * t + offset * 0.3, from[1] + (to[1] - from[1]) * t + offset]);
     }
-    return pts;
+    return { coordinates: pts, distance_km: null, duration_min: null, alternates: [], provider: 'offline' };
   }
 
   function clearAnalysis() {
@@ -75,26 +119,47 @@
     var from = CITY_COORDS[srcKey] || CITY_COORDS.guwahati;
     var to = CITY_COORDS[dstKey] || CITY_COORDS.shillong;
     var color = risk > 70 ? '#ff3b3b' : (risk > 45 ? '#ff9500' : '#00ff88');
-    var coords = await fetchOsrm(from, to);
+    var geom = await fetchRoadGeometry(from, to, true);
+    var coords = geom.coordinates || [];
+    var distLabel = geom.distance_km != null ? (geom.distance_km + ' km') : '';
+    var durLabel = geom.duration_min != null ? (geom.duration_min + ' min') : '';
+    var meta = [distLabel, durLabel, 'Risk: ' + risk + '%'].filter(Boolean).join(' · ');
     var line = L.polyline(coords, { color: color, weight: 6, opacity: 0.92, lineCap: 'round', lineJoin: 'round' }).addTo(map);
-    line.bindPopup('<b>' + sourceLabel + ' to ' + destLabel + '</b><br>Risk: ' + risk + '%');
+    line.bindPopup('<b>' + sourceLabel + ' → ' + destLabel + '</b><br>' + meta + '<br><small>via ' + (geom.provider || 'routing') + '</small>');
     analysisLayers.push(line);
-    var mid = coords[Math.floor(coords.length / 2)] || from;
-    var via = [mid[0] + 0.12, mid[1] - 0.1];
-    var a1 = await fetchOsrm(from, via), a2 = await fetchOsrm(via, to);
-    var altLine = L.polyline(a1.concat(a2.slice(1)), { color: '#ff9500', weight: 4, opacity: 0.75, dashArray: '8 10' }).addTo(map);
-    analysisLayers.push(altLine);
+    var alts = geom.alternates || [];
+    if (alts.length) {
+      alts.forEach(function (alt, i) {
+        if (!alt.coordinates || alt.coordinates.length < 2) return;
+        var altLine = L.polyline(alt.coordinates, {
+          color: i === 0 ? '#ff9500' : '#ff3b3b', weight: 4, opacity: 0.75, dashArray: '8 10'
+        }).addTo(map);
+        var am = [];
+        if (alt.distance_km != null) am.push(alt.distance_km + ' km');
+        if (alt.duration_min != null) am.push(alt.duration_min + ' min');
+        altLine.bindPopup('<b>Alternate ' + (i + 1) + '</b><br>' + am.join(' · '));
+        analysisLayers.push(altLine);
+      });
+    } else {
+      var mid = coords[Math.floor(coords.length / 2)] || from;
+      var via = [mid[0] + 0.12, mid[1] - 0.1];
+      var g2 = await fetchRoadGeometry(from, via, false);
+      var g3 = await fetchRoadGeometry(via, to, false);
+      var a1 = g2.coordinates || [], a2 = g3.coordinates || [];
+      if (a1.length && a2.length) {
+        var altLine = L.polyline(a1.concat(a2.slice(1)), { color: '#ff9500', weight: 4, opacity: 0.75, dashArray: '8 10' }).addTo(map);
+        analysisLayers.push(altLine);
+      }
+    }
     analysisMarkers.push(
       L.circleMarker(from, { radius: 8, color: '#fff', fillColor: '#00d4ff', fillOpacity: 1, weight: 2 }).addTo(map).bindPopup('Source: ' + sourceLabel),
       L.circleMarker(to, { radius: 8, color: '#fff', fillColor: '#ff3b3b', fillOpacity: 1, weight: 2 }).addTo(map).bindPopup('Destination: ' + destLabel)
     );
-    try { map.fitBounds(L.latLngBounds(coords), { padding: [40, 40] }); } catch (e) { map.setView(from, 8); }
+    try { map.fitBounds(L.latLngBounds(coords), { padding: [40, 40] }); } catch (e) {}
   }
 
-  function colorFor(value) {
-    if (value >= 70) return 'var(--status-danger)';
-    if (value >= 40) return 'var(--status-warn)';
-    return 'var(--status-safe)';
+  function colorFor(v) {
+    return v > 70 ? '#ff3b3b' : (v > 45 ? '#ff9500' : '#00ff88');
   }
   function setBar(id, value) {
     var bar = document.getElementById('bar-' + id);
@@ -132,7 +197,7 @@
       }
     } catch (e) {}
 
-    await new Promise(function (r) { setTimeout(r, 500); });
+    await new Promise(function (r) { setTimeout(r, 400); });
     if (scanner) scanner.classList.remove('active');
 
     if (!data || data.status !== 'success' || data.risk_score == null) {
@@ -148,7 +213,6 @@
     if (gaugeSub) gaugeSub.textContent = '% RISK - ' + sev;
     var gaugeColor = score < 35 ? 'var(--status-safe)' : (score < 55 ? 'var(--status-warn)' : 'var(--status-danger)');
     if (gauge) gauge.style.background = 'conic-gradient(' + gaugeColor + ' ' + score + '%, rgba(255,255,255,0.1) 0)';
-    if (gaugeVal) gaugeVal.style.color = gaugeColor;
 
     var b = data.breakdown || {};
     setBar('road', Math.round(b.road_condition || 0));
@@ -170,97 +234,4 @@
     await drawPair(sourceKey, destKey, score, source, destination);
     if (window.SmartRoute) SmartRoute.showToast('Route: ' + source + ' to ' + destination + ' (' + sev + ')', 'success');
   };
-})();
-
-(function () {
-  function generateRouteReport() {
-    var srcEl = document.getElementById('source');
-    var dstEl = document.getElementById('dest');
-    var source = srcEl ? srcEl.options[srcEl.selectedIndex].text : 'Guwahati';
-    var destination = dstEl ? dstEl.options[dstEl.selectedIndex].text : 'Shillong';
-    var vehicle = (document.getElementById('vehicle-type') || {}).value || 'Medicine Truck';
-    var priority = (document.getElementById('priority') || {}).value || 'Critical';
-    var risk = (document.getElementById('risk-gauge-val') || {}).textContent || '-';
-    var sev = (document.getElementById('risk-gauge-sub') || {}).textContent || '';
-    var delay = (document.getElementById('val-delay') || {}).textContent || '-';
-    var access = (document.getElementById('val-access') || {}).textContent || '-';
-    var disrupt = (document.getElementById('val-disrupt') || {}).textContent || '-';
-    var depart = (document.getElementById('val-departure') || {}).textContent || '-';
-    var road = (document.getElementById('val-road') || {}).textContent || '-';
-    var weather = (document.getElementById('val-weather') || {}).textContent || '-';
-    var traffic = (document.getElementById('val-traffic') || {}).textContent || '-';
-    var flood = (document.getElementById('val-flood') || {}).textContent || '-';
-    var landslide = (document.getElementById('val-landslide') || {}).textContent || '-';
-    var lines = [
-      'SmartRoute NER - AI Route Risk Report',
-      '=====================================',
-      'Generated: ' + new Date().toLocaleString(),
-      '',
-      'Corridor: ' + source + ' to ' + destination,
-      'Vehicle: ' + vehicle,
-      'Priority: ' + priority,
-      '',
-      'Overall Risk: ' + risk + '%  ' + sev,
-      'Est. Delay: ' + delay,
-      'Road Accessibility: ' + access,
-      'Disruption Probability: ' + disrupt,
-      'Recommended Departure: ' + depart,
-      '',
-      'Risk Breakdown',
-      '--------------',
-      'Road Condition: ' + road,
-      'Weather Risk: ' + weather,
-      'Traffic Load: ' + traffic,
-      'Flood Risk: ' + flood,
-      'Landslide Risk: ' + landslide,
-      '',
-      'Recommendation: Prefer green/safe corridors; use orange alternate when primary is disrupted.',
-      'Region: North Eastern Region (NER)'
-    ];
-    var blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = 'NER-Route-Report.txt';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 400);
-    if (window.SmartRoute) SmartRoute.showToast('Route report downloaded', 'success');
-    try {
-      var list = JSON.parse(localStorage.getItem('sr_route_reports') || '[]');
-      list.unshift({ id: 'RR-' + Date.now(), source: source, destination: destination, risk: risk, at: new Date().toISOString() });
-      localStorage.setItem('sr_route_reports', JSON.stringify(list.slice(0, 50)));
-    } catch (e) {}
-  }
-
-  function wireButtons() {
-    document.querySelectorAll('a[href="alternate-routes.html"], a[href*="alternate-routes"]').forEach(function (a) {
-      if (a._srAltWired) return;
-      a._srAltWired = true;
-      a.addEventListener('click', function (e) {
-        e.preventDefault();
-        var src = document.getElementById('source');
-        var dst = document.getElementById('dest');
-        var q = '';
-        if (src && dst) q = '?from=' + encodeURIComponent(src.value) + '&to=' + encodeURIComponent(dst.value);
-        window.location.href = 'alternate-routes.html' + q;
-      });
-    });
-    var btn = document.getElementById('btn-gen-report');
-    if (btn && !btn._srWired) {
-      btn._srWired = true;
-      btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        generateRouteReport();
-      });
-    }
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', wireButtons);
-  } else {
-    wireButtons();
-  }
-  setTimeout(wireButtons, 1000);
 })();
