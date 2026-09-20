@@ -9,7 +9,6 @@ import sys
 import time
 from pathlib import Path
 
-# Ensure root directory is on Python path
 ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
@@ -31,6 +30,7 @@ try:
     from .routes.ai_bp import ai_bp
     from .routes.simulation_bp import simulation_bp
     from .routes.users_bp import users_bp
+    from .routes.routing_bp import routing_bp
 except ImportError:
     from backend.database import init_db, query_db
     from backend.seed_data import seed_database
@@ -45,22 +45,18 @@ except ImportError:
     from backend.routes.ai_bp import ai_bp
     from backend.routes.simulation_bp import simulation_bp
     from backend.routes.users_bp import users_bp
+    from backend.routes.routing_bp import routing_bp
 
 START_TIME = time.time()
 FRONTEND_DIR = Path(__file__).resolve().parent.parent
 
 def create_app():
-    """Application factory for SmartRoute backend."""
     app = Flask(__name__, static_folder=str(FRONTEND_DIR), static_url_path="")
-    
-    # Enable CORS for all routes
     CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-    # Auto-initialize and seed DB
     init_db()
     seed_database()
 
-    # Register Blueprints with /api prefix
     app.register_blueprint(roads_bp, url_prefix="/api")
     app.register_blueprint(incidents_bp, url_prefix="/api")
     app.register_blueprint(vehicles_bp, url_prefix="/api")
@@ -72,13 +68,15 @@ def create_app():
     app.register_blueprint(ai_bp, url_prefix="/api")
     app.register_blueprint(simulation_bp, url_prefix="/api")
     app.register_blueprint(users_bp, url_prefix="/api")
+    app.register_blueprint(routing_bp, url_prefix="/api")
 
     @app.route("/api/health")
     def health():
         return jsonify({
             "status": "healthy",
             "uptime_sec": int(time.time() - START_TIME),
-            "service": "SmartRoute API"
+            "service": "SmartRoute API",
+            "ors_configured": bool(os.environ.get("OPENROUTESERVICE_API_KEY") or os.environ.get("ORS_API_KEY")),
         })
 
     @app.route("/")
