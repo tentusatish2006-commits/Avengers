@@ -42,28 +42,25 @@
       <main style="padding: 18px;">
         <div class="glass-card" style="margin-bottom: 14px;">
           <h1 style="margin:0 0 6px;font-size:1.35rem;background:linear-gradient(90deg,#00d4ff,#00ff88);-webkit-background-clip:text;background-clip:text;color:transparent;">AI Photo Analysis</h1>
-          <p style="margin:0;color:#8fa3b8;font-size:0.88rem;">Upload field photo · Classify landslide / pothole / flood · Map shows NER incident context</p>
+          <p style="margin:0;color:#8fa3b8;font-size:0.88rem;">Upload field photo · Classify landslide / pothole / flood · Map shows NER location</p>
         </div>
         <div class="photo-layout">
           <div class="glass-card" style="position:relative;overflow:hidden;">
             <div id="analysis-map"></div>
-            <div style="position:absolute;top:10px;left:10px;z-index:600;background:rgba(3,8,16,0.85);border:1px solid rgba(0,212,255,0.4);border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700;letter-spacing:0.08em;color:#00d4ff;">LIVE INCIDENT MAP — NE INDIA</div>
             <div id="map-photo-overlay">
               <img id="map-photo-img" alt="">
               <div id="map-photo-label" style="margin-top:4px;font-weight:700;color:#00d4ff;"></div>
             </div>
           </div>
           <div class="glass-card">
-            <input type="file" id="file-input" accept="image/*" style="display:none;">
             <div class="upload-zone" id="upload-zone">
-              <div id="upload-hint">
-                <div style="font-size:32px;margin-bottom:8px;">📷</div>
-                <strong style="color:#00d4ff;">Click to upload field damage photo</strong>
-                <div style="font-size:12px;color:#8fa3b8;margin-top:4px;">Landslide · Pothole · Flood</div>
-              </div>
-              <img id="preview-img" alt="Preview">
+              <div style="font-size:2rem;margin-bottom:8px;">📷</div>
+              <div style="font-weight:700;color:#e8f4ff;">Drop field photo or click to upload</div>
+              <div style="font-size:0.8rem;color:#8fa3b8;margin-top:6px;">Landslide · Pothole · Flood</div>
+              <input type="file" id="file-input" accept="image/*" style="display:none;">
             </div>
-            <button id="btn-analyze" class="btn-primary" style="margin-top:12px;width:100%;padding:12px;border:none;border-radius:10px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#00d4ff,#0099cc);color:#031018;">ANALYZE WITH AI VISION</button>
+            <img id="preview-img" alt="Preview">
+            <button type="button" id="btn-analyze" style="margin-top:12px;width:100%;padding:12px;border:none;border-radius:10px;font-weight:800;cursor:pointer;background:linear-gradient(90deg,#00d4ff,#00ff88);color:#031018;">ANALYZE WITH AI VISION</button>
             <div id="result-card" class="result-card">
               <div id="result-title" style="font-weight:700;font-size:1.1rem;margin-bottom:6px;"></div>
               <div id="result-detail" style="font-size:0.88rem;color:#c8d4e0;"></div>
@@ -74,13 +71,48 @@
     </div>
   </div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="js/map-engine.js"></script>
   <script src="js/components.js"></script>
+  <script src="js/map-engine.js"></script>
   <script src="js/photo-cv.js"></script>
   <script>
   (function () {
     function $(id) { return document.getElementById(id); }
     var customUrl = null, customFilename = '', isScanning = false, map = null;
+
+    var HAZARD_LOCATIONS = {
+      flood:     { name: 'Guwahati · Brahmaputra lowlands, Assam', lat: 26.1445, lng: 91.7362, zoom: 12 },
+      landslide: { name: 'Shillong · NH-6 corridor, Meghalaya', lat: 25.5788, lng: 91.8933, zoom: 12 },
+      pothole:   { name: 'Kohima · Dimapur–Kohima highway, Nagaland', lat: 25.6751, lng: 94.1086, zoom: 12 },
+      invalid:   { name: 'North-Eastern Region', lat: 25.80, lng: 91.60, zoom: 7 }
+    };
+    var hazardMarker = null;
+
+    function locationFor(meta) {
+      var c = ((meta && (meta.class || meta.hazard_type)) || '').toLowerCase();
+      if (c.indexOf('flood') >= 0 || c.indexOf('water') >= 0) return HAZARD_LOCATIONS.flood;
+      if (c.indexOf('land') >= 0 || c.indexOf('slope') >= 0) return HAZARD_LOCATIONS.landslide;
+      if (c.indexOf('pothole') >= 0 || c.indexOf('road damage') >= 0) return HAZARD_LOCATIONS.pothole;
+      return HAZARD_LOCATIONS.invalid;
+    }
+    function displayName(meta) {
+      var loc = locationFor(meta);
+      if (meta.invalid || meta.class === 'invalid') return 'Invalid photo';
+      var base = meta.hazard_type || meta.class || 'Hazard';
+      return base + ' — ' + loc.name;
+    }
+    function flyToHazard(meta) {
+      var loc = locationFor(meta);
+      try {
+        if (!map) return;
+        map.flyTo([loc.lat, loc.lng], loc.zoom, { duration: 1.2 });
+        if (window.L) {
+          if (hazardMarker) { try { map.removeLayer(hazardMarker); } catch (e) {} }
+          hazardMarker = L.marker([loc.lat, loc.lng]).addTo(map)
+            .bindPopup('<b>' + (meta.hazard_type || meta.class || 'Hazard') + '</b><br>' + loc.name)
+            .openPopup();
+        }
+      } catch (e) {}
+    }
 
     function showInvalid(url) {
       var card = $('result-card');
@@ -89,95 +121,97 @@
       $('result-title').textContent = 'Invalid photo';
       $('result-detail').textContent = 'Could not classify as landslide, pothole, or flood. Try a clear field photo.';
       $('map-photo-img').src = url;
-      $('map-photo-label').textContent = 'INVALID · NO SCORE';
+      $('map-photo-label').textContent = 'Invalid photo · NER';
       $('map-photo-overlay').style.display = 'block';
+      flyToHazard({ class: 'invalid' });
     }
 
     function showValid(url, meta) {
       var card = $('result-card');
       card.className = 'result-card';
       card.style.display = 'block';
-      $('result-title').textContent = (meta.hazard_type || meta.class || 'Hazard').toUpperCase();
-      $('result-detail').textContent = 'Risk ' + (meta.risk_score != null ? meta.risk_score : meta.damage_pct) + '% · ' + (meta.recommended_action || meta.hazard_type || '');
+      $('result-title').textContent = displayName(meta);
+      $('result-detail').textContent = 'Location: ' + locationFor(meta).name + ' · Risk ' +
+        (meta.risk_score != null ? meta.risk_score : meta.damage_pct) + '% · ' +
+        (meta.recommended_action || meta.hazard_type || '');
       $('map-photo-img').src = url;
-      $('map-photo-label').textContent = meta.hazard_type || meta.class;
+      $('map-photo-label').textContent = displayName(meta);
       $('map-photo-overlay').style.display = 'block';
-      try { if (map) map.flyTo([26.15, 91.75], 11, { duration: 1.2 }); } catch (e) {}
+      flyToHazard(meta);
     }
 
     function loadFile(file) {
-      if (!file) return;
+      if (!file || !file.type || file.type.indexOf('image') !== 0) return;
       customFilename = file.name || '';
       var reader = new FileReader();
-      reader.onload = function (e) {
-        customUrl = e.target.result;
-        var img = $('preview-img');
-        img.src = customUrl;
-        img.style.display = 'block';
-        $('upload-hint').style.display = 'none';
+      reader.onload = function () {
+        customUrl = reader.result;
+        var prev = $('preview-img');
+        prev.src = customUrl;
+        prev.style.display = 'block';
+        $('result-card').style.display = 'none';
       };
       reader.readAsDataURL(file);
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-      if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'AI Photo Analysis', subtitle: 'Landslide · Pothole · Flood only' });
-      if (window.MapEngine && window.MapEngine.initMap) {
+      if (window.SmartRoute && SmartRoute.initSharedComponents) {
+        SmartRoute.initSharedComponents({ title: 'AI Photo Analysis', subtitle: 'Field hazard classification' });
+      }
+      if (window.MapEngine && MapEngine.initMap) {
         map = MapEngine.initMap('analysis-map', { center: [25.80, 91.60], zoom: 7, zoomControl: true });
         try {
           if (MapEngine.addRoads) MapEngine.addRoads(map);
           if (MapEngine.addIncidents) MapEngine.addIncidents(map);
         } catch (e) {}
-      } else {
+      } else if (window.L) {
         map = L.map('analysis-map', { zoomControl: true }).setView([25.80, 91.60], 7);
-        L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-          maxZoom: 20, subdomains: ['0','1','2','3'], attribution: 'Satellite'
-        }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
       }
-      setTimeout(function () { try { map.invalidateSize(true); } catch (e) {} }, 300);
-    });
+      setTimeout(function () { try { if (map) map.invalidateSize(true); } catch (e) {} }, 300);
 
-    $('upload-zone').onclick = function () { $('file-input').click(); };
-    $('file-input').onchange = function () { loadFile(this.files && this.files[0]); };
-    $('upload-zone').ondragover = function (e) { e.preventDefault(); };
-    $('upload-zone').ondrop = function (e) {
-      e.preventDefault();
-      loadFile(e.dataTransfer.files && e.dataTransfer.files[0]);
-    };
+      $('upload-zone').onclick = function () { $('file-input').click(); };
+      $('file-input').onchange = function () { loadFile(this.files && this.files[0]); };
+      $('upload-zone').ondragover = function (e) { e.preventDefault(); };
+      $('upload-zone').ondrop = function (e) {
+        e.preventDefault();
+        loadFile(e.dataTransfer.files && e.dataTransfer.files[0]);
+      };
 
-    $('btn-analyze').onclick = function () {
-      if (isScanning || !customUrl) {
-        if (window.SmartRoute) SmartRoute.showToast('Upload a field photo first', 'warn');
-        return;
-      }
-      var CV = window.SmartRoutePhotoCV || window.PhotoCV;
-      if (!CV || typeof CV.classify !== 'function') {
-        if (window.SmartRoute) SmartRoute.showToast('Photo analyzer not loaded — refresh page', 'warn');
-        return;
-      }
-      isScanning = true;
-      $('btn-analyze').disabled = true;
-      $('btn-analyze').textContent = 'SCANNING…';
-      $('map-photo-img').src = customUrl;
-      $('map-photo-label').textContent = 'SCANNING…';
-      $('map-photo-overlay').style.display = 'block';
-      try { if (map) map.flyTo([26.15, 91.75], 11, { duration: 1.2 }); } catch (e) {}
-
-      CV.classify(customUrl, customFilename).then(function (meta) {
-        if (!meta || meta.class === 'invalid' || meta.invalid === true || meta.no_score === true) {
-          showInvalid(customUrl);
-        } else {
-          showValid(customUrl, meta);
-          if (window.SmartRoute) SmartRoute.showToast('Detected: ' + (meta.hazard_type || meta.class), 'success');
+      $('btn-analyze').onclick = function () {
+        if (isScanning || !customUrl) {
+          if (window.SmartRoute) SmartRoute.showToast('Upload a field photo first', 'warn');
+          return;
         }
-      }).catch(function (err) {
-        console.warn(err);
-        showInvalid(customUrl);
-      }).then(function () {
-        isScanning = false;
-        $('btn-analyze').disabled = false;
-        $('btn-analyze').textContent = 'ANALYZE WITH AI VISION';
-      });
-    };
+        var CV = window.SmartRoutePhotoCV || window.PhotoCV;
+        if (!CV || typeof CV.classify !== 'function') {
+          if (window.SmartRoute) SmartRoute.showToast('Photo analyzer not loaded — refresh page', 'warn');
+          return;
+        }
+        isScanning = true;
+        $('btn-analyze').disabled = true;
+        $('btn-analyze').textContent = 'SCANNING…';
+        $('map-photo-img').src = customUrl;
+        $('map-photo-label').textContent = 'SCANNING…';
+        $('map-photo-overlay').style.display = 'block';
+
+        CV.classify(customUrl, customFilename).then(function (meta) {
+          if (!meta || meta.class === 'invalid' || meta.invalid === true || meta.no_score === true) {
+            showInvalid(customUrl);
+          } else {
+            showValid(customUrl, meta);
+            if (window.SmartRoute) SmartRoute.showToast('Detected: ' + displayName(meta), 'success');
+          }
+        }).catch(function (err) {
+          console.warn(err);
+          showInvalid(customUrl);
+        }).then(function () {
+          isScanning = false;
+          $('btn-analyze').disabled = false;
+          $('btn-analyze').textContent = 'ANALYZE WITH AI VISION';
+        });
+      };
+    });
   })();
   </script>
 </body>
