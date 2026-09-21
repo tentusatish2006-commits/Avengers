@@ -1,65 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather & Risk - SmartRoute</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="css/design-system.css">
-    <link rel="stylesheet" href="css/animations.css">
-    <link rel="stylesheet" href="css/components.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather & Risk - SmartRoute NER</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    body{background:#030810;color:#e8f4ff;font-family:Outfit,sans-serif;margin:0;}
+    .page-body{padding:20px;}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+    .card{background:rgba(8,18,36,0.9);border:1px solid rgba(0,212,255,0.2);border-radius:12px;padding:16px;}
+    .card h3{margin:0 0 8px;color:#00d4ff;}
+    .risk{font-weight:800;}
+    .risk.high{color:#ff6b6b;}.risk.med{color:#ff9500;}.risk.low{color:#00ff88;}
+    @media(max-width:800px){.grid{grid-template-columns:1fr;}}
+  </style>
 </head>
 <body>
-    <div class="app-shell">
-        <div class="main-content" id="main-content">
-            <main class="page-body">
-                <div class="page-header">
-                    <h1>Weather & Risk Intelligence</h1>
-                    <p class="page-subtitle">Real-time weather monitoring and risk assessment for NER corridors</p>
-                </div>
-                <div class="stats-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px;">
-                    <div class="glass-card" style="padding:20px;"><div style="font-size:28px;font-weight:800;color:#00d4ff;">28°C</div><div style="color:#8fa3b8;font-size:12px;">Guwahati</div></div>
-                    <div class="glass-card" style="padding:20px;"><div style="font-size:28px;font-weight:800;color:#ff9500;">HIGH</div><div style="color:#8fa3b8;font-size:12px;">Flood Risk — Assam</div></div>
-                    <div class="glass-card" style="padding:20px;"><div style="font-size:28px;font-weight:800;color:#ff3b3b;">CRITICAL</div><div style="color:#8fa3b8;font-size:12px;">Landslide — Arunachal</div></div>
-                    <div class="glass-card" style="padding:20px;"><div style="font-size:28px;font-weight:800;color:#00ff88;">42 mm</div><div style="color:#8fa3b8;font-size:12px;">24h Rainfall</div></div>
-                </div>
-                <div class="glass-card" style="padding:24px;margin-bottom:20px;">
-                    <h3 style="color:#00d4ff;margin-top:0;">NER State Weather Summary</h3>
-                    <div style="overflow-x:auto;">
-                        <table style="width:100%;border-collapse:collapse;color:#e8f4ff;font-size:14px;">
-                            <thead><tr style="border-bottom:1px solid rgba(0,212,255,0.3);text-align:left;">
-                                <th style="padding:10px;">State</th><th>Temp</th><th>Rain</th><th>Risk</th><th>Alert</th>
-                            </tr></thead>
-                            <tbody>
-                                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);"><td style="padding:10px;">Assam</td><td>28°C</td><td>42mm</td><td style="color:#ff9500;">High Flood</td><td>Active</td></tr>
-                                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);"><td style="padding:10px;">Meghalaya</td><td>22°C</td><td>68mm</td><td style="color:#ff9500;">Heavy Rain</td><td>Watch</td></tr>
-                                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);"><td style="padding:10px;">Arunachal Pradesh</td><td>18°C</td><td>35mm</td><td style="color:#ff3b3b;">Landslide</td><td>Critical</td></tr>
-                                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);"><td style="padding:10px;">Nagaland</td><td>24°C</td><td>28mm</td><td style="color:#ffcc00;">Moderate</td><td>Advisory</td></tr>
-                                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);"><td style="padding:10px;">Manipur</td><td>26°C</td><td>20mm</td><td style="color:#00ff88;">Low</td><td>Clear</td></tr>
-                                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);"><td style="padding:10px;">Mizoram</td><td>25°C</td><td>30mm</td><td style="color:#ffcc00;">Moderate</td><td>Watch</td></tr>
-                                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);"><td style="padding:10px;">Tripura</td><td>29°C</td><td>15mm</td><td style="color:#00ff88;">Low</td><td>Clear</td></tr>
-                                <tr><td style="padding:10px;">Sikkim</td><td>16°C</td><td>55mm</td><td style="color:#ff3b3b;">Flash Flood</td><td>Critical</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="glass-card" style="padding:24px;">
-                    <h3 style="color:#00d4ff;margin-top:0;">Corridor Risk Overlay</h3>
-                    <p style="color:#8fa3b8;">AH-1, NH-13, NH-10 and GS-1 are under elevated weather risk. Prefer alternate corridors NH-8 and NH-27 where marked accessible.</p>
-                    <button class="btn-primary" onclick="if(window.SmartRoute)SmartRoute.showToast('Weather risk map refreshed','success')">Refresh Risk Layers</button>
-                </div>
-            </main>
-        </div>
-    </div>
-    <script src="js/components.js"></script>
-    <script src="js/charts.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Weather & Risk', subtitle: 'NER meteorological intelligence' });
-        });
-    </script>
+<div class="app-shell"><div class="main-content" id="main-content">
+<main class="page-body">
+  <h1 style="margin:0 0 6px;color:#00d4ff;">Weather & Risk</h1>
+  <p style="color:#8fa3b8;margin:0 0 18px;">North-Eastern Region · standalone weather outlook</p>
+  <div class="grid">
+    <div class="card"><h3>🌧 Guwahati</h3><div>Heavy rain likely · Flood watch</div><div class="risk high">Risk: HIGH</div></div>
+    <div class="card"><h3>🌫 Shillong</h3><div>Fog morning · Landslide watch NH-6</div><div class="risk med">Risk: MEDIUM</div></div>
+    <div class="card"><h3>❄ Tawang</h3><div>Low visibility · Snow possible</div><div class="risk high">Risk: HIGH</div></div>
+    <div class="card"><h3>🌦 Kohima</h3><div>Scattered showers</div><div class="risk low">Risk: LOW</div></div>
+    <div class="card"><h3>🌧 Silchar</h3><div>Persistent rain · Road damage</div><div class="risk med">Risk: MEDIUM</div></div>
+    <div class="card"><h3>☁ Imphal</h3><div>Cloudy · Stable corridors</div><div class="risk low">Risk: LOW</div></div>
+  </div>
+</main></div></div>
+<script src="js/components.js"></script>
+<script src="js/api.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Weather & Risk', subtitle: 'NER outlook' });
+});
+</script>
 </body>
 </html>

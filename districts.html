@@ -1,57 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Districts - SmartRoute NER</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/design-system.css">
-    <link rel="stylesheet" href="css/animations.css">
-    <link rel="stylesheet" href="css/components.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Districts - SmartRoute NER</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    body{background:#030810;color:#e8f4ff;font-family:Outfit,sans-serif;margin:0;}
+    .page-body{padding:20px;}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+    .card{background:rgba(8,18,36,0.9);border:1px solid rgba(0,212,255,0.2);border-radius:12px;padding:16px;}
+    .card h3{margin:0 0 6px;color:#00d4ff;}
+    @media(max-width:800px){.grid{grid-template-columns:1fr;}}
+  </style>
 </head>
 <body>
-<div class="app-shell">
-  <div class="main-content" id="main-content">
-    <main class="page-body" style="padding:20px;">
-      <div class="page-header">
-        <h1 class="page-title">Districts</h1>
-        <p class="page-subtitle">North Eastern Region coverage</p>
-      </div>
-      <div id="dist-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;"></div>
-    </main>
+<div class="app-shell"><div class="main-content" id="main-content">
+<main class="page-body">
+  <h1 style="margin:0 0 6px;color:#00d4ff;">Districts</h1>
+  <p style="color:#8fa3b8;margin:0 0 18px;">North-Eastern Region coverage · offline</p>
+  <div class="grid">
+    <div class="card"><h3>Assam</h3><div>Guwahati hub · flood watch zones</div></div>
+    <div class="card"><h3>Meghalaya</h3><div>Shillong · NH-6 corridor</div></div>
+    <div class="card"><h3>Nagaland</h3><div>Kohima · Dimapur highway</div></div>
+    <div class="card"><h3>Arunachal</h3><div>Tawang Pass · high altitude</div></div>
+    <div class="card"><h3>Manipur</h3><div>Imphal · city entry routes</div></div>
+    <div class="card"><h3>Mizoram</h3><div>Aizawl · hill roads</div></div>
+    <div class="card"><h3>Tripura</h3><div>Agartala link corridors</div></div>
+    <div class="card"><h3>Sikkim</h3><div>Gangtok access monitoring</div></div>
   </div>
-</div>
+</main></div></div>
 <script src="js/components.js"></script>
 <script>
-  var DISTRICTS = [
-    { state: 'Assam', name: 'Kamrup Metro', hq: 'Guwahati', access: 78 },
-    { state: 'Assam', name: 'Cachar', hq: 'Silchar', access: 61 },
-    { state: 'Assam', name: 'Jorhat', hq: 'Jorhat', access: 70 },
-    { state: 'Meghalaya', name: 'East Khasi Hills', hq: 'Shillong', access: 64 },
-    { state: 'Arunachal Pradesh', name: 'Tawang', hq: 'Tawang', access: 42 },
-    { state: 'Nagaland', name: 'Kohima', hq: 'Kohima', access: 52 },
-    { state: 'Nagaland', name: 'Dimapur', hq: 'Dimapur', access: 66 },
-    { state: 'Manipur', name: 'Imphal West', hq: 'Imphal', access: 58 },
-    { state: 'Mizoram', name: 'Aizawl', hq: 'Aizawl', access: 49 },
-    { state: 'Tripura', name: 'West Tripura', hq: 'Agartala', access: 71 },
-    { state: 'Sikkim', name: 'East Sikkim', hq: 'Gangtok', access: 68 },
-    { state: 'Arunachal Pradesh', name: 'Papum Pare', hq: 'Itanagar', access: 45 }
-  ];
-  document.addEventListener('DOMContentLoaded', function () {
-    if (window.SmartRoute) {
-      SmartRoute.initSharedComponents({ title: 'Districts', subtitle: 'NER districts' });
-    }
-    var g = document.getElementById('dist-grid');
-    DISTRICTS.forEach(function (d) {
-      var card = document.createElement('div');
-      card.className = 'glass-card';
-      card.style.padding = '14px';
-      card.innerHTML = '<div style="font-weight:700;">' + d.name + '</div>' +
-        '<div style="color:#8fa3b8;font-size:0.85rem;">' + d.state + ' · HQ ' + d.hq + '</div>' +
-        '<div style="margin-top:8px;color:#00d4ff;">Access ' + d.access + '%</div>';
-      g.appendChild(card);
-    });
-  });
+document.addEventListener('DOMContentLoaded', function () {
+  if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Districts', subtitle: 'NER coverage' });
+});
 </script>
 </body>
 </html>

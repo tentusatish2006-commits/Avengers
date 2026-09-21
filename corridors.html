@@ -1,74 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Risk Corridors - SmartRoute NER</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/design-system.css">
-    <link rel="stylesheet" href="css/animations.css">
-    <link rel="stylesheet" href="css/components.css">
-    <style>
-      .corridor-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; }
-      .corridor-card { padding:16px; cursor:pointer; border-left:4px solid #00d4ff; }
-      .c-critical { border-left-color:#ff3b3b; }
-      .c-high { border-left-color:#ff9500; }
-      .c-mod { border-left-color:#ffd700; }
-      .c-safe { border-left-color:#00ff88; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Risk Corridors - SmartRoute NER</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    body{background:#030810;color:#e8f4ff;font-family:Outfit,sans-serif;margin:0;}
+    .page-body{padding:20px;}
+    table{width:100%;border-collapse:collapse;background:rgba(8,18,36,0.9);border-radius:12px;overflow:hidden;}
+    th,td{padding:12px 14px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.06);}
+    th{color:#8fa3b8;font-size:0.75rem;text-transform:uppercase;}
+    .g{color:#00ff88;}.o{color:#ff9500;}.r{color:#ff6b6b;}
+  </style>
 </head>
 <body>
-<div class="app-shell">
-  <div class="main-content" id="main-content">
-    <main class="page-body" style="padding:20px;">
-      <div class="page-header">
-        <h1 class="page-title">Risk Corridors</h1>
-        <p class="page-subtitle">North Eastern Region transport corridors</p>
-      </div>
-      <div class="corridor-grid" id="corridor-grid"></div>
-      <div class="glass-card" id="detail" style="margin-top:16px;padding:16px;display:none;">
-        <h3 id="d-title" style="margin:0 0 8px;color:#00d4ff;"></h3>
-        <p id="d-body" style="margin:0;color:#c8d8e8;"></p>
-      </div>
-    </main>
-  </div>
-</div>
+<div class="app-shell"><div class="main-content" id="main-content">
+<main class="page-body">
+  <h1 style="margin:0 0 6px;color:#00d4ff;">Risk Corridors</h1>
+  <p style="color:#8fa3b8;margin:0 0 18px;">NER highway risk board · works offline</p>
+  <table>
+    <thead><tr><th>Corridor</th><th>Status</th><th>Risk</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>NH-6 Shillong</td><td class="o">Watch</td><td class="o">62</td><td>Landslide monitoring</td></tr>
+      <tr><td>NH-37 Guwahati</td><td class="r">Alert</td><td class="r">78</td><td>Flood lowlands</td></tr>
+      <tr><td>Dimapur–Kohima</td><td class="g">Open</td><td class="g">28</td><td>Surface repairs</td></tr>
+      <tr><td>Tawang Pass</td><td class="r">Restricted</td><td class="r">85</td><td>Fog + slope risk</td></tr>
+      <tr><td>Silchar NH-306</td><td class="o">Caution</td><td class="o">55</td><td>Road damage</td></tr>
+      <tr><td>Imphal entry</td><td class="g">Open</td><td class="g">22</td><td>Normal traffic</td></tr>
+    </tbody>
+  </table>
+</main></div></div>
 <script src="js/components.js"></script>
 <script>
-  var CORRIDORS = [
-    { name: 'Shillong – Tawang', risk: 86, level: 'CRITICAL', issue: 'Landslide + weather', cls: 'c-critical', coord: [27.58, 91.86] },
-    { name: 'Silchar – Aizawl', risk: 79, level: 'HIGH', issue: 'Road damage + rain', cls: 'c-high', coord: [24.83, 92.78] },
-    { name: 'Dimapur – Kohima', risk: 72, level: 'HIGH', issue: 'Slope instability', cls: 'c-high', coord: [25.67, 94.11] },
-    { name: 'Jorhat – Shillong', risk: 65, level: 'MODERATE', issue: 'Construction', cls: 'c-mod', coord: [26.75, 94.20] },
-    { name: 'Guwahati – Dimapur', risk: 48, level: 'MODERATE', issue: 'Heavy traffic', cls: 'c-mod', coord: [26.14, 91.73] },
-    { name: 'Guwahati – Shillong (NH-6)', risk: 35, level: 'SAFE', issue: 'Normal flow', cls: 'c-safe', coord: [25.57, 91.89] },
-    { name: 'Imphal – Moreh', risk: 58, level: 'MODERATE', issue: 'Border checks', cls: 'c-mod', coord: [24.81, 93.94] },
-    { name: 'Agartala – Silchar', risk: 41, level: 'SAFE', issue: 'Clear', cls: 'c-safe', coord: [23.83, 91.28] }
-  ];
-
-  function showDetails(c) {
-    var box = document.getElementById('detail');
-    box.style.display = 'block';
-    document.getElementById('d-title').textContent = c.name + ' · Risk ' + c.risk + '/100';
-    document.getElementById('d-body').textContent = c.level + ' — ' + c.issue + ' · Focus coord: ' + c.coord.join(', ');
-    if (window.SmartRoute) SmartRoute.showToast(c.name + ' selected', 'info', 2000);
-  }
-
-  document.addEventListener('DOMContentLoaded', function () {
-    if (window.SmartRoute) {
-      SmartRoute.initSharedComponents({ title: 'Risk Corridors', subtitle: 'NER corridors' });
-    }
-    var grid = document.getElementById('corridor-grid');
-    CORRIDORS.forEach(function (c) {
-      var d = document.createElement('div');
-      d.className = 'glass-card corridor-card ' + c.cls;
-      d.innerHTML = '<h3 style="margin:0 0 6px;font-size:1rem;">' + c.name + '</h3>' +
-        '<div style="color:#8fa3b8;font-size:0.85rem;">Risk ' + c.risk + ' · ' + c.level + '</div>' +
-        '<div style="margin-top:8px;color:#c8d8e8;font-size:0.85rem;">' + c.issue + '</div>';
-      d.onclick = function () { showDetails(c); };
-      grid.appendChild(d);
-    });
-  });
+document.addEventListener('DOMContentLoaded', function () {
+  if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Risk Corridors', subtitle: 'NER highways' });
+});
 </script>
 </body>
 </html>
