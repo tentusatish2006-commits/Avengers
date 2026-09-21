@@ -9,7 +9,12 @@
   }
   async function fetchConfig() {
     try {
+      if (w.SmartRouteAPI && SmartRouteAPI.isOnline === false) {
+        state.error = 'Backend offline — start Flask on :5000 for push config';
+        return null;
+      }
       var res = await fetch(API_BASE + '/notifications/config');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
       var json = await res.json();
       if (!json.configured) { state.error = 'Firebase web config missing on server'; return null; }
       return json.config;
@@ -50,6 +55,7 @@
     var userId = localStorage.getItem('sr_user_email') || localStorage.getItem('sr_user_id') || 'anonymous';
     var role = localStorage.getItem('sr_user_role') || '';
     try {
+      if (w.SmartRouteAPI && SmartRouteAPI.isOnline === false) return;
       await fetch(API_BASE + '/notifications/register-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -98,9 +104,16 @@
   }
   async function refreshUnreadBadge() {
     try {
-      var res = await fetch(API_BASE + '/notifications/unread-count');
-      var json = await res.json();
-      var n = (json && json.count) || 0;
+      if (w.SmartRouteAPI && SmartRouteAPI.isOnline === false) return;
+      var n = 0;
+      if (w.SmartRouteAPI && typeof SmartRouteAPI.getUnreadCount === 'function') {
+        n = await SmartRouteAPI.getUnreadCount();
+      } else {
+        var res = await fetch(API_BASE + '/notifications/unread-count');
+        if (!res.ok) return;
+        var json = await res.json();
+        n = (json && json.count) || 0;
+      }
       var btn = document.getElementById('sr-alerts-btn');
       if (!btn) return;
       var badge = document.getElementById('sr-alert-badge');
@@ -117,5 +130,9 @@
   }
   w.SmartRouteFCM = { enable: enablePush, state: state, refreshBadge: refreshUnreadBadge };
   w.updateAlertBadge = refreshUnreadBadge;
-  document.addEventListener('DOMContentLoaded', function () { setTimeout(refreshUnreadBadge, 800); });
+  document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(function () {
+      if (!(w.SmartRouteAPI && SmartRouteAPI.isOnline === false)) refreshUnreadBadge();
+    }, 1500);
+  });
 })(window);

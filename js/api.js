@@ -1,128 +1,132 @@
 /**
  * SmartRoute Client API Bridge
- * Connects frontend views to the Python Flask + SQLite Backend (/api)
- * Features automatic failover to local memory if backend is offline.
+ * Auto failover to standalone/demo when Flask backend is offline.
+ * Avoids repeated connection-refused requests.
  */
+(function () {
+  'use strict';
+  var API_PORT = 5000;
+  var host = window.location.hostname;
+  var isLocal = host === 'localhost' || host === '127.0.0.1';
+  var sameOriginApi = isLocal && String(window.location.port) === String(API_PORT);
+  var BASE_URL = sameOriginApi ? '/api' : (isLocal ? 'http://127.0.0.1:' + API_PORT + '/api' : '/api');
 
-(function() {
-    const API_PORT = 5000;
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const BASE_URL = (isLocalhost && window.location.port == API_PORT)
-        ? '/api'
-        : `http://127.0.0.1:${API_PORT}/api`;
+  var offlineUntil = 0;
+  var OFFLINE_COOLDOWN_MS = 60000;
 
-    const SmartRouteAPI = {
-        baseUrl: BASE_URL,
-        isOnline: false,
+  function isMarkedOffline() {
+    return Date.now() < offlineUntil;
+  }
+  function markOffline() {
+    offlineUntil = Date.now() + OFFLINE_COOLDOWN_MS;
+    SmartRouteAPI.isOnline = false;
+    SmartRouteAPI.setOnline(false);
+  }
+  function markOnline() {
+    offlineUntil = 0;
+    SmartRouteAPI.isOnline = true;
+    SmartRouteAPI.setOnline(true);
+  }
 
-        async request(endpoint, options = {}) {
-            const url = `${this.baseUrl}${endpoint}`;
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 12000);
+  var SmartRouteAPI = {
+    baseUrl: BASE_URL,
+    isOnline: false,
 
-            try {
-                const response = await fetch(url, {
-                    ...options,
-                    signal: controller.signal,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(options.headers || {})
-                    }
-                });
-                clearTimeout(timeoutId);
+    async request(endpoint, options) {
+      options = options || {};
+      if (isMarkedOffline() && !options.force) {
+        return null;
+      }
+      var url = this.baseUrl + endpoint;
+      var controller = new AbortController();
+      var timeoutId = setTimeout(function () { controller.abort(); }, options.timeout || 4000);
+      try {
+        var response = await fetch(url, {
+          method: options.method || 'GET',
+          signal: controller.signal,
+          headers: Object.assign({ 'Content-Type': 'application/json' }, options.headers || {}),
+          body: options.body || undefined
+        });
+        clearTimeout(timeoutId);
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        var data = await response.json();
+        markOnline();
+        return data;
+      } catch (err) {
+        clearTimeout(timeoutId);
+        markOffline();
+        return null;
+      }
+    },
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error ${response.status}`);
-                }
+    setOnline: function (status) {
+      this.isOnline = !!status;
+      var badge = document.getElementById('backend-status-badge');
+      if (!badge) return;
+      if (status) {
+        badge.innerHTML = '<span style="color:#00ff88;">●</span> API CONNECTED';
+        badge.title = 'Connected to SmartRoute backend';
+      } else {
+        badge.innerHTML = '<span style="color:#aaa;">○</span> STANDALONE';
+        badge.title = 'Offline mode — demo data (start Flask on :5000 for API)';
+      }
+    },
 
-                const data = await response.json();
-                this.setOnline(true);
-                return data;
-            } catch (err) {
-                clearTimeout(timeoutId);
-                this.setOnline(false);
-                return null;
-            }
-        },
+    async checkHealth() {
+      if (isMarkedOffline()) {
+        this.setOnline(false);
+        return false;
+      }
+      var res = await this.request('/health', { timeout: 2500 });
+      var ok = !!(res && (res.status === 'healthy' || res.status === 'ok'));
+      if (!ok) markOffline();
+      return ok;
+    },
 
-        setOnline(status) {
-            this.isOnline = status;
-            const badge = document.getElementById('backend-status-badge');
-            if (badge) {
-                if (status) {
-                    badge.innerHTML = '<span style="color:#00ff88;">●</span> API CONNECTED';
-                    badge.className = 'badge badge-safe';
-                    badge.title = 'Connected to SmartRoute backend';
-                } else {
-                    badge.innerHTML = '<span style="color:#aaa;">○</span> STANDALONE';
-                    badge.className = 'badge';
-                    badge.title = 'Offline mode (Fallback data active)';
-                }
-            }
-        },
+    async getNotifications(limit) {
+      if (isMarkedOffline()) return null;
+      return this.request('/notifications?limit=' + (limit || 50), { timeout: 3000 });
+    },
 
-        async checkHealth() {
-            const res = await this.request('/health');
-            return res && res.status === 'healthy';
-        },
+    async getUnreadCount() {
+      if (isMarkedOffline()) return 0;
+      var res = await this.request('/notifications/unread-count', { timeout: 2500 });
+      return (res && res.count) || 0;
+    },
 
-        async getRoads() {
-            const res = await this.request('/roads');
-            if (res && res.data) return res.data;
-            return window.MapEngine ? window.MapEngine.ROAD_DATA : [];
-        },
+    async getRouteDirections(start, end, options) {
+      options = options || {};
+      var body = {
+        start: Array.isArray(start) ? { lat: start[0], lng: start[1] } : start,
+        end: Array.isArray(end) ? { lat: end[0], lng: end[1] } : end,
+        alternatives: !!options.alternatives,
+        alternative_count: options.alternative_count || 2,
+        profile: options.profile || 'driving-car'
+      };
+      return this.request('/routing/directions', {
+        method: 'POST',
+        body: JSON.stringify(body),
+        force: true,
+        timeout: 15000
+      });
+    },
 
-        async getIncidents() {
-            const res = await this.request('/incidents');
-            if (res && res.data) return res.data;
-            return [];
-        },
+    async predictRouteRisk(source, destination, vehicle_type, priority) {
+      return this.request('/ai/predict-route', {
+        method: 'POST',
+        body: JSON.stringify({ source: source, destination: destination, vehicle_type: vehicle_type, priority: priority }),
+        force: true
+      });
+    }
+  };
 
-        async getVehicles() {
-            const res = await this.request('/vehicles');
-            if (res && res.data) return res.data;
-            return window.MapEngine ? window.MapEngine.VEHICLE_DATA : [];
-        },
+  window.SmartRouteAPI = SmartRouteAPI;
 
-        async getDeliveries() {
-            const res = await this.request('/deliveries');
-            return res ? res.data : [];
-        },
-
-        async getOfficers() {
-            const res = await this.request('/officers');
-            return res ? res.data : [];
-        },
-
-        async getDistricts() {
-            const res = await this.request('/districts');
-            if (res && res.data) return res.data;
-            return window.MapEngine ? window.MapEngine.DISTRICT_DATA : [];
-        },
-
-        async getRouteDirections(start, end, options = {}) {
-            const body = {
-                start: Array.isArray(start) ? { lat: start[0], lng: start[1] } : start,
-                end: Array.isArray(end) ? { lat: end[0], lng: end[1] } : end,
-                alternatives: !!(options && options.alternatives),
-                alternative_count: (options && options.alternative_count) || 2,
-                profile: (options && options.profile) || 'driving-car'
-            };
-            const res = await this.request('/routing/directions', {
-                method: 'POST',
-                body: JSON.stringify(body)
-            });
-            return res;
-        },
-
-        async predictRouteRisk(source, destination, vehicle_type, priority) {
-            const res = await this.request('/ai/predict-route', {
-                method: 'POST',
-                body: JSON.stringify({ source, destination, vehicle_type, priority })
-            });
-            return res;
-        }
-    };
-
-    window.SmartRouteAPI = SmartRouteAPI;
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(function () { SmartRouteAPI.checkHealth(); }, 1200);
+    });
+  } else {
+    setTimeout(function () { SmartRouteAPI.checkHealth(); }, 1200);
+  }
 })();
