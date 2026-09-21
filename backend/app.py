@@ -1,9 +1,4 @@
-"""
-SmartRoute Flask Main Application
-Integrates REST API blueprints, CORS middleware, SQLite initialization,
-and frontend static asset serving.
-"""
-
+"""SmartRoute Flask Main Application"""
 import os
 import sys
 import time
@@ -31,6 +26,7 @@ try:
     from .routes.simulation_bp import simulation_bp
     from .routes.users_bp import users_bp
     from .routes.routing_bp import routing_bp
+    from .routes.notifications_bp import notifications_bp
 except ImportError:
     from backend.database import init_db, query_db
     from backend.seed_data import seed_database
@@ -46,6 +42,7 @@ except ImportError:
     from backend.routes.simulation_bp import simulation_bp
     from backend.routes.users_bp import users_bp
     from backend.routes.routing_bp import routing_bp
+    from backend.routes.notifications_bp import notifications_bp
 
 START_TIME = time.time()
 FRONTEND_DIR = Path(__file__).resolve().parent.parent
@@ -53,9 +50,17 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent
 def create_app():
     app = Flask(__name__, static_folder=str(FRONTEND_DIR), static_url_path="")
     CORS(app, resources={r"/api/*": {"origins": "*"}})
-
     init_db()
     seed_database()
+    try:
+        from .notification_service import ensure_tables as _ensure_notif
+        _ensure_notif()
+    except Exception:
+        try:
+            from backend.notification_service import ensure_tables as _ensure_notif
+            _ensure_notif()
+        except Exception:
+            pass
 
     app.register_blueprint(roads_bp, url_prefix="/api")
     app.register_blueprint(incidents_bp, url_prefix="/api")
@@ -69,6 +74,7 @@ def create_app():
     app.register_blueprint(simulation_bp, url_prefix="/api")
     app.register_blueprint(users_bp, url_prefix="/api")
     app.register_blueprint(routing_bp, url_prefix="/api")
+    app.register_blueprint(notifications_bp, url_prefix="/api")
 
     @app.route("/api/health")
     def health():
@@ -90,14 +96,6 @@ def create_app():
         elif (FRONTEND_DIR / f"{filename}.html").exists():
             return send_from_directory(str(FRONTEND_DIR), f"{filename}.html")
         return jsonify({"status": "error", "message": "File not found"}), 404
-
-    @app.errorhandler(404)
-    def handle_not_found(e):
-        return jsonify({"status": "error", "message": "Endpoint not found"}), 404
-
-    @app.errorhandler(500)
-    def handle_server_error(e):
-        return jsonify({"status": "error", "message": "Internal server error"}), 500
 
     return app
 
