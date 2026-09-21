@@ -1,78 +1,117 @@
-/* SmartRoute components — 3-line menu hides sidebar, logos, mobile */
+/* ============================================================
+   SMARTROUTE — SHARED COMPONENT INJECTOR (full previous UI)
+   ============================================================ */
 
 const SMARTROUTE_NAV = [
-  { section: 'OPERATIONS', items: [
-    { id: 'dashboard', label: 'Dashboard', icon: '\u229e', href: 'dashboard.html' },
-    { id: 'map', label: 'Live Map', icon: '\ud83d\uddfa', href: 'map.html' },
-    { id: 'incidents', label: 'Incidents', icon: '\u26a0', href: 'incidents.html', badge: '18' },
-    { id: 'alerts', label: 'Alerts', icon: '\ud83d\udd14', href: 'alerts.html', badge: '7' },
-    { id: 'emergency', label: 'Emergency Response', icon: '\ud83d\udea8', href: 'emergency.html' }
-  ]},
-  { section: 'INTELLIGENCE', items: [
-    { id: 'route-prediction', label: 'AI Route Prediction', icon: '\ud83e\udd16', href: 'route-prediction.html' },
-    { id: 'alternate-routes', label: 'Alternate Routes', icon: '\u2194', href: 'alternate-routes.html' },
-    { id: 'ai-command', label: 'AI Command Center', icon: '\u26a1', href: 'ai-command.html' },
-    { id: 'photo-analysis', label: 'AI Photo Analysis', icon: '\ud83d\udcf7', href: 'photo-analysis.html' },
-    { id: 'weather', label: 'Weather & Risk', icon: '\ud83c\udf27', href: 'weather.html' }
-  ]},
-  { section: 'TRANSPORT', items: [
-    { id: 'vehicle-tracking', label: 'Vehicle Tracking', icon: '\ud83d\ude9b', href: 'vehicle-tracking.html' },
-    { id: 'deliveries', label: 'Deliveries', icon: '\ud83d\udce6', href: 'deliveries.html' },
-    { id: 'corridors', label: 'Risk Corridors', icon: '\ud83d\udee3', href: 'corridors.html' }
-  ]},
-  { section: 'MONITORING', items: [
-    { id: 'districts', label: 'Districts', icon: '\ud83d\uddc2', href: 'districts.html' },
-    { id: 'infrastructure', label: 'Infrastructure', icon: '\ud83c\udf09', href: 'infrastructure.html' },
-    { id: 'officers', label: 'Field Officers', icon: '\ud83d\udc6e', href: 'officers.html' },
-    { id: 'field-report', label: 'Field Report', icon: '\ud83d\udccd', href: 'field-report.html' },
-    { id: 'reports', label: 'Reports', icon: '\ud83d\udccb', href: 'reports.html' },
-    { id: 'analytics', label: 'Analytics', icon: '\ud83d\udcc8', href: 'analytics.html' },
-    { id: 'simulation', label: 'Live Simulation', icon: '\ud83c\udfac', href: 'simulation.html' }
-  ]},
-  { section: 'SYSTEM', items: [
-    { id: 'language', label: 'Language & Region', icon: '\ud83c\udf10', href: 'language.html' },
-    { id: 'admin', label: 'Admin Panel', icon: '\ud83d\udd27', href: 'admin.html' },
-    { id: 'settings', label: 'Settings', icon: '\u2699', href: 'settings.html' }
-  ]}
+  {
+    section: 'OPERATIONS',
+    items: [
+      { id: 'dashboard',         label: 'Dashboard',          icon: '⊞',  href: 'dashboard.html' },
+      { id: 'map',               label: 'Live Map',            icon: '🗺',  href: 'map.html' },
+      { id: 'incidents',         label: 'Incidents',          icon: '⚠',  href: 'incidents.html',    badge: '18' },
+      { id: 'alerts',            label: 'Alerts',             icon: '🔔',  href: 'alerts.html',       badge: '7' },
+      { id: 'emergency',         label: 'Emergency Response', icon: '🚨',  href: 'emergency.html' },
+    ]
+  },
+  {
+    section: 'INTELLIGENCE',
+    items: [
+      { id: 'route-prediction',  label: 'AI Route Prediction',   icon: '🤖',  href: 'route-prediction.html' },
+      { id: 'alternate-routes',  label: 'Alternate Routes',      icon: '↔',  href: 'alternate-routes.html' },
+      { id: 'ai-command',        label: 'AI Command Center',     icon: '⚡',  href: 'ai-command.html' },
+      { id: 'photo-analysis',    label: 'AI Photo Analysis',     icon: '📷',  href: 'photo-analysis.html' },
+      { id: 'weather',           label: 'Weather & Risk',        icon: '🌧',  href: 'weather.html' },
+    ]
+  },
+  {
+    section: 'TRANSPORT',
+    items: [
+      { id: 'vehicle-tracking',  label: 'Vehicle Tracking',     icon: '🚛',  href: 'vehicle-tracking.html' },
+      { id: 'deliveries',        label: 'Deliveries',           icon: '📦',  href: 'deliveries.html' },
+      { id: 'corridors',         label: 'Risk Corridors',       icon: '🛣',  href: 'corridors.html' },
+    ]
+  },
+  {
+    section: 'MONITORING',
+    items: [
+      { id: 'districts',         label: 'Districts',            icon: '🗂',  href: 'districts.html' },
+      { id: 'infrastructure',    label: 'Infrastructure',       icon: '🌉',  href: 'infrastructure.html' },
+      { id: 'officers',          label: 'Field Officers',       icon: '👮',  href: 'officers.html' },
+      { id: 'reports',           label: 'Reports',              icon: '📋',  href: 'reports.html' },
+    ]
+  },
+  {
+    section: 'ANALYTICS',
+    items: [
+      { id: 'analytics',         label: 'Analytics',            icon: '📊',  href: 'analytics.html' },
+      { id: 'simulation',        label: 'Live Simulation',      icon: '▶',  href: 'simulation.html' },
+    ]
+  },
+  {
+    section: 'FIELD',
+    items: [
+      { id: 'field-report',      label: 'Field Report',         icon: '📍',  href: 'field-report.html' },
+      { id: 'officer-dashboard', label: 'Officer Dashboard',    icon: '📱',  href: 'officer-dashboard.html' },
+    ]
+  },
+  {
+    section: 'SYSTEM',
+    items: [
+      { id: 'language',          label: 'Language & Region',    icon: '🌐',  href: 'language.html' },
+      { id: 'admin',             label: 'Admin Panel',          icon: '🔧',  href: 'admin.html' },
+      { id: 'settings',          label: 'Settings',             icon: '⚙',  href: 'settings.html' },
+    ]
+  }
 ];
 
 function getPageId() {
   const path = window.location.pathname;
-  return path.split('/').pop().replace('.html', '') || 'index';
+  const file = path.split('/').pop().replace('.html', '') || 'index';
+  return file;
 }
 
 function buildSidebar() {
   const currentPage = getPageId();
-  const sidebar = document.createElement('aside');
-  sidebar.className = 'sidebar';
-  sidebar.id = 'sidebar';
-  sidebar.innerHTML =
-    '<a href="index.html" class="sidebar-logo" style="text-decoration:none;display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid rgba(0,212,255,0.15);">' +
-      '<div class="sidebar-logo-icon" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#00d4ff,#00ff88);display:flex;align-items:center;justify-content:center;font-weight:900;color:#031018;font-size:15px;box-shadow:0 0 16px rgba(0,212,255,0.35);flex-shrink:0;">SR</div>' +
-      '<div class="sidebar-logo-text"><div class="sidebar-logo-title" style="font-weight:800;color:#00d4ff;font-size:1rem;">SmartRoute</div>' +
-      '<div class="sidebar-logo-sub" style="font-size:0.72rem;color:#8fa3b8;">NER Emergency Mgmt</div></div></a>' +
-    '<nav class="sidebar-section" id="sidebar-nav"></nav>' +
-    '<div class="sidebar-bottom"><div class="sidebar-user">' +
-      '<div class="user-avatar">NE</div><div><div class="user-name">Admin Officer</div>' +
-      '<div class="user-role">Command HQ · North-Eastern Region</div></div></div>' +
-      '<a href="login.html" class="nav-item" style="color:#ff6b6b;"><span class="nav-label">Sign Out</span></a></div>';
+  const collapsed = localStorage.getItem('sr-sidebar-collapsed') === '1';
 
-  const nav = sidebar.querySelector('#sidebar-nav');
-  SMARTROUTE_NAV.forEach(function (section) {
-    const label = document.createElement('div');
-    label.className = 'sidebar-section-label';
-    label.textContent = section.section;
-    nav.appendChild(label);
-    section.items.forEach(function (item) {
-      const a = document.createElement('a');
-      a.href = item.href;
-      a.className = 'nav-item' + (currentPage === item.id ? ' active' : '');
-      a.innerHTML = '<span class="nav-icon" style="width:22px;text-align:center;flex-shrink:0;">' + item.icon +
-        '</span><span class="nav-label">' + item.label + '</span>' +
-        (item.badge ? '<span class="nav-badge">' + item.badge + '</span>' : '');
-      nav.appendChild(a);
+  const sidebar = document.createElement('aside');
+  sidebar.className = 'sidebar' + (collapsed ? ' collapsed' : '');
+  sidebar.id = 'sidebar';
+
+  let navHtml = '';
+  SMARTROUTE_NAV.forEach(section => {
+    navHtml += `<div class="sidebar-section-label">${section.section}</div>`;
+    section.items.forEach(item => {
+      const active = currentPage === item.id ? ' active' : '';
+      const badge = item.badge ? `<span class="nav-badge">${item.badge}</span>` : '';
+      navHtml += `
+        <a href="${item.href}" class="nav-item${active}">
+          <span class="nav-icon">${item.icon}</span>
+          <span class="nav-label">${item.label}</span>
+          ${badge}
+        </a>`;
     });
   });
+
+  sidebar.innerHTML = `
+    <a href="index.html" class="sidebar-logo" style="text-decoration:none;display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid rgba(0,212,255,0.15);">
+      <div class="sidebar-logo-icon" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#00d4ff,#00ff88);display:flex;align-items:center;justify-content:center;font-weight:900;color:#031018;font-size:15px;box-shadow:0 0 16px rgba(0,212,255,0.35);flex-shrink:0;">SR</div>
+      <div class="sidebar-logo-text">
+        <div class="sidebar-logo-title" style="font-weight:800;color:#00d4ff;font-size:1rem;">SmartRoute</div>
+        <div class="sidebar-logo-sub" style="font-size:0.72rem;color:#8fa3b8;">NER Emergency Mgmt</div>
+      </div>
+    </a>
+    <nav class="sidebar-section" id="sidebar-nav">${navHtml}</nav>
+    <div class="sidebar-bottom">
+      <div class="sidebar-user">
+        <div class="user-avatar">NE</div>
+        <div>
+          <div class="user-name">Admin Officer</div>
+          <div class="user-role">Command HQ · North-Eastern Region</div>
+        </div>
+      </div>
+      <a href="login.html" class="nav-item" style="color:#ff6b6b;"><span class="nav-label">Sign Out</span></a>
+    </div>`;
   return sidebar;
 }
 
@@ -80,26 +119,32 @@ function buildNavbar(title, subtitle) {
   const navbar = document.createElement('header');
   navbar.className = 'navbar';
   navbar.id = 'navbar';
-  navbar.innerHTML =
-    '<div class="navbar-left">' +
-      '<button type="button" class="collapse-btn" id="sidebar-toggle" title="Hide / show menu" aria-label="Menu" ' +
-      'style="width:42px;height:42px;border-radius:10px;border:1px solid rgba(0,212,255,0.45);background:rgba(0,212,255,0.12);color:#e8f4ff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;">' +
-        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">' +
-          '<line x1="4" y1="7" x2="20" y2="7"></line>' +
-          '<line x1="4" y1="12" x2="20" y2="12"></line>' +
-          '<line x1="4" y1="17" x2="20" y2="17"></line>' +
-        '</svg></button>' +
-      '<a href="index.html" class="navbar-brand-logo" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;flex-shrink:0;">' +
-        '<span style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#00d4ff,#00ff88);display:inline-flex;align-items:center;justify-content:center;font-weight:900;color:#031018;font-size:12px;">SR</span>' +
-        '<span class="navbar-brand-text" style="font-weight:800;color:#00d4ff;font-size:0.9rem;">SmartRoute</span></a>' +
-      '<div style="min-width:0;"><div class="navbar-title">' + (title || 'SmartRoute') + '</div>' +
-      (subtitle ? '<div style="font-size:12px;color:#8fa3b8;">' + subtitle + '</div>' : '') + '</div></div>' +
-    '<div class="navbar-right">' +
-      '<div id="backend-status-badge" class="badge" style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#aaa;">STANDALONE</div>' +
-      '<div class="status-indicator"><div class="status-dot"></div> LIVE</div>' +
-      '<div id="navbar-clock" class="navbar-clock" style="font-family:monospace;font-size:12px;color:#8fa3b8;"></div>' +
-      '<a href="alerts.html" class="navbar-alert-btn" id="sr-alerts-btn" title="Alerts">\ud83d\udd14</a>' +
-      '<a href="settings.html" class="navbar-alert-btn" title="Settings">\u2699</a></div>';
+  navbar.innerHTML = `
+    <div class="navbar-left">
+      <button type="button" class="collapse-btn" id="sidebar-toggle" title="Hide / show menu" aria-label="Menu"
+        style="width:42px;height:42px;border-radius:10px;border:1px solid rgba(0,212,255,0.45);background:rgba(0,212,255,0.12);color:#e8f4ff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+          <line x1="4" y1="7" x2="20" y2="7"></line>
+          <line x1="4" y1="12" x2="20" y2="12"></line>
+          <line x1="4" y1="17" x2="20" y2="17"></line>
+        </svg>
+      </button>
+      <a href="index.html" class="navbar-brand-logo" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;flex-shrink:0;">
+        <span style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#00d4ff,#00ff88);display:inline-flex;align-items:center;justify-content:center;font-weight:900;color:#031018;font-size:12px;">SR</span>
+        <span class="navbar-brand-text" style="font-weight:800;color:#00d4ff;font-size:0.9rem;">SmartRoute</span>
+      </a>
+      <div style="min-width:0;">
+        <div class="navbar-title">${title || 'SmartRoute'}</div>
+        ${subtitle ? `<div style="font-size:12px;color:#8fa3b8;">${subtitle}</div>` : ''}
+      </div>
+    </div>
+    <div class="navbar-right">
+      <div id="backend-status-badge" class="badge" style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#aaa;">STANDALONE</div>
+      <div class="status-indicator"><div class="status-dot"></div> LIVE</div>
+      <div id="navbar-clock" class="navbar-clock" style="font-family:monospace;font-size:12px;color:#8fa3b8;"></div>
+      <a href="alerts.html" class="navbar-alert-btn" id="sr-alerts-btn" title="Alerts">🔔</a>
+      <a href="settings.html" class="navbar-alert-btn" title="Settings">⚙</a>
+    </div>`;
   return navbar;
 }
 
@@ -141,6 +186,7 @@ function initSidebarToggle() {
         mainContent.style.marginLeft = '0';
       }
       localStorage.setItem('sr-sidebar-hidden', '1');
+      localStorage.setItem('sr-sidebar-collapsed', '1');
     } else {
       document.body.classList.remove('sidebar-hidden');
       sidebar.classList.remove('sr-hidden');
@@ -149,6 +195,7 @@ function initSidebarToggle() {
         mainContent.style.marginLeft = '';
       }
       localStorage.setItem('sr-sidebar-hidden', '0');
+      localStorage.setItem('sr-sidebar-collapsed', '0');
     }
   }
 
@@ -178,16 +225,15 @@ function initSidebarToggle() {
       const bd = document.getElementById('sr-sidebar-backdrop');
       if (bd) bd.style.display = 'none';
     }
-    try { if (window.MapEngine && MapEngine.map) MapEngine.map.invalidateSize(true); } catch (err) {}
   });
 }
 
-function injectResponsiveCss() {
+function injectShellCss() {
   if (!document.getElementById('sr-timeline-fix-css')) {
-    var tl = document.createElement('link');
+    const tl = document.createElement('link');
     tl.id = 'sr-timeline-fix-css';
     tl.rel = 'stylesheet';
-    tl.href = 'css/timeline-fix.css?v=1';
+    tl.href = 'css/timeline-fix.css?v=2';
     document.head.appendChild(tl);
   }
   if (!document.getElementById('sr-responsive-css-link')) {
@@ -205,31 +251,22 @@ function injectResponsiveCss() {
     'body.sidebar-hidden .main-content,.main-content.sidebar-collapsed{margin-left:0!important;width:100%!important;}' +
     '.main-content{margin-left:260px;min-height:100vh;min-width:0;transition:margin-left .28s ease;}' +
     '.sidebar{transition:transform .28s ease;}' +
-    '.page-body,.main-content{color:#e8f4ff;}' +
-    '.page-body{opacity:1!important;transform:none!important;visibility:visible!important;}' +
-    '.page-title,h1,h2,h3{color:#e8f4ff;}' +
-    '.glass-card,.stat-card{background:rgba(8,18,36,0.92)!important;}' +
+    '.page-body{opacity:1!important;visibility:visible!important;}' +
     '.navbar{display:flex!important;align-items:center;justify-content:space-between;gap:10px;padding:8px 14px;position:sticky;top:0;z-index:120;background:rgba(4,11,26,0.92)!important;border-bottom:1px solid rgba(0,212,255,0.15);}' +
     '.navbar-left{display:flex!important;align-items:center;gap:12px;min-width:0;}' +
-    '#sidebar-toggle{z-index:130;}' +
     '@media(max-width:992px){' +
       '.sidebar{transform:translateX(-105%);width:min(280px,86vw)!important;z-index:300!important;}' +
       '.sidebar.mobile-open,body.sidebar-open .sidebar{transform:translateX(0)!important;}' +
-      '.main-content,.main-content.sidebar-collapsed{margin-left:0!important;width:100%!important;}' +
+      '.main-content{margin-left:0!important;width:100%!important;}' +
       '.navbar-brand-text{display:none;}' +
-    '}' +
-    '@media(max-width:640px){' +
-      '.navbar-title{font-size:14px!important;max-width:40vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
-      '.status-indicator,#backend-status-badge{display:none!important;}' +
     '}';
   document.head.appendChild(style);
 }
 
-function initSharedComponents(config) {
-  config = config || {};
+function initSharedComponents(config = {}) {
+  injectShellCss();
   const title = config.title;
   const subtitle = config.subtitle;
-  injectResponsiveCss();
 
   let appShell = document.querySelector('.app-shell') || document.getElementById('app-root');
   if (!appShell) {
@@ -259,13 +296,6 @@ function initSharedComponents(config) {
 
   if (!document.getElementById('navbar')) {
     mainContent.insertBefore(buildNavbar(title, subtitle), mainContent.firstChild);
-  }
-
-  const body = mainContent.querySelector('.page-body');
-  if (body) {
-    body.style.opacity = '1';
-    body.style.visibility = 'visible';
-    body.style.transform = 'none';
   }
 
   initClock();
@@ -303,10 +333,7 @@ function showToast(msg, type, duration) {
 }
 
 window.SmartRoute = {
-  initSharedComponents: initSharedComponents,
-  showToast: showToast,
-  getPageId: getPageId,
-  brandLogoHtml: function () {
-    return '<div class="sidebar-logo-icon" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#00d4ff,#00ff88);display:flex;align-items:center;justify-content:center;font-weight:900;color:#031018;font-size:15px;">SR</div>';
-  }
+  initSharedComponents,
+  showToast,
+  getPageId
 };
