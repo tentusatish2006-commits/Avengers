@@ -31,7 +31,6 @@
           <div>📍 <span id="detail-loc">—</span> | 🕒 <span id="detail-time">—</span></div>
           <p id="detail-sev" style="margin:8px 0 0;font-weight:700;"></p>
           <p id="detail-msg" style="margin-top:12px;color:#c8d8e8;">Select an alert</p>
-          <a id="detail-link" href="#" style="display:none;margin-top:12px;color:#00d4ff;">Open related page →</a>
         </div>
       </div>
     </main>
@@ -57,23 +56,14 @@
     { time: '12:15', loc: 'Guwahati', title: 'Flood watch', msg: 'Flood watch on Brahmaputra lowlands', severity: 'CRITICAL' },
     { time: '13:00', loc: 'Aizawl', title: 'Heavy rain', msg: 'Rain intensity high — alternate route advised', severity: 'HIGH' }
   ];
-  function apiBase() {
-    if (window.SmartRouteAPI && SmartRouteAPI.baseUrl) return SmartRouteAPI.baseUrl;
-    var h = location.hostname;
-    if (h === 'localhost' || h === '127.0.0.1') return 'http://127.0.0.1:5000/api';
-    return '/api';
-  }
   function selectAlert(a) {
     document.getElementById('detail-loc').textContent = a.loc || 'NER';
-    document.getElementById('detail-time').textContent = a.time || a.created_at || '—';
-    document.getElementById('detail-msg').textContent = a.msg || a.message || a.title || '';
+    document.getElementById('detail-time').textContent = a.time || '—';
+    document.getElementById('detail-msg').textContent = a.msg || a.title || '';
     var sev = a.severity || '';
     var sevEl = document.getElementById('detail-sev');
     sevEl.textContent = sev ? ('Severity: ' + sev) : '';
     sevEl.style.color = sev === 'CRITICAL' ? '#ff6b6b' : (sev === 'HIGH' ? '#ff9500' : '#00ff88');
-    var link = document.getElementById('detail-link');
-    if (a.link) { link.href = a.link; link.style.display = 'inline-block'; }
-    else link.style.display = 'none';
   }
   function renderList(items) {
     var list = document.getElementById('alert-list');
@@ -101,22 +91,32 @@
         if (json && json.data && json.data.length) {
           fromApi = true;
           items = json.data.map(function (n) {
-            return { id: n.id, title: n.title, msg: n.message, time: n.created_at, loc: n.notification_type, severity: n.severity, link: n.link };
+            return { id: n.id, title: n.title, msg: n.message, time: n.created_at, loc: n.notification_type, severity: n.severity };
           });
         }
       }
     } catch (e) {}
-    if (!items.length) items = DEMO_ALERTS.slice();
+    if (!items.length) {
+      var now = new Date();
+      var tstr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      items = DEMO_ALERTS.map(function (a, i) {
+        var copy = Object.assign({}, a);
+        if (i === 0) copy.time = tstr;
+        return copy;
+      });
+      var rot = now.getSeconds() % items.length;
+      items = items.slice(rot).concat(items.slice(0, rot));
+    }
     renderList(items);
     if (btn) { btn.disabled = false; btn.textContent = 'Refresh'; }
     if (status && !status.dataset.locked) {
       status.textContent = fromApi
-        ? ('Loaded ' + items.length + ' from backend')
-        : ('Standalone mode · ' + items.length + ' demo alerts (start Flask on :5000 for live API)');
+        ? ('Loaded ' + items.length + ' from backend · ' + new Date().toLocaleTimeString())
+        : ('Standalone · refreshed ' + new Date().toLocaleTimeString() + ' · Flask :5000 optional');
       status.style.color = fromApi ? '#00ff88' : '#8fa3b8';
     }
     if (window.SmartRoute && SmartRoute.showToast) {
-      SmartRoute.showToast(fromApi ? 'Alerts from API' : 'Demo alerts (backend offline)', fromApi ? 'success' : 'info');
+      SmartRoute.showToast(fromApi ? 'Alerts updated from API' : 'Alerts refreshed (demo)', 'success');
     }
   }
   async function onEnablePush() {
@@ -125,18 +125,32 @@
     if (btn) { btn.disabled = true; btn.textContent = 'Enabling…'; }
     try {
       if (!window.SmartRouteFCM || typeof SmartRouteFCM.enable !== 'function') {
-        if (status) { status.dataset.locked = '1'; status.textContent = 'Push module missing — Refresh still works.'; status.style.color = '#ff9500'; }
+        if (status) {
+          status.dataset.locked = '1';
+          status.textContent = 'Push needs backend + Firebase config. Refresh works without backend.';
+          status.style.color = '#ff9500';
+        }
       } else {
         var st = await SmartRouteFCM.enable();
         if (status) {
           status.dataset.locked = '1';
-          if (st && st.error) { status.textContent = 'Push: ' + st.error; status.style.color = '#ff9500'; }
-          else if (st && st.token) { status.textContent = 'Push enabled · token registered'; status.style.color = '#00ff88'; }
-          else { status.textContent = 'Permission: ' + ((st && st.permission) || 'unknown'); }
+          if (st && st.error) {
+            status.textContent = st.error + ' — use Refresh for local alerts (Flask optional).';
+            status.style.color = '#ff9500';
+          } else if (st && st.token) {
+            status.textContent = 'Push enabled · token registered';
+            status.style.color = '#00ff88';
+          } else {
+            status.textContent = 'Permission: ' + ((st && st.permission) || 'unknown');
+          }
         }
       }
     } catch (err) {
-      if (status) { status.dataset.locked = '1'; status.textContent = 'Push error: ' + (err.message || err); status.style.color = '#ff6b6b'; }
+      if (status) {
+        status.dataset.locked = '1';
+        status.textContent = 'Push: ' + (err.message || err) + ' — Refresh still works.';
+        status.style.color = '#ff6b6b';
+      }
     }
     if (btn) { btn.disabled = false; btn.textContent = 'Enable push'; }
   }
