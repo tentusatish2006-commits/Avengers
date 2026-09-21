@@ -9,17 +9,13 @@
   }
   async function fetchConfig() {
     try {
-      if (w.SmartRouteAPI && SmartRouteAPI.isOnline === false) {
-        state.error = 'Backend offline — start Flask on :5000 for push config';
-        return null;
-      }
+      if (w.SmartRouteAPI && SmartRouteAPI.isOnline === false) return null;
       var res = await fetch(API_BASE + '/notifications/config');
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (!res.ok) return null;
       var json = await res.json();
-      if (!json.configured) { state.error = 'Firebase web config missing on server'; return null; }
+      if (!json.configured) return null;
       return json.config;
     } catch (e) {
-      state.error = 'Cannot reach backend /notifications/config — is Flask running?';
       return null;
     }
   }
@@ -61,15 +57,44 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: token, user_id: userId, role: role })
       });
-    } catch (e) { console.warn('[FCM] token register failed', e); }
+    } catch (e) {}
+  }
+  async function enableLocalOnly() {
+    if (typeof Notification === 'undefined') {
+      state.error = 'Notifications not supported in this browser';
+      toast(state.error, 'warn');
+      return state;
+    }
+    var permission = await Notification.requestPermission();
+    state.permission = permission;
+    if (permission !== 'granted') {
+      state.error = 'Notification permission denied';
+      toast(state.error, 'warn');
+      return state;
+    }
+    state.configured = true;
+    state.token = 'local-' + Date.now();
+    state.error = null;
+    try {
+      new Notification('SmartRoute Alerts', {
+        body: 'Local notifications enabled (standalone mode).',
+        icon: '/favicon.ico'
+      });
+    } catch (e) {}
+    toast('Local notifications enabled', 'success');
+    return state;
   }
   async function enablePush() {
     state.error = null;
     if (typeof Notification === 'undefined') {
-      state.error = 'Notifications not supported'; toast(state.error, 'warn'); return state;
+      state.error = 'Notifications not supported';
+      toast(state.error, 'warn');
+      return state;
     }
     var config = await fetchConfig();
-    if (!config) { toast(state.error || 'Firebase not configured', 'warn'); return state; }
+    if (!config) {
+      return enableLocalOnly();
+    }
     try {
       await loadFirebaseScripts();
       if (!w.firebase.apps.length) w.firebase.initializeApp(config);
@@ -77,14 +102,17 @@
       var permission = await Notification.requestPermission();
       state.permission = permission;
       if (permission !== 'granted') {
-        state.error = 'Notification permission denied'; toast(state.error, 'warn'); return state;
+        state.error = 'Notification permission denied';
+        toast(state.error, 'warn');
+        return state;
       }
       var messaging = w.firebase.messaging();
       var token = await messaging.getToken({ vapidKey: config.vapidKey, serviceWorkerRegistration: reg });
       if (!token) {
-        state.error = 'Could not get FCM token (check VAPID key)'; toast(state.error, 'warn'); return state;
+        return enableLocalOnly();
       }
-      state.token = token; state.configured = true;
+      state.token = token;
+      state.configured = true;
       localStorage.setItem('sr_fcm_token', token);
       await registerTokenWithBackend(token);
       messaging.onMessage(function (payload) {
@@ -92,14 +120,11 @@
         var body = (payload.notification && payload.notification.body) || (payload.data && payload.data.message) || '';
         toast(title + ': ' + body, 'info');
         if (typeof w.refreshSmartRouteAlerts === 'function') w.refreshSmartRouteAlerts();
-        if (typeof w.updateAlertBadge === 'function') w.updateAlertBadge();
       });
-      toast('Push notifications enabled', 'success');
+      toast('Cloud push enabled', 'success');
       return state;
     } catch (e) {
-      state.error = e.message || String(e);
-      toast('FCM error: ' + state.error, 'warn');
-      return state;
+      return enableLocalOnly();
     }
   }
   async function refreshUnreadBadge() {
@@ -108,11 +133,6 @@
       var n = 0;
       if (w.SmartRouteAPI && typeof SmartRouteAPI.getUnreadCount === 'function') {
         n = await SmartRouteAPI.getUnreadCount();
-      } else {
-        var res = await fetch(API_BASE + '/notifications/unread-count');
-        if (!res.ok) return;
-        var json = await res.json();
-        n = (json && json.count) || 0;
       }
       var btn = document.getElementById('sr-alerts-btn');
       if (!btn) return;
@@ -130,9 +150,4 @@
   }
   w.SmartRouteFCM = { enable: enablePush, state: state, refreshBadge: refreshUnreadBadge };
   w.updateAlertBadge = refreshUnreadBadge;
-  document.addEventListener('DOMContentLoaded', function () {
-    setTimeout(function () {
-      if (!(w.SmartRouteAPI && SmartRouteAPI.isOnline === false)) refreshUnreadBadge();
-    }, 1500);
-  });
 })(window);
