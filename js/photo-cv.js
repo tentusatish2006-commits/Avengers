@@ -1,14 +1,14 @@
-/* SmartRoute Photo CV v16 — strict invalid (no score); distinct flood/landslide/pothole */
+/* SmartRoute Photo CV v17 — invalid photos get NO risk score */
 (function (global) {
   function classify(dataUrl, filename) {
     return new Promise(function (resolve) {
       var fn = (filename || '').toLowerCase();
       if (/\.(dwg|dxf|psd)$/i.test(fn)) {
-        return resolve(invalidMeta(99, 'Software / CAD file — not a field photo.'));
+        return resolve(invalidMeta(99, 'Not a field photo.'));
       }
       var nameHint = null;
-      if (/pothole|pot.?hole|crater|asphalt.?damage|road.?hole/i.test(fn)) nameHint = 'pothole';
-      else if (/flood|waterlog|inundat|submerged|overflow/i.test(fn)) nameHint = 'flood';
+      if (/pothole|pot.?hole|crater|road.?hole/i.test(fn)) nameHint = 'pothole';
+      else if (/flood|waterlog|inundat|submerged/i.test(fn)) nameHint = 'flood';
       else if (/landslide|debris|slope|mudslide|rockfall/i.test(fn)) nameHint = 'landslide';
 
       var img = new Image();
@@ -16,10 +16,10 @@
         try {
           var w = img.naturalWidth || img.width;
           var h = img.naturalHeight || img.height;
-          if (w < 48 || h < 48) return resolve(invalidMeta(95, 'Image too small for analysis.'));
+          if (w < 64 || h < 64) return resolve(invalidMeta(95, 'Image too small. No risk score.'));
 
           var canvas = document.createElement('canvas');
-          var maxSide = 360;
+          var maxSide = 320;
           var scale = Math.min(1, maxSide / Math.max(w, h));
           canvas.width = Math.max(1, Math.round(w * scale));
           canvas.height = Math.max(1, Math.round(h * scale));
@@ -28,8 +28,7 @@
           var data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
           var n = canvas.width * canvas.height;
 
-          var B = 0, G = 0, D = 0, U = 0, GR = 0, WH = 0, MW = 0, ASP = 0;
-          var satSum = 0, lumSum = 0;
+          var B = 0, G = 0, D = 0, U = 0, GR = 0, WH = 0, MW = 0, ASP = 0, satSum = 0;
 
           for (var i = 0; i < data.length; i += 4) {
             var r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
@@ -38,15 +37,14 @@
             var sat = mx === 0 ? 0 : (mx - mn) / mx;
             satSum += sat;
             var lum = 0.299 * r + 0.587 * g + 0.114 * b;
-            lumSum += lum;
-            if (lum < 50) D++;
-            if (r > 85 && g > 50 && b < 100 && r > b + 20 && r >= g - 5) B++;
-            if (Math.abs(r - g) < 25 && Math.abs(g - b) < 25 && lum > 40 && lum < 185) G++;
-            if (sat < 0.16 && lum > 28 && lum < 130 && Math.abs(r - g) < 20 && Math.abs(g - b) < 20) ASP++;
-            if (b > r + 25 && b > g + 15 && lum > 45 && lum < 175 && sat > 0.15) U++;
-            if (g > r + 18 && g > b + 12 && g > 60) GR++;
-            if (lum < 58 && sat < 0.32) WH++;
-            if (r > 60 && g > 48 && b > 40 && b < 120 && lum < 130 && sat > 0.12 && sat < 0.5) MW++;
+            if (lum < 48) D++;
+            if (r > 95 && g > 55 && b < 95 && r > b + 25 && r >= g) B++;
+            if (Math.abs(r - g) < 22 && Math.abs(g - b) < 22 && lum > 45 && lum < 175) G++;
+            if (sat < 0.14 && lum > 30 && lum < 120 && Math.abs(r - g) < 18 && Math.abs(g - b) < 18) ASP++;
+            if (b > r + 30 && b > g + 18 && lum > 50 && lum < 165 && sat > 0.18) U++;
+            if (g > r + 20 && g > b + 15 && g > 70) GR++;
+            if (lum < 55 && sat < 0.28) WH++;
+            if (r > 70 && g > 55 && b > 45 && b < 110 && lum < 120 && sat > 0.14 && sat < 0.48) MW++;
           }
 
           function pct(x) { return (x / n) * 100; }
@@ -54,52 +52,43 @@
           WH = pct(WH); MW = pct(MW); ASP = pct(ASP);
           var avgSat = satSum / n;
 
-          if (avgSat < 0.04 && G > 55) {
-            return resolve(invalidMeta(93, 'Not a field hazard photo (looks blank or UI).'));
+          if (avgSat < 0.05 && G > 50) {
+            return resolve(invalidMeta(94, 'Invalid photo — looks blank or UI. No risk score.'));
+          }
+          if (GR > 45 && B < 6 && U < 5 && WH < 8) {
+            return resolve(invalidMeta(92, 'Invalid photo — not a road hazard scene. No risk score.'));
           }
 
           var scoreLand = 0, scoreFlood = 0, scorePot = 0;
+          scoreLand += Math.min(55, B * 1.8);
+          scoreLand += Math.min(15, D * 0.35);
+          if (B > 12) scoreLand += 18;
+          if (B > 20) scoreLand += 15;
+          if (U > 10) scoreLand -= 15;
 
-          scoreLand += Math.min(50, B * 1.5);
-          scoreLand += Math.min(18, D * 0.4);
-          if (B > 8) scoreLand += 12;
-          if (B > 15) scoreLand += 15;
-          if (U > 12) scoreLand -= 10;
+          scoreFlood += Math.min(50, U * 2.0);
+          scoreFlood += Math.min(20, MW * 0.8);
+          if (U > 10) scoreFlood += 20;
+          if (U > 18) scoreFlood += 18;
+          if (U < 6) scoreFlood *= 0.2;
 
-          scoreFlood += Math.min(45, U * 1.8);
-          scoreFlood += Math.min(22, MW * 0.85);
-          if (U > 8) scoreFlood += 15;
-          if (U > 15) scoreFlood += 20;
-          if (U > 25) scoreFlood += 15;
-          if (U < 5) scoreFlood *= 0.3;
+          scorePot += Math.min(45, ASP * 1.2);
+          scorePot += Math.min(32, WH * 1.25);
+          if (ASP > 18 && WH > 8) scorePot += 30;
+          if (ASP > 22 && U < 12) scorePot += 15;
+          if (WH > 10 && ASP > 12 && U <= 14) scorePot += 20;
 
-          scorePot += Math.min(42, ASP * 1.15);
-          scorePot += Math.min(30, WH * 1.2);
-          scorePot += Math.min(18, G * 0.4);
-          if (ASP > 15 && WH > 5) scorePot += 25;
-          if (ASP > 20 && U < 16) scorePot += 18;
-          if (WH > 8 && U <= 14 && ASP > 10) scorePot += 22;
-
-          if (ASP > 18 && ASP >= U) {
-            scoreFlood = Math.max(0, scoreFlood - 28);
-            scorePot += 10;
-          }
-          if (U > 20 && ASP < 12) {
-            scoreFlood += 18;
-            scorePot = Math.max(0, scorePot - 12);
-          }
-          if (B > 14 && U < 10 && ASP < 20) {
-            scoreLand += 16;
-            scoreFlood = Math.max(0, scoreFlood - 12);
-          }
-          if (U >= 4 && U <= 16 && ASP > 14 && WH > 6) {
-            scorePot += 28;
-            scoreFlood = Math.max(0, scoreFlood - 25);
+          if (ASP > 20 && ASP >= U) scoreFlood = Math.max(0, scoreFlood - 35);
+          if (U > 22 && ASP < 10) scorePot = Math.max(0, scorePot - 20);
+          if (B > 16 && U < 8) scoreFlood = Math.max(0, scoreFlood - 15);
+          if (U >= 4 && U <= 14 && ASP > 16 && WH > 8) {
+            scorePot += 25;
+            scoreFlood = Math.max(0, scoreFlood - 30);
           }
 
-          if (nameHint === 'pothole') scorePot += 40;
-          if (nameHint === 'flood') scoreFlood += 40;
-          if (nameHint === 'landslide') scoreLand += 40;
+          if (nameHint === 'pothole') scorePot += 45;
+          if (nameHint === 'flood') scoreFlood += 45;
+          if (nameHint === 'landslide') scoreLand += 45;
 
           var best = 'invalid';
           var bestScore = 0;
@@ -111,20 +100,24 @@
             best = 'pothole'; bestScore = scorePot;
           }
 
-          if (best === 'flood' && ASP > U + 4 && ASP > 14) {
-            best = 'pothole'; bestScore = scorePot;
-          }
-          if (best === 'flood' && U < 10) {
-            if (scorePot >= 25) { best = 'pothole'; bestScore = scorePot; }
-            else if (scoreLand >= 25) { best = 'landslide'; bestScore = scoreLand; }
+          if (best === 'flood' && (ASP > U + 3 || U < 8)) {
+            if (scorePot >= 30) { best = 'pothole'; bestScore = scorePot; }
+            else if (scoreLand >= 30) { best = 'landslide'; bestScore = scoreLand; }
+            else { best = 'invalid'; bestScore = 0; }
           }
 
-          var MIN_SCORE = nameHint ? 22 : 28;
-          if (bestScore < MIN_SCORE) {
-            return resolve(invalidMeta(90, 'INVALID PHOTO — not a clear landslide, pothole, or flood field photo. No risk score.'));
+          var MIN_SCORE = nameHint ? 35 : 42;
+          var signalOk = false;
+          if (best === 'landslide' && B >= 8) signalOk = true;
+          if (best === 'flood' && U >= 8) signalOk = true;
+          if (best === 'pothole' && (ASP >= 12 || WH >= 8)) signalOk = true;
+          if (nameHint && bestScore >= 35) signalOk = true;
+
+          if (bestScore < MIN_SCORE || !signalOk || best === 'invalid') {
+            return resolve(invalidMeta(91, 'INVALID PHOTO — not a clear landslide, pothole, or flood. Risk score not calculated.'));
           }
 
-          var conf = Math.min(96, Math.round(52 + bestScore * 0.4));
+          var conf = Math.min(96, Math.round(55 + bestScore * 0.35));
           var features = {
             brown: +B.toFixed(1), gray: +G.toFixed(1), dark: +D.toFixed(1),
             blue: +U.toFixed(1), green: +GR.toFixed(1), wet_holes: +WH.toFixed(1),
@@ -134,16 +127,16 @@
           if (best === 'landslide') {
             return resolve({
               class: 'landslide', invalid: false, no_score: false, confidence: conf, features: features,
-              risk_score: Math.min(95, Math.round(50 + B * 1.2 + D * 0.3)),
+              risk_score: Math.min(95, Math.round(52 + B * 1.1)),
               hazard_type: 'Landslide', severity: 'CRITICAL',
               damage_pct: Math.min(95, Math.round(50 + B)),
-              recommended_action: 'Landslide debris on corridor. Close road and deploy clearance crew.'
+              recommended_action: 'Landslide debris detected. Close corridor and deploy clearance crew.'
             });
           }
           if (best === 'flood') {
             return resolve({
               class: 'flood', invalid: false, no_score: false, confidence: conf, features: features,
-              risk_score: Math.min(94, Math.round(48 + U * 1.1 + MW * 0.4)),
+              risk_score: Math.min(94, Math.round(50 + U * 1.0)),
               hazard_type: 'Flood', severity: 'CRITICAL',
               damage_pct: Math.min(92, Math.round(45 + U)),
               recommended_action: 'Flood / waterlogging. Use elevated alternate NER routes.'
@@ -151,9 +144,9 @@
           }
           return resolve({
             class: 'pothole', invalid: false, no_score: false, confidence: conf, features: features,
-            risk_score: Math.min(88, Math.round(38 + ASP * 0.6 + WH * 0.8)),
+            risk_score: Math.min(88, Math.round(40 + ASP * 0.5 + WH * 0.7)),
             hazard_type: 'Road Potholes', severity: 'HIGH',
-            damage_pct: Math.min(85, Math.round(35 + ASP * 0.5 + WH)),
+            damage_pct: Math.min(85, Math.round(35 + ASP * 0.4 + WH)),
             recommended_action: 'Potholes / surface damage. Slow traffic and schedule repair.'
           });
         } catch (err) {
@@ -184,7 +177,7 @@
     return classify(url, filename);
   }
 
-  var api = { version: 16, classify: classify, analyze: analyze };
+  var api = { version: 17, classify: classify, analyze: analyze };
   global.SmartRoutePhotoCV = api;
   global.PhotoCV = api;
 })(typeof window !== 'undefined' ? window : this);
