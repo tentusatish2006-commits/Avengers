@@ -13,57 +13,127 @@
 <div class="app-shell">
   <div class="main-content" id="main-content">
     <main class="page-body" style="padding:20px;">
-      <div class="page-header">
-        <h1 class="page-title">Alerts</h1>
-        <p class="page-subtitle">North Eastern Region real-time alerts</p>
+      <div class="page-header" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
+        <div>
+          <h1 class="page-title">Alerts</h1>
+          <p class="page-subtitle">North Eastern Region real-time alerts</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" id="btn-enable-push" style="padding:8px 14px;border-radius:8px;border:none;background:linear-gradient(90deg,#00d4ff,#00ff88);color:#031018;font-weight:700;cursor:pointer;">Enable push</button>
+          <button type="button" id="btn-refresh-alerts" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(0,212,255,0.4);background:rgba(0,212,255,0.1);color:#00d4ff;font-weight:700;cursor:pointer;">Refresh</button>
+        </div>
       </div>
-
+      <p id="push-status" style="color:#8fa3b8;font-size:0.85rem;margin:0 0 12px;"></p>
       <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;">
         <div class="glass-card" style="padding:12px;">
           <div id="alert-list"></div>
         </div>
         <div class="glass-card" style="padding:16px;">
           <h3 style="margin:0 0 8px;color:#00d4ff;">Alert detail</h3>
-          <div class="text-cyan">📍 <span id="detail-loc">Shillong</span> | 🕒 <span id="detail-time">08:32</span></div>
+          <div class="text-cyan">📍 <span id="detail-loc">—</span> | 🕒 <span id="detail-time">—</span></div>
+          <p id="detail-sev" style="margin:8px 0 0;font-weight:700;"></p>
           <p id="detail-msg" style="margin-top:12px;color:#c8d8e8;">Select an alert</p>
+          <a id="detail-link" href="#" style="display:none;margin-top:12px;color:#00d4ff;">Open related page →</a>
         </div>
       </div>
     </main>
   </div>
 </div>
+<script src="js/api.js"></script>
 <script src="js/components.js"></script>
+<script src="js/fcm-client.js"></script>
 <script>
-  var ALERTS = [
-    { time: '08:32', loc: 'Shillong', msg: 'Landslide risk elevated on NH-6 stretch' },
-    { time: '09:10', loc: 'Tawang', msg: 'Heavy fog — visibility under 50m' },
-    { time: '09:45', loc: 'Silchar', msg: 'Bridge weight restriction active' },
-    { time: '10:05', loc: 'Kohima', msg: 'Slope monitoring alert — Dimapur–Kohima' },
-    { time: '10:20', loc: 'Shillong PHC', msg: 'Medical supply convoy delayed 40 min' },
-    { time: '11:00', loc: 'Imphal', msg: 'Route congestion near city entry' },
-    { time: '12:15', loc: 'Guwahati', msg: 'Flood watch on Brahmaputra lowlands' },
-    { time: '13:00', loc: 'Aizawl', msg: 'Rain intensity high — alternate route advised' }
+  var DEMO_ALERTS = [
+    { time: '08:32', loc: 'Shillong', msg: 'Landslide risk elevated on NH-6 stretch', severity: 'HIGH', type: 'LANDSLIDE' },
+    { time: '09:10', loc: 'Tawang', msg: 'Heavy fog — visibility under 50m', severity: 'MEDIUM', type: 'ALERT' },
+    { time: '09:45', loc: 'Silchar', msg: 'Bridge weight restriction active', severity: 'HIGH', type: 'ROAD_BLOCKED' },
+    { time: '10:05', loc: 'Kohima', msg: 'Slope monitoring alert — Dimapur–Kohima', severity: 'HIGH', type: 'LANDSLIDE' },
+    { time: '10:20', loc: 'Shillong PHC', msg: 'Medical supply convoy delayed 40 min', severity: 'MEDIUM', type: 'SHIPMENT_DELAY' },
+    { time: '11:00', loc: 'Imphal', msg: 'Route congestion near city entry', severity: 'MEDIUM', type: 'ROUTE_RISK' },
+    { time: '12:15', loc: 'Guwahati', msg: 'Flood watch on Brahmaputra lowlands', severity: 'CRITICAL', type: 'FLOOD' },
+    { time: '13:00', loc: 'Aizawl', msg: 'Rain intensity high — alternate route advised', severity: 'HIGH', type: 'ALERT' }
   ];
-
+  var API_BASE = (window.SmartRouteAPI && SmartRouteAPI.baseUrl) || 'http://127.0.0.1:5000/api';
   function selectAlert(a) {
-    document.getElementById('detail-loc').textContent = a.loc;
-    document.getElementById('detail-time').textContent = a.time;
-    document.getElementById('detail-msg').textContent = a.msg;
-  }
-
-  document.addEventListener('DOMContentLoaded', function () {
-    if (window.SmartRoute) {
-      SmartRoute.initSharedComponents({ title: 'Alerts', subtitle: 'NER alerts' });
+    document.getElementById('detail-loc').textContent = a.loc || a.notification_type || 'NER';
+    document.getElementById('detail-time').textContent = a.time || a.created_at || '—';
+    document.getElementById('detail-msg').textContent = a.msg || a.message || a.title || '';
+    var sev = a.severity || '';
+    var sevEl = document.getElementById('detail-sev');
+    sevEl.textContent = sev ? ('Severity: ' + sev) : '';
+    sevEl.style.color = sev === 'CRITICAL' ? '#ff6b6b' : (sev === 'HIGH' ? '#ff9500' : '#00ff88');
+    var link = document.getElementById('detail-link');
+    if (a.link) {
+      link.href = a.link;
+      link.style.display = 'inline-block';
+    } else {
+      link.style.display = 'none';
     }
+  }
+  function renderList(items) {
     var list = document.getElementById('alert-list');
-    ALERTS.forEach(function (a, i) {
+    list.innerHTML = '';
+    if (!items.length) {
+      list.innerHTML = '<div style="color:#8fa3b8;padding:12px;">No alerts yet</div>';
+      return;
+    }
+    items.forEach(function (a, i) {
       var row = document.createElement('div');
-      row.className = 'glass-card';
-      row.style.cssText = 'padding:12px;margin-bottom:8px;cursor:pointer;';
-      row.innerHTML = '<div style="font-weight:600;">' + a.msg + '</div><div class="text-sm" style="color:#8fa3b8;margin-top:4px;">' + a.time + ' | ' + a.loc + '</div>';
-      row.onclick = function () { selectAlert(a); };
+      row.style.cssText = 'padding:12px;border-bottom:1px solid rgba(255,255,255,0.06);cursor:pointer;';
+      var unread = a.read_status === false || a.read_status === 0;
+      row.innerHTML =
+        '<div style="font-weight:700;color:' + (unread ? '#e8f4ff' : '#8fa3b8') + ';">' + (a.title || a.msg || '') + '</div>' +
+        '<div style="color:#8fa3b8;margin-top:4px;font-size:0.85rem;">' +
+          (a.time || a.created_at || '') + ' | ' + (a.loc || a.notification_type || '') +
+          (a.severity ? ' · ' + a.severity : '') +
+          (unread ? ' · <span style="color:#ff9500;">Unread</span>' : '') +
+        '</div>';
+      row.onclick = function () {
+        selectAlert(a);
+        if (a.id) {
+          fetch(API_BASE + '/notifications/' + a.id + '/read', { method: 'POST' })
+            .then(function () { if (window.updateAlertBadge) updateAlertBadge(); });
+        }
+      };
       list.appendChild(row);
       if (i === 0) selectAlert(a);
     });
+  }
+  async function loadAlerts() {
+    var items = [];
+    try {
+      var res = await fetch(API_BASE + '/notifications?limit=50');
+      var json = await res.json();
+      if (json && json.data && json.data.length) {
+        items = json.data.map(function (n) {
+          return {
+            id: n.id, title: n.title, msg: n.message, message: n.message,
+            time: n.created_at, created_at: n.created_at, loc: n.notification_type,
+            severity: n.severity, notification_type: n.notification_type,
+            link: n.link, read_status: n.read_status
+          };
+        });
+      }
+    } catch (e) {}
+    if (!items.length) items = DEMO_ALERTS;
+    renderList(items);
+    if (window.updateAlertBadge) updateAlertBadge();
+  }
+  window.refreshSmartRouteAlerts = loadAlerts;
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Alerts', subtitle: 'NER alerts' });
+    loadAlerts();
+    document.getElementById('btn-refresh-alerts').onclick = loadAlerts;
+    document.getElementById('btn-enable-push').onclick = async function () {
+      if (!window.SmartRouteFCM) {
+        document.getElementById('push-status').textContent = 'FCM client not loaded';
+        return;
+      }
+      var st = await SmartRouteFCM.enable();
+      document.getElementById('push-status').textContent = st.error
+        ? ('Config: ' + st.error)
+        : (st.token ? 'Push enabled · token registered' : 'Permission: ' + st.permission);
+    };
   });
 </script>
 </body>
