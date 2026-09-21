@@ -111,13 +111,11 @@
     if (btn) { btn.disabled = false; btn.textContent = 'Refresh'; }
     if (status && !status.dataset.locked) {
       status.textContent = fromApi
-        ? ('Loaded ' + items.length + ' from backend · ' + new Date().toLocaleTimeString())
-        : ('Standalone · refreshed ' + new Date().toLocaleTimeString() + ' · Flask :5000 optional');
+        ? ('Loaded ' + items.length + ' from backend')
+        : ('Standalone · refreshed ' + new Date().toLocaleTimeString());
       status.style.color = fromApi ? '#00ff88' : '#8fa3b8';
     }
-    if (window.SmartRoute && SmartRoute.showToast) {
-      SmartRoute.showToast(fromApi ? 'Alerts updated from API' : 'Alerts refreshed (demo)', 'success');
-    }
+    if (window.SmartRoute && SmartRoute.showToast) SmartRoute.showToast('Alerts refreshed', 'success');
   }
   async function onEnablePush() {
     var status = document.getElementById('push-status');
@@ -127,19 +125,22 @@
       if (!window.SmartRouteFCM || typeof SmartRouteFCM.enable !== 'function') {
         if (status) {
           status.dataset.locked = '1';
-          status.textContent = 'Push needs backend + Firebase config. Refresh works without backend.';
+          status.textContent = 'Push module missing.';
           status.style.color = '#ff9500';
         }
       } else {
         var st = await SmartRouteFCM.enable();
         if (status) {
           status.dataset.locked = '1';
-          if (st && st.error) {
-            status.textContent = st.error + ' — use Refresh for local alerts (Flask optional).';
-            status.style.color = '#ff9500';
-          } else if (st && st.token) {
-            status.textContent = 'Push enabled · token registered';
+          if (st && st.token) {
+            var local = String(st.token).indexOf('local-') === 0;
+            status.textContent = local
+              ? 'Local notifications ON — allow browser permission if asked'
+              : 'Cloud push enabled · FCM token registered';
             status.style.color = '#00ff88';
+          } else if (st && st.error) {
+            status.textContent = st.error;
+            status.style.color = '#ff9500';
           } else {
             status.textContent = 'Permission: ' + ((st && st.permission) || 'unknown');
           }
@@ -148,7 +149,7 @@
     } catch (err) {
       if (status) {
         status.dataset.locked = '1';
-        status.textContent = 'Push: ' + (err.message || err) + ' — Refresh still works.';
+        status.textContent = 'Push: ' + (err.message || err);
         status.style.color = '#ff6b6b';
       }
     }
