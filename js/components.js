@@ -183,6 +183,13 @@ function initSidebarToggle() {
 }
 
 function injectResponsiveCss() {
+  if (!document.getElementById('sr-timeline-fix-css')) {
+    var tl = document.createElement('link');
+    tl.id = 'sr-timeline-fix-css';
+    tl.rel = 'stylesheet';
+    tl.href = 'css/timeline-fix.css?v=1';
+    document.head.appendChild(tl);
+  }
   if (!document.getElementById('sr-responsive-css-link')) {
     const link = document.createElement('link');
     link.id = 'sr-responsive-css-link';
