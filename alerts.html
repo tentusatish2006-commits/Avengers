@@ -79,7 +79,6 @@
     var list = document.getElementById('alert-list');
     if (!list) return;
     list.innerHTML = '';
-    if (!items.length) { list.innerHTML = '<div style="color:#8fa3b8;padding:12px;">No alerts yet</div>'; return; }
     items.forEach(function (a, i) {
       var row = document.createElement('div');
       row.style.cssText = 'padding:12px;border-bottom:1px solid rgba(255,255,255,0.06);cursor:pointer;';
@@ -95,23 +94,30 @@
     var status = document.getElementById('push-status');
     if (btn) { btn.disabled = true; btn.textContent = 'Refreshing…'; }
     var items = [];
+    var fromApi = false;
     try {
-      var ctrl = new AbortController();
-      var t = setTimeout(function () { ctrl.abort(); }, 4000);
-      var res = await fetch(apiBase() + '/notifications?limit=50', { signal: ctrl.signal });
-      clearTimeout(t);
-      var json = await res.json();
-      if (json && json.data && json.data.length) {
-        items = json.data.map(function (n) {
-          return { id: n.id, title: n.title, msg: n.message, time: n.created_at, loc: n.notification_type, severity: n.severity, link: n.link };
-        });
+      if (window.SmartRouteAPI && typeof SmartRouteAPI.getNotifications === 'function') {
+        var json = await SmartRouteAPI.getNotifications(50);
+        if (json && json.data && json.data.length) {
+          fromApi = true;
+          items = json.data.map(function (n) {
+            return { id: n.id, title: n.title, msg: n.message, time: n.created_at, loc: n.notification_type, severity: n.severity, link: n.link };
+          });
+        }
       }
     } catch (e) {}
     if (!items.length) items = DEMO_ALERTS.slice();
     renderList(items);
     if (btn) { btn.disabled = false; btn.textContent = 'Refresh'; }
-    if (status && !status.dataset.locked) status.textContent = 'Alerts updated (' + items.length + ')';
-    if (window.SmartRoute && SmartRoute.showToast) SmartRoute.showToast('Alerts refreshed', 'success');
+    if (status && !status.dataset.locked) {
+      status.textContent = fromApi
+        ? ('Loaded ' + items.length + ' from backend')
+        : ('Standalone mode · ' + items.length + ' demo alerts (start Flask on :5000 for live API)');
+      status.style.color = fromApi ? '#00ff88' : '#8fa3b8';
+    }
+    if (window.SmartRoute && SmartRoute.showToast) {
+      SmartRoute.showToast(fromApi ? 'Alerts from API' : 'Demo alerts (backend offline)', fromApi ? 'success' : 'info');
+    }
   }
   async function onEnablePush() {
     var status = document.getElementById('push-status');
@@ -119,8 +125,7 @@
     if (btn) { btn.disabled = true; btn.textContent = 'Enabling…'; }
     try {
       if (!window.SmartRouteFCM || typeof SmartRouteFCM.enable !== 'function') {
-        if (status) { status.dataset.locked = '1'; status.textContent = 'Push module missing — Refresh still works for local alerts.'; status.style.color = '#ff9500'; }
-        if (window.SmartRoute && SmartRoute.showToast) SmartRoute.showToast('FCM client not loaded', 'warn');
+        if (status) { status.dataset.locked = '1'; status.textContent = 'Push module missing — Refresh still works.'; status.style.color = '#ff9500'; }
       } else {
         var st = await SmartRouteFCM.enable();
         if (status) {
