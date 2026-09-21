@@ -3,81 +3,277 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>SmartRoute - Command Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
     <link rel="stylesheet" href="css/design-system.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/components.css">
+
     <style>
-        .dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
-        .stat-card { background: rgba(8,18,36,0.85); border: 1px solid rgba(0,212,255,0.22); border-radius: 14px; padding: 18px; position: relative; overflow: hidden; }
-        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #00d4ff, #00ff88); }
-        .stat-label { font-size: 0.75rem; color: #8fa3b8; text-transform: uppercase; letter-spacing: 0.06em; }
-        .stat-value { font-size: 1.85rem; font-weight: 800; color: #00d4ff; margin-top: 6px; font-family: 'JetBrains Mono', monospace; }
-        .stat-sub { font-size: 0.78rem; color: #6a8ea8; margin-top: 4px; }
-        .panel-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; margin-bottom: 16px; }
-        .panel { background: rgba(8,18,36,0.85); border: 1px solid rgba(0,212,255,0.2); border-radius: 14px; padding: 14px; min-height: 320px; }
-        .panel h3 { margin: 0 0 12px; font-size: 0.95rem; color: #e8f4ff; }
-        #dash-map { width: 100%; height: 300px; border-radius: 10px; }
-        .incident-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.85rem; }
-        .sev { font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
-        .sev.crit { background: rgba(255,59,59,0.2); color: #ff6b6b; }
-        .sev.high { background: rgba(255,149,0,0.2); color: #ff9500; }
-        .sev.mod { background: rgba(0,212,255,0.15); color: #00d4ff; }
-        .route-legend { display:flex; gap:14px; flex-wrap:wrap; margin:8px 0 12px; font-size:0.8rem; color:#c5d8ec; }
-        .route-legend span { display:inline-flex; align-items:center; gap:6px; }
-        .route-legend i { width:28px; height:4px; border-radius:2px; display:inline-block; }
-        .quick-links { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .quick-links a { display: block; text-align: center; padding: 14px 8px; border-radius: 10px; text-decoration: none; color: #e8f4ff; background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.25); font-weight: 700; font-size: 0.82rem; }
-        .quick-links a:hover { background: rgba(0,212,255,0.18); }
-        @media (max-width: 1000px) { .dash-grid { grid-template-columns: 1fr 1fr; } .panel-row { grid-template-columns: 1fr; } .quick-links { grid-template-columns: 1fr 1fr; } }
+        body {
+            background-color: #030810;
+            color: #fff;
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .page-body {
+            padding: 20px;
+        }
+
+        .dash-hero {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .dash-hero h1 {
+            margin: 0;
+            font-size: 1.75rem;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .dash-hero p {
+            margin: 6px 0 0;
+            color: #8fa3b8;
+            font-size: 0.95rem;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: rgba(8, 18, 36, 0.9);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 14px;
+            padding: 18px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #8fa3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #00d4ff;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-value.danger { color: #ff6b6b; }
+        .stat-value.ok { color: #00ff88; }
+        .stat-value.warn { color: #ff9500; }
+
+        .stat-sub {
+            font-size: 0.78rem;
+            color: #6a8ea8;
+            margin-top: 6px;
+        }
+
+        .panel-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .glass-panel {
+            background: rgba(8, 18, 36, 0.9);
+            border: 1px solid rgba(0, 212, 255, 0.18);
+            border-radius: 14px;
+            padding: 16px;
+            min-height: 340px;
+        }
+
+        .glass-panel h3 {
+            margin: 0 0 14px;
+            font-size: 1rem;
+            color: #e8f4ff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #dash-map {
+            width: 100%;
+            height: 300px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+        }
+
+        .incident-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 0.88rem;
+        }
+
+        .sev {
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 3px 10px;
+            border-radius: 999px;
+        }
+
+        .sev.crit { background: rgba(255, 59, 59, 0.2); color: #ff6b6b; }
+        .sev.high { background: rgba(255, 149, 0, 0.2); color: #ff9500; }
+        .sev.mod { background: rgba(0, 212, 255, 0.15); color: #00d4ff; }
+
+        .quick-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .quick-grid a {
+            display: block;
+            text-align: center;
+            padding: 16px 10px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: #e8f4ff;
+            background: rgba(0, 212, 255, 0.08);
+            border: 1px solid rgba(0, 212, 255, 0.25);
+            font-weight: 700;
+            font-size: 0.85rem;
+            transition: background 0.2s;
+        }
+
+        .quick-grid a:hover {
+            background: rgba(0, 212, 255, 0.18);
+            border-color: rgba(0, 212, 255, 0.5);
+        }
+
+        .legend {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin: 0 0 12px;
+            font-size: 0.8rem;
+            color: #c5d8ec;
+        }
+
+        .legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend i {
+            width: 28px;
+            height: 4px;
+            border-radius: 2px;
+            display: inline-block;
+        }
+
+        @media (max-width: 1000px) {
+            .stat-grid { grid-template-columns: 1fr 1fr; }
+            .panel-grid { grid-template-columns: 1fr; }
+            .quick-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        @media (max-width: 600px) {
+            .stat-grid { grid-template-columns: 1fr; }
+            .quick-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
 <div class="app-shell">
   <div class="main-content" id="main-content">
-    <main class="page-body" style="padding:16px;">
-      <div class="page-header" style="margin-bottom:16px;">
-        <h1 class="page-title" style="margin:0;">Command Dashboard</h1>
-        <p class="page-subtitle" style="margin:4px 0 0;color:#8fa3b8;">NER Logistics Intelligence · Live overview</p>
+    <main class="page-body">
+      <div class="dash-hero">
+        <div>
+          <h1>Command Dashboard</h1>
+          <p>North-Eastern Region · Logistics Intelligence · Live overview</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span style="padding:6px 12px;border-radius:20px;background:rgba(0,255,136,0.12);border:1px solid rgba(0,255,136,0.35);color:#00ff88;font-size:0.8rem;font-weight:700;">● SYSTEM LIVE</span>
+        </div>
       </div>
 
-      <div class="dash-grid">
-        <div class="stat-card"><div class="stat-label">Active Vehicles</div><div class="stat-value">24</div><div class="stat-sub">On NER corridors</div></div>
-        <div class="stat-card"><div class="stat-label">Open Incidents</div><div class="stat-value" style="color:#ff6b6b;">7</div><div class="stat-sub">3 critical</div></div>
-        <div class="stat-card"><div class="stat-label">Safe Corridors</div><div class="stat-value" style="color:#00ff88;">12</div><div class="stat-sub">Green routes</div></div>
-        <div class="stat-card"><div class="stat-label">Alerts Today</div><div class="stat-value" style="color:#ff9500;">5</div><div class="stat-sub">Weather + landslide</div></div>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">Active Vehicles</div>
+          <div class="stat-value">24</div>
+          <div class="stat-sub">On NER corridors</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Open Incidents</div>
+          <div class="stat-value danger">7</div>
+          <div class="stat-sub">3 critical · 4 high/medium</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Safe Corridors</div>
+          <div class="stat-value ok">12</div>
+          <div class="stat-sub">Green routes available</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Alerts Today</div>
+          <div class="stat-value warn">5</div>
+          <div class="stat-sub">Weather + landslide</div>
+        </div>
       </div>
 
-      <div class="panel-row">
-        <div class="panel">
-          <h3>Live NER Map · Road routes</h3>
-          <div class="route-legend">
+      <div class="panel-grid">
+        <div class="glass-panel">
+          <h3>🗺 Live NER Map · Road routes</h3>
+          <div class="legend">
             <span><i style="background:#00ff88"></i> Safe (green)</span>
             <span><i style="background:#ff9500"></i> Alternate (orange)</span>
             <span><i style="background:#ff3b3b"></i> Critical (red)</span>
           </div>
           <div id="dash-map"></div>
         </div>
-        <div class="panel">
-          <h3>Priority Incidents</h3>
-          <div class="incident-row"><span>Tawang Pass Landslide</span><span class="sev crit">CRITICAL</span></div>
-          <div class="incident-row"><span>Brahmaputra Flood Surge</span><span class="sev crit">CRITICAL</span></div>
-          <div class="incident-row"><span>Medicine Delivery — Kohima</span><span class="sev high">HIGH</span></div>
-          <div class="incident-row"><span>Shillong Bypass Warning</span><span class="sev high">HIGH</span></div>
-          <div class="incident-row"><span>Silchar NH-306 Damage</span><span class="sev mod">MEDIUM</span></div>
-          <div style="margin-top:16px;">
+        <div class="glass-panel">
+          <h3>⚠ Priority Incidents</h3>
+          <div class="incident-line"><span>Tawang Pass Landslide</span><span class="sev crit">CRITICAL</span></div>
+          <div class="incident-line"><span>Brahmaputra Flood Surge</span><span class="sev crit">CRITICAL</span></div>
+          <div class="incident-line"><span>Medicine Delivery — Kohima</span><span class="sev high">HIGH</span></div>
+          <div class="incident-line"><span>Shillong Bypass Warning</span><span class="sev high">HIGH</span></div>
+          <div class="incident-line"><span>Silchar NH-306 Damage</span><span class="sev mod">MEDIUM</span></div>
+          <div style="margin-top:18px;">
             <a href="emergency.html" style="color:#00d4ff;font-weight:700;text-decoration:none;">Open Emergency Response →</a>
           </div>
         </div>
       </div>
 
-      <div class="panel">
-        <h3>Quick Command</h3>
-        <div class="quick-links">
+      <div class="glass-panel" style="min-height:auto;">
+        <h3>⚡ Quick Command</h3>
+        <div class="quick-grid">
           <a href="map.html">Live Map</a>
           <a href="emergency.html">Emergency</a>
           <a href="simulation.html">Simulation</a>
@@ -93,25 +289,10 @@
   </div>
 </div>
 
-<script src="js/auth-users.js?v=nav8"></script>
-<script src="js/auth-gate.js?v=nav8"></script>
-<script src="js/components.js?v=nav8"></script>
-<script src="js/map-engine.js?v=nav8"></script>
+<script src="js/components.js"></script>
+<script src="js/map-engine.js"></script>
 <script>
 (function () {
-  function sessionOk() {
-    try {
-      return localStorage.getItem('sr_logged_in') === '1' ||
-        !!localStorage.getItem('sr_user') ||
-        !!localStorage.getItem('sr_username');
-    } catch (e) { return false; }
-  }
-  if (!sessionOk()) {
-    setTimeout(function () {
-      if (!sessionOk()) location.replace('login.html');
-    }, 80);
-  }
-
   document.addEventListener('DOMContentLoaded', function () {
     if (window.SmartRoute && SmartRoute.initSharedComponents) {
       SmartRoute.initSharedComponents({
@@ -129,7 +310,7 @@
         if (MapEngine.addVehicles) MapEngine.addVehicles(m);
       } else if (window.L) {
         var map = L.map('dash-map').setView([26.2, 92.0], 7);
-        L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18 }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
       }
     } catch (e) {}
   });
