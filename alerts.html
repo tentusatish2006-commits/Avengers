@@ -19,18 +19,16 @@
           <p class="page-subtitle">North Eastern Region real-time alerts</p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button type="button" id="btn-enable-push" style="padding:8px 14px;border-radius:8px;border:none;background:linear-gradient(90deg,#00d4ff,#00ff88);color:#031018;font-weight:700;cursor:pointer;">Enable push</button>
-          <button type="button" id="btn-refresh-alerts" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(0,212,255,0.4);background:rgba(0,212,255,0.1);color:#00d4ff;font-weight:700;cursor:pointer;">Refresh</button>
+          <button type="button" id="btn-enable-push">Enable push</button>
+          <button type="button" id="btn-refresh-alerts">Refresh</button>
         </div>
       </div>
       <p id="push-status" style="color:#8fa3b8;font-size:0.85rem;margin:0 0 12px;"></p>
-      <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;">
-        <div class="glass-card" style="padding:12px;">
-          <div id="alert-list"></div>
-        </div>
+      <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;" class="alerts-grid">
+        <div class="glass-card" style="padding:12px;"><div id="alert-list"></div></div>
         <div class="glass-card" style="padding:16px;">
           <h3 style="margin:0 0 8px;color:#00d4ff;">Alert detail</h3>
-          <div class="text-cyan">📍 <span id="detail-loc">—</span> | 🕒 <span id="detail-time">—</span></div>
+          <div>📍 <span id="detail-loc">—</span> | 🕒 <span id="detail-time">—</span></div>
           <p id="detail-sev" style="margin:8px 0 0;font-weight:700;"></p>
           <p id="detail-msg" style="margin-top:12px;color:#c8d8e8;">Select an alert</p>
           <a id="detail-link" href="#" style="display:none;margin-top:12px;color:#00d4ff;">Open related page →</a>
@@ -39,23 +37,34 @@
     </main>
   </div>
 </div>
+<style>
+#btn-enable-push{padding:8px 14px;border-radius:8px;border:none;background:linear-gradient(90deg,#00d4ff,#00ff88);color:#031018;font-weight:700;cursor:pointer;}
+#btn-refresh-alerts{padding:8px 14px;border-radius:8px;border:1px solid rgba(0,212,255,0.4);background:rgba(0,212,255,0.1);color:#00d4ff;font-weight:700;cursor:pointer;}
+@media (max-width:900px){.alerts-grid{grid-template-columns:1fr!important;}}
+</style>
 <script src="js/api.js"></script>
 <script src="js/components.js"></script>
 <script src="js/fcm-client.js"></script>
 <script>
+(function () {
   var DEMO_ALERTS = [
-    { time: '08:32', loc: 'Shillong', msg: 'Landslide risk elevated on NH-6 stretch', severity: 'HIGH', type: 'LANDSLIDE' },
-    { time: '09:10', loc: 'Tawang', msg: 'Heavy fog — visibility under 50m', severity: 'MEDIUM', type: 'ALERT' },
-    { time: '09:45', loc: 'Silchar', msg: 'Bridge weight restriction active', severity: 'HIGH', type: 'ROAD_BLOCKED' },
-    { time: '10:05', loc: 'Kohima', msg: 'Slope monitoring alert — Dimapur–Kohima', severity: 'HIGH', type: 'LANDSLIDE' },
-    { time: '10:20', loc: 'Shillong PHC', msg: 'Medical supply convoy delayed 40 min', severity: 'MEDIUM', type: 'SHIPMENT_DELAY' },
-    { time: '11:00', loc: 'Imphal', msg: 'Route congestion near city entry', severity: 'MEDIUM', type: 'ROUTE_RISK' },
-    { time: '12:15', loc: 'Guwahati', msg: 'Flood watch on Brahmaputra lowlands', severity: 'CRITICAL', type: 'FLOOD' },
-    { time: '13:00', loc: 'Aizawl', msg: 'Rain intensity high — alternate route advised', severity: 'HIGH', type: 'ALERT' }
+    { time: '08:32', loc: 'Shillong', title: 'Landslide risk', msg: 'Landslide risk elevated on NH-6 stretch', severity: 'HIGH' },
+    { time: '09:10', loc: 'Tawang', title: 'Heavy fog', msg: 'Heavy fog — visibility under 50m', severity: 'MEDIUM' },
+    { time: '09:45', loc: 'Silchar', title: 'Bridge restriction', msg: 'Bridge weight restriction active', severity: 'HIGH' },
+    { time: '10:05', loc: 'Kohima', title: 'Slope monitoring', msg: 'Slope monitoring alert — Dimapur–Kohima', severity: 'HIGH' },
+    { time: '10:20', loc: 'Shillong PHC', title: 'Convoy delay', msg: 'Medical supply convoy delayed 40 min', severity: 'MEDIUM' },
+    { time: '11:00', loc: 'Imphal', title: 'Congestion', msg: 'Route congestion near city entry', severity: 'MEDIUM' },
+    { time: '12:15', loc: 'Guwahati', title: 'Flood watch', msg: 'Flood watch on Brahmaputra lowlands', severity: 'CRITICAL' },
+    { time: '13:00', loc: 'Aizawl', title: 'Heavy rain', msg: 'Rain intensity high — alternate route advised', severity: 'HIGH' }
   ];
-  var API_BASE = (window.SmartRouteAPI && SmartRouteAPI.baseUrl) || 'http://127.0.0.1:5000/api';
+  function apiBase() {
+    if (window.SmartRouteAPI && SmartRouteAPI.baseUrl) return SmartRouteAPI.baseUrl;
+    var h = location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1') return 'http://127.0.0.1:5000/api';
+    return '/api';
+  }
   function selectAlert(a) {
-    document.getElementById('detail-loc').textContent = a.loc || a.notification_type || 'NER';
+    document.getElementById('detail-loc').textContent = a.loc || 'NER';
     document.getElementById('detail-time').textContent = a.time || a.created_at || '—';
     document.getElementById('detail-msg').textContent = a.msg || a.message || a.title || '';
     var sev = a.severity || '';
@@ -63,78 +72,80 @@
     sevEl.textContent = sev ? ('Severity: ' + sev) : '';
     sevEl.style.color = sev === 'CRITICAL' ? '#ff6b6b' : (sev === 'HIGH' ? '#ff9500' : '#00ff88');
     var link = document.getElementById('detail-link');
-    if (a.link) {
-      link.href = a.link;
-      link.style.display = 'inline-block';
-    } else {
-      link.style.display = 'none';
-    }
+    if (a.link) { link.href = a.link; link.style.display = 'inline-block'; }
+    else link.style.display = 'none';
   }
   function renderList(items) {
     var list = document.getElementById('alert-list');
+    if (!list) return;
     list.innerHTML = '';
-    if (!items.length) {
-      list.innerHTML = '<div style="color:#8fa3b8;padding:12px;">No alerts yet</div>';
-      return;
-    }
+    if (!items.length) { list.innerHTML = '<div style="color:#8fa3b8;padding:12px;">No alerts yet</div>'; return; }
     items.forEach(function (a, i) {
       var row = document.createElement('div');
       row.style.cssText = 'padding:12px;border-bottom:1px solid rgba(255,255,255,0.06);cursor:pointer;';
-      var unread = a.read_status === false || a.read_status === 0;
-      row.innerHTML =
-        '<div style="font-weight:700;color:' + (unread ? '#e8f4ff' : '#8fa3b8') + ';">' + (a.title || a.msg || '') + '</div>' +
-        '<div style="color:#8fa3b8;margin-top:4px;font-size:0.85rem;">' +
-          (a.time || a.created_at || '') + ' | ' + (a.loc || a.notification_type || '') +
-          (a.severity ? ' · ' + a.severity : '') +
-          (unread ? ' · <span style="color:#ff9500;">Unread</span>' : '') +
-        '</div>';
-      row.onclick = function () {
-        selectAlert(a);
-        if (a.id) {
-          fetch(API_BASE + '/notifications/' + a.id + '/read', { method: 'POST' })
-            .then(function () { if (window.updateAlertBadge) updateAlertBadge(); });
-        }
-      };
+      row.innerHTML = '<div style="font-weight:700;color:#e8f4ff;">' + (a.title || a.msg || '') + '</div>' +
+        '<div style="color:#8fa3b8;margin-top:4px;font-size:0.85rem;">' + (a.time || '') + ' | ' + (a.loc || '') + (a.severity ? ' · ' + a.severity : '') + '</div>';
+      row.onclick = function () { selectAlert(a); };
       list.appendChild(row);
       if (i === 0) selectAlert(a);
     });
   }
   async function loadAlerts() {
+    var btn = document.getElementById('btn-refresh-alerts');
+    var status = document.getElementById('push-status');
+    if (btn) { btn.disabled = true; btn.textContent = 'Refreshing…'; }
     var items = [];
     try {
-      var res = await fetch(API_BASE + '/notifications?limit=50');
+      var ctrl = new AbortController();
+      var t = setTimeout(function () { ctrl.abort(); }, 4000);
+      var res = await fetch(apiBase() + '/notifications?limit=50', { signal: ctrl.signal });
+      clearTimeout(t);
       var json = await res.json();
       if (json && json.data && json.data.length) {
         items = json.data.map(function (n) {
-          return {
-            id: n.id, title: n.title, msg: n.message, message: n.message,
-            time: n.created_at, created_at: n.created_at, loc: n.notification_type,
-            severity: n.severity, notification_type: n.notification_type,
-            link: n.link, read_status: n.read_status
-          };
+          return { id: n.id, title: n.title, msg: n.message, time: n.created_at, loc: n.notification_type, severity: n.severity, link: n.link };
         });
       }
     } catch (e) {}
-    if (!items.length) items = DEMO_ALERTS;
+    if (!items.length) items = DEMO_ALERTS.slice();
     renderList(items);
-    if (window.updateAlertBadge) updateAlertBadge();
+    if (btn) { btn.disabled = false; btn.textContent = 'Refresh'; }
+    if (status && !status.dataset.locked) status.textContent = 'Alerts updated (' + items.length + ')';
+    if (window.SmartRoute && SmartRoute.showToast) SmartRoute.showToast('Alerts refreshed', 'success');
   }
-  window.refreshSmartRouteAlerts = loadAlerts;
-  document.addEventListener('DOMContentLoaded', function () {
-    if (window.SmartRoute) SmartRoute.initSharedComponents({ title: 'Alerts', subtitle: 'NER alerts' });
-    loadAlerts();
-    document.getElementById('btn-refresh-alerts').onclick = loadAlerts;
-    document.getElementById('btn-enable-push').onclick = async function () {
-      if (!window.SmartRouteFCM) {
-        document.getElementById('push-status').textContent = 'FCM client not loaded';
-        return;
+  async function onEnablePush() {
+    var status = document.getElementById('push-status');
+    var btn = document.getElementById('btn-enable-push');
+    if (btn) { btn.disabled = true; btn.textContent = 'Enabling…'; }
+    try {
+      if (!window.SmartRouteFCM || typeof SmartRouteFCM.enable !== 'function') {
+        if (status) { status.dataset.locked = '1'; status.textContent = 'Push module missing — Refresh still works for local alerts.'; status.style.color = '#ff9500'; }
+        if (window.SmartRoute && SmartRoute.showToast) SmartRoute.showToast('FCM client not loaded', 'warn');
+      } else {
+        var st = await SmartRouteFCM.enable();
+        if (status) {
+          status.dataset.locked = '1';
+          if (st && st.error) { status.textContent = 'Push: ' + st.error; status.style.color = '#ff9500'; }
+          else if (st && st.token) { status.textContent = 'Push enabled · token registered'; status.style.color = '#00ff88'; }
+          else { status.textContent = 'Permission: ' + ((st && st.permission) || 'unknown'); }
+        }
       }
-      var st = await SmartRouteFCM.enable();
-      document.getElementById('push-status').textContent = st.error
-        ? ('Config: ' + st.error)
-        : (st.token ? 'Push enabled · token registered' : 'Permission: ' + st.permission);
-    };
+    } catch (err) {
+      if (status) { status.dataset.locked = '1'; status.textContent = 'Push error: ' + (err.message || err); status.style.color = '#ff6b6b'; }
+    }
+    if (btn) { btn.disabled = false; btn.textContent = 'Enable push'; }
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.SmartRoute && SmartRoute.initSharedComponents) {
+      SmartRoute.initSharedComponents({ title: 'Alerts', subtitle: 'NER real-time alerts' });
+    }
+    var r = document.getElementById('btn-refresh-alerts');
+    var p = document.getElementById('btn-enable-push');
+    if (r) r.addEventListener('click', function (e) { e.preventDefault(); loadAlerts(); });
+    if (p) p.addEventListener('click', function (e) { e.preventDefault(); onEnablePush(); });
+    loadAlerts();
   });
+})();
 </script>
 </body>
 </html>
