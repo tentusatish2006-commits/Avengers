@@ -1,4 +1,4 @@
-/* SmartRoute components — full nav + timeline-fix v9 */
+/* SmartRoute components — shows logged-in / signed-up user name */
 
 const SMARTROUTE_NAV = [
   { section: 'OPERATIONS', items: [
@@ -37,67 +37,164 @@ const SMARTROUTE_NAV = [
 ];
 
 function getPageId() {
-  const path = window.location.pathname;
+  var path = window.location.pathname;
   return path.split('/').pop().replace('.html', '') || 'index';
 }
 
+function ensureAuthScript(cb) {
+  if (window.SmartRouteAuth) { if (cb) cb(); return; }
+  if (document.querySelector('script[data-sr-auth]')) {
+    setTimeout(function () { if (cb) cb(); }, 250);
+    return;
+  }
+  var s = document.createElement('script');
+  s.src = 'js/auth-users.js?v=nav4';
+  s.setAttribute('data-sr-auth', '1');
+  s.onload = function () { if (cb) cb(); };
+  s.onerror = function () { if (cb) cb(); };
+  document.head.appendChild(s);
+}
+
+function getLoggedInDisplay() {
+  var name = 'Guest';
+  var role = 'Not signed in';
+  var initials = 'SR';
+  try {
+    var u = null;
+    if (window.SmartRouteAuth && SmartRouteAuth.getSessionUser) {
+      u = SmartRouteAuth.getSessionUser();
+    }
+    if (!u) {
+      var raw = localStorage.getItem('sr_user') || sessionStorage.getItem('sr_user');
+      if (raw) u = JSON.parse(raw);
+    }
+    if (!u) {
+      var n = localStorage.getItem('sr_username');
+      if (n) {
+        u = {
+          username: n,
+          role: localStorage.getItem('sr_user_role') || localStorage.getItem('sr_role') || ''
+        };
+      }
+    }
+    if (u) {
+      name = (u.username || u.name || u.email || 'Officer').trim();
+      role = (u.role || u.department || 'Command HQ · NER').trim();
+      var parts = name.split(/\s+/).filter(Boolean);
+      if (parts.length >= 2) {
+        initials = (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+      } else {
+        initials = name.slice(0, 2).toUpperCase();
+      }
+    }
+  } catch (e) {}
+  return { name: name, role: role, initials: initials };
+}
+
+function refreshUserDisplay() {
+  var d = getLoggedInDisplay();
+  var n = document.getElementById('sr-sidebar-username');
+  var r = document.getElementById('sr-sidebar-role');
+  var av = document.querySelector('.sidebar-user .user-avatar');
+  var nu = document.getElementById('sr-nav-username');
+  if (n) n.textContent = d.name;
+  if (r) r.textContent = d.role;
+  if (av) av.textContent = d.initials;
+  if (nu) nu.textContent = d.name !== 'Guest' ? d.name : '';
+}
+
 function buildSidebar() {
-  const currentPage = getPageId();
-  const sidebar = document.createElement('aside');
+  var currentPage = getPageId();
+  var sidebar = document.createElement('aside');
   sidebar.className = 'sidebar';
   sidebar.id = 'sidebar';
-  let navHtml = '';
-  SMARTROUTE_NAV.forEach(section => {
-    navHtml += `<div class="sidebar-section-label">${section.section}</div>`;
-    section.items.forEach(item => {
-      const active = currentPage === item.id ? ' active' : '';
-      const badge = item.badge ? `<span class="nav-badge">${item.badge}</span>` : '';
-      navHtml += `<a href="${item.href}" class="nav-item${active}"><span class="nav-icon">${item.icon}</span><span class="nav-label">${item.label}</span>${badge}</a>`;
+  var navHtml = '';
+  SMARTROUTE_NAV.forEach(function (section) {
+    navHtml += '<div class="sidebar-section-label">' + section.section + '</div>';
+    section.items.forEach(function (item) {
+      var active = currentPage === item.id ? ' active' : '';
+      var badge = item.badge ? '<span class="nav-badge">' + item.badge + '</span>' : '';
+      navHtml += '<a href="' + item.href + '" class="nav-item' + active + '"><span class="nav-icon">' + item.icon + '</span><span class="nav-label">' + item.label + '</span>' + badge + '</a>';
     });
   });
+  var d = getLoggedInDisplay();
   sidebar.innerHTML =
-    `<a href="index.html" class="sidebar-logo" style="text-decoration:none;display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid rgba(0,212,255,0.15);">` +
-    `<div class="sidebar-logo-icon" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#00d4ff,#00ff88);display:flex;align-items:center;justify-content:center;font-weight:900;color:#031018;font-size:15px;flex-shrink:0;">SR</div>` +
-    `<div><div style="font-weight:800;color:#00d4ff;">SmartRoute</div><div style="font-size:0.72rem;color:#8fa3b8;">NER Emergency Mgmt</div></div></a>` +
-    `<nav class="sidebar-section" id="sidebar-nav">${navHtml}</nav>` +
-    `<div class="sidebar-bottom"><div class="sidebar-user"><div class="user-avatar">NE</div><div><div class="user-name">Admin Officer</div><div class="user-role">Command HQ · NER</div></div></div>` +
-    `<a href="login.html" class="nav-item" style="color:#ff6b6b;"><span class="nav-label">Sign Out</span></a></div>`;
+    '<a href="index.html" class="sidebar-logo" style="text-decoration:none;display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid rgba(0,212,255,0.15);">' +
+    '<div class="sidebar-logo-icon" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#00d4ff,#00ff88);display:flex;align-items:center;justify-content:center;font-weight:900;color:#031018;font-size:15px;flex-shrink:0;">SR</div>' +
+    '<div><div style="font-weight:800;color:#00d4ff;">SmartRoute</div><div style="font-size:0.72rem;color:#8fa3b8;">NER Emergency Mgmt</div></div></a>' +
+    '<nav class="sidebar-section" id="sidebar-nav">' + navHtml + '</nav>' +
+    '<div class="sidebar-bottom">' +
+    '<div class="sidebar-user" title="Logged in user">' +
+    '<div class="user-avatar">' + d.initials + '</div>' +
+    '<div><div class="user-name" id="sr-sidebar-username">' + d.name + '</div>' +
+    '<div class="user-role" id="sr-sidebar-role">' + d.role + '</div></div></div>' +
+    '<a href="login.html" class="nav-item" id="sr-signout" style="color:#ff6b6b;"><span class="nav-label">Sign Out</span></a>' +
+    '</div>';
   return sidebar;
 }
 
 function buildNavbar(title, subtitle) {
-  const navbar = document.createElement('header');
+  var navbar = document.createElement('header');
   navbar.className = 'navbar';
   navbar.id = 'navbar';
+  var d = getLoggedInDisplay();
+  var nameChip = d.name !== 'Guest'
+    ? '<span id="sr-nav-username" style="font-size:12px;font-weight:700;color:#00d4ff;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="Logged in as ' + d.name + '">' + d.name + '</span>'
+    : '<span id="sr-nav-username" style="font-size:12px;color:#8fa3b8;"></span>';
   navbar.innerHTML =
-    `<div class="navbar-left">` +
-    `<button type="button" class="collapse-btn" id="sidebar-toggle" title="Menu" style="width:42px;height:42px;border-radius:10px;border:1px solid rgba(0,212,255,0.45);background:rgba(0,212,255,0.12);color:#e8f4ff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;">` +
-    `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg></button>` +
-    `<a href="index.html" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;"><span style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#00d4ff,#00ff88);display:inline-flex;align-items:center;justify-content:center;font-weight:900;color:#031018;font-size:12px;">SR</span><span style="font-weight:800;color:#00d4ff;">SmartRoute</span></a>` +
-    `<div><div class="navbar-title">${title || 'SmartRoute'}</div>${subtitle ? `<div style="font-size:12px;color:#8fa3b8;">${subtitle}</div>` : ''}</div></div>` +
-    `<div class="navbar-right"><div id="backend-status-badge" class="badge" style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#aaa;">STANDALONE</div>` +
-    `<div class="status-indicator"><div class="status-dot"></div> LIVE</div>` +
-    `<div id="navbar-clock" style="font-family:monospace;font-size:12px;color:#8fa3b8;"></div>` +
-    `<a href="alerts.html" class="navbar-alert-btn" id="sr-alerts-btn">🔔</a>` +
-    `<a href="settings.html" class="navbar-alert-btn">⚙</a></div>`;
+    '<div class="navbar-left">' +
+    '<button type="button" class="collapse-btn" id="sidebar-toggle" title="Menu" style="width:42px;height:42px;border-radius:10px;border:1px solid rgba(0,212,255,0.45);background:rgba(0,212,255,0.12);color:#e8f4ff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;">' +
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg></button>' +
+    '<a href="index.html" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;"><span style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#00d4ff,#00ff88);display:inline-flex;align-items:center;justify-content:center;font-weight:900;color:#031018;font-size:12px;">SR</span><span style="font-weight:800;color:#00d4ff;">SmartRoute</span></a>' +
+    '<div><div class="navbar-title">' + (title || 'SmartRoute') + '</div>' +
+    (subtitle ? '<div style="font-size:12px;color:#8fa3b8;">' + subtitle + '</div>' : '') +
+    '</div></div>' +
+    '<div class="navbar-right">' +
+    '<div id="backend-status-badge" class="badge" style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#aaa;">STANDALONE</div>' +
+    '<div class="status-indicator"><div class="status-dot"></div> LIVE</div>' +
+    nameChip +
+    '<div id="navbar-clock" style="font-family:monospace;font-size:12px;color:#8fa3b8;"></div>' +
+    '<a href="alerts.html" class="navbar-alert-btn" id="sr-alerts-btn">🔔</a>' +
+    '<a href="settings.html" class="navbar-alert-btn">⚙</a></div>';
   return navbar;
 }
 
 function initClock() {
-  const el = document.getElementById('navbar-clock');
+  var el = document.getElementById('navbar-clock');
   if (!el) return;
-  function tick() { el.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
-  tick(); setInterval(tick, 1000);
+  function tick() {
+    el.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+
+function wireSignOut() {
+  var a = document.getElementById('sr-signout');
+  if (!a || a._srWired) return;
+  a._srWired = true;
+  a.addEventListener('click', function (e) {
+    e.preventDefault();
+    try {
+      if (window.SmartRouteAuth && SmartRouteAuth.clearSession) SmartRouteAuth.clearSession();
+      else {
+        ['sr_username', 'sr_officer_id', 'sr_email', 'sr_user_role', 'sr_department', 'sr_region', 'sr_logged_in', 'sr_user'].forEach(function (k) {
+          try { localStorage.removeItem(k); sessionStorage.removeItem(k); } catch (x) {}
+        });
+      }
+    } catch (err) {}
+    window.location.href = 'login.html';
+  });
 }
 
 function initSidebarToggle() {
-  const btn = document.getElementById('sidebar-toggle');
-  const sidebar = document.getElementById('sidebar');
-  const mainContent = document.getElementById('main-content');
+  var btn = document.getElementById('sidebar-toggle');
+  var sidebar = document.getElementById('sidebar');
+  var mainContent = document.getElementById('main-content');
   if (!btn || !sidebar || btn._srToggleWired) return;
   btn._srToggleWired = true;
   if (!document.getElementById('sr-sidebar-backdrop')) {
-    const bd = document.createElement('div');
+    var bd = document.createElement('div');
     bd.id = 'sr-sidebar-backdrop';
     bd.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:150;';
     bd.onclick = function () {
@@ -126,9 +223,9 @@ function initSidebarToggle() {
     if ((window.innerWidth || 1200) <= 992) {
       document.body.classList.toggle('sidebar-open');
       sidebar.classList.toggle('mobile-open');
-      const open = document.body.classList.contains('sidebar-open');
-      const bd = document.getElementById('sr-sidebar-backdrop');
-      if (bd) bd.style.display = open ? 'block' : 'none';
+      var open = document.body.classList.contains('sidebar-open');
+      var bd2 = document.getElementById('sr-sidebar-backdrop');
+      if (bd2) bd2.style.display = open ? 'block' : 'none';
     } else setDesktopHidden(!document.body.classList.contains('sidebar-hidden'));
   });
 }
@@ -142,7 +239,7 @@ function injectShellCss() {
     document.head.appendChild(tl);
   }
   if (document.getElementById('sr-mobile-shell-css')) return;
-  const style = document.createElement('style');
+  var style = document.createElement('style');
   style.id = 'sr-mobile-shell-css';
   style.textContent =
     'body.sidebar-hidden .sidebar,.sidebar.sr-hidden{transform:translateX(-105%)!important;}' +
@@ -157,7 +254,7 @@ function injectShellCss() {
 function initSharedComponents(config) {
   config = config || {};
   injectShellCss();
-  let appShell = document.querySelector('.app-shell') || document.getElementById('app-root');
+  var appShell = document.querySelector('.app-shell') || document.getElementById('app-root');
   if (!appShell) {
     appShell = document.createElement('div');
     appShell.className = 'app-shell';
@@ -165,7 +262,7 @@ function initSharedComponents(config) {
     document.body.appendChild(appShell);
   }
   if (!document.getElementById('sidebar')) appShell.insertBefore(buildSidebar(), appShell.firstChild);
-  let mainContent = appShell.querySelector('.main-content') || document.getElementById('main-content');
+  var mainContent = appShell.querySelector('.main-content') || document.getElementById('main-content');
   if (!mainContent) {
     mainContent = document.createElement('div');
     mainContent.className = 'main-content';
@@ -179,25 +276,33 @@ function initSharedComponents(config) {
   if (!document.getElementById('navbar')) mainContent.insertBefore(buildNavbar(config.title, config.subtitle), mainContent.firstChild);
   initClock();
   initSidebarToggle();
+  wireSignOut();
+  refreshUserDisplay();
+  ensureAuthScript(function () {
+    refreshUserDisplay();
+    wireSignOut();
+  });
   if (!window.SmartRouteAPI) {
-    const s = document.createElement('script');
+    var s = document.createElement('script');
     s.src = 'js/api.js';
     document.head.appendChild(s);
-  } else if (window.SmartRouteAPI.checkHealth) window.SmartRouteAPI.checkHealth();
+  } else if (window.SmartRouteAPI.checkHealth) {
+    window.SmartRouteAPI.checkHealth();
+  }
 }
 
 function showToast(msg, type, duration) {
   type = type || 'info';
   duration = duration || 3500;
-  let container = document.getElementById('toast-container');
+  var container = document.getElementById('toast-container');
   if (!container) {
     container = document.createElement('div');
     container.id = 'toast-container';
     Object.assign(container.style, { position: 'fixed', bottom: '24px', right: '24px', zIndex: '9999', display: 'flex', flexDirection: 'column', gap: '8px' });
     document.body.appendChild(container);
   }
-  const colors = { info: '#4facfe', success: '#00ff88', warn: '#ff9500', danger: '#ff3b3b' };
-  const toast = document.createElement('div');
+  var colors = { info: '#4facfe', success: '#00ff88', warn: '#ff9500', danger: '#ff3b3b' };
+  var toast = document.createElement('div');
   Object.assign(toast.style, {
     background: 'rgba(5,12,28,0.95)', border: '1px solid ' + (colors[type] || colors.info),
     borderLeft: '3px solid ' + (colors[type] || colors.info), borderRadius: '10px', padding: '12px 16px', color: '#e8f4ff', fontSize: '0.9rem'
@@ -207,4 +312,10 @@ function showToast(msg, type, duration) {
   setTimeout(function () { toast.remove(); }, duration);
 }
 
-window.SmartRoute = { initSharedComponents: initSharedComponents, showToast: showToast, getPageId: getPageId };
+window.SmartRoute = {
+  initSharedComponents: initSharedComponents,
+  showToast: showToast,
+  getPageId: getPageId,
+  getLoggedInDisplay: getLoggedInDisplay,
+  refreshUserDisplay: refreshUserDisplay
+};
