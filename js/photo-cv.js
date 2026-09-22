@@ -1,13 +1,19 @@
-/* SmartRoute Photo CV v21
- * Landslide = brown soil/debris  |  Flood = water surface (muddy or blue)
+/* SmartRoute Photo CV v22
+ * STRICT: only strong match to flood/landslide/pothole gets a risk score
+ * Anything else → invalid, risk_score = null
  */
 (function (global) {
   function invalidMeta(reason) {
     return {
-      class: 'invalid', invalid: true, no_score: true, confidence: 95,
-      hazard_type: 'Invalid Photo', severity: 'REJECTED',
-      damage_pct: null, risk_score: null,
-      recommended_action: reason || 'Photo is not similar to flood, landslide, or pothole. No risk score.',
+      class: 'invalid',
+      invalid: true,
+      no_score: true,
+      confidence: 98,
+      hazard_type: 'Invalid Photo',
+      severity: 'REJECTED',
+      damage_pct: null,
+      risk_score: null,
+      recommended_action: reason || 'Not a clear flood, landslide, or pothole photo. Risk score not calculated.',
       features: {}
     };
   }
@@ -16,7 +22,7 @@
     return new Promise(function (resolve) {
       var fn = (filename || '').toLowerCase();
       if (/\.(dwg|dxf|psd|sldprt|catpart)$/i.test(fn)) {
-        return resolve(invalidMeta('CAD file — not a field hazard photo.'));
+        return resolve(invalidMeta('CAD / software file. No risk score.'));
       }
 
       var nameHint = null;
@@ -29,7 +35,7 @@
         try {
           var w = img.naturalWidth || img.width;
           var h = img.naturalHeight || img.height;
-          if (w < 48 || h < 48) return resolve(invalidMeta('Image too small.'));
+          if (w < 64 || h < 64) return resolve(invalidMeta('Image too small. No risk score.'));
 
           var canvas = document.createElement('canvas');
           var maxSide = 320;
@@ -43,7 +49,7 @@
           var data = ctx.getImageData(0, 0, cw, ch).data;
           var n = cw * ch;
 
-          var soil = 0, rock = 0, mud = 0, blueW = 0, asphalt = 0, holes = 0;
+          var soil = 0, rock = 0, mud = 0, blueW = 0, asphalt = 0, holes = 0, green = 0;
           var uiGray = 0, uiWhite = 0, dark = 0, satSum = 0, edgeDiff = 0, edgeN = 0;
 
           for (var i = 0; i < data.length; i += 4) {
@@ -57,6 +63,7 @@
             if (lum > 245) uiWhite++;
             if (sat < 0.07 && lum > 50 && lum < 190) uiGray++;
             if (lum < 42) dark++;
+            if (g > r + 18 && g > b + 12 && g > 65) green++;
 
             if (r > 95 && g > 45 && b < 95 && r > b + 28 && r >= g && sat > 0.14 && lum > 35 && lum < 160) soil++;
             if (sat < 0.12 && lum > 55 && lum < 160 && Math.abs(r - g) < 15 && Math.abs(g - b) < 15 && r > 70) rock++;
@@ -80,49 +87,51 @@
 
           function pct(x) { return (x / n) * 100; }
           soil = pct(soil); rock = pct(rock); mud = pct(mud); blueW = pct(blueW);
-          asphalt = pct(asphalt); holes = pct(holes);
+          asphalt = pct(asphalt); holes = pct(holes); green = pct(green);
           uiGray = pct(uiGray); uiWhite = pct(uiWhite); dark = pct(dark);
           var avgSat = satSum / n;
           var texture = edgeN ? (edgeDiff / edgeN) : 0;
 
-          if (uiGray > 35 && uiWhite > 8 && avgSat < 0.12 && mud < 8 && soil < 8) {
-            return resolve(invalidMeta('Not similar to flood, landslide, or pothole (looks like app UI).'));
+          if (uiGray > 30 && uiWhite > 6 && avgSat < 0.14 && mud < 10 && soil < 10 && blueW < 5) {
+            return resolve(invalidMeta('Invalid photo — not a field hazard. No risk score.'));
+          }
+          if (avgSat < 0.06 && uiGray > 25) {
+            return resolve(invalidMeta('Invalid photo — not a field hazard. No risk score.'));
+          }
+          if (green > 45 && soil < 6 && mud < 8 && blueW < 5 && asphalt < 10) {
+            return resolve(invalidMeta('Invalid photo — not a road hazard scene. No risk score.'));
           }
 
           var simFlood = 0;
           simFlood += Math.min(40, blueW * 2.2);
-          if (texture < 18) {
-            simFlood += Math.min(35, mud * 1.3);
-            if (mud > 18) simFlood += 15;
-          } else {
-            simFlood += Math.min(12, mud * 0.4);
+          if (texture < 16) {
+            simFlood += Math.min(30, mud * 1.2);
+            if (mud > 20) simFlood += 12;
           }
-          if (blueW > 8) simFlood += 20;
-          if (blueW > 15) simFlood += 15;
-          if (blueW < 4 && mud < 12) simFlood *= 0.15;
-          if (soil > mud + 5 && blueW < 6) simFlood = Math.max(0, simFlood - 25);
+          if (blueW > 10) simFlood += 18;
+          if (blueW > 16) simFlood += 12;
+          if (blueW < 5 && mud < 14) simFlood = 0;
+          if (soil > mud + 6 && blueW < 6) simFlood = Math.max(0, simFlood - 30);
 
           var simLand = 0;
           simLand += Math.min(45, soil * 2.2);
-          simLand += Math.min(25, rock * 1.2);
-          simLand += Math.min(20, dark * 0.45);
-          if (texture > 12) simLand += 18;
-          if (texture > 20) simLand += 12;
-          if (soil > 10) simLand += 18;
-          if (soil > 18) simLand += 15;
-          if (blueW > 12) simLand -= 20;
-          if (blueW > 8 && mud > soil) simLand -= 15;
-          if (soil > 8 && blueW < 6) simLand += 12;
+          simLand += Math.min(22, rock * 1.2);
+          if (texture > 14) simLand += 15;
+          if (soil > 12) simLand += 16;
+          if (soil > 20) simLand += 12;
+          if (blueW > 10) simLand -= 25;
+          if (soil < 8) simLand = Math.max(0, simLand - 20);
 
           var simPot = 0;
           simPot += Math.min(40, asphalt * 1.3);
-          simPot += Math.min(28, holes * 1.0);
-          if (asphalt > 18 && holes > 8) simPot += 22;
-          if (mud > 18 || blueW > 12 || soil > 15) simPot -= 15;
+          simPot += Math.min(25, holes * 1.0);
+          if (asphalt > 20 && holes > 10) simPot += 20;
+          if (mud > 16 || blueW > 10 || soil > 14) simPot -= 20;
+          if (asphalt < 12) simPot = Math.max(0, simPot - 15);
 
-          if (nameHint === 'flood') simFlood += 22;
-          if (nameHint === 'landslide') simLand += 22;
-          if (nameHint === 'pothole') simPot += 22;
+          if (nameHint === 'flood') simFlood += 15;
+          if (nameHint === 'landslide') simLand += 15;
+          if (nameHint === 'pothole') simPot += 15;
 
           var best = 'invalid', bestSim = 0;
           if (simLand >= simFlood && simLand >= simPot) {
@@ -133,37 +142,34 @@
             best = 'pothole'; bestSim = simPot;
           }
 
-          if (soil >= 10 && blueW < 7 && simLand >= 28) {
-            best = 'landslide';
-            bestSim = Math.max(simLand, 40);
+          if (soil >= 14 && blueW < 6 && simLand >= 40) {
+            best = 'landslide'; bestSim = Math.max(simLand, 45);
           }
-          if (blueW >= 12 && simFlood >= 30) {
-            best = 'flood';
-            bestSim = Math.max(simFlood, 40);
-          }
-          if (mud >= 18 && blueW >= 3 && soil < mud && texture < 16 && simFlood >= 28) {
-            best = 'flood';
-            bestSim = Math.max(simFlood, 38);
+          if (blueW >= 14 && simFlood >= 40) {
+            best = 'flood'; bestSim = Math.max(simFlood, 45);
           }
 
-          var THRESHOLD = nameHint ? 28 : 34;
-          var signalOk =
-            (best === 'flood' && (blueW >= 6 || (mud >= 12 && texture < 18))) ||
-            (best === 'landslide' && (soil >= 7 || rock >= 10)) ||
-            (best === 'pothole' && asphalt >= 12 && holes >= 5);
+          var THRESHOLD = nameHint ? 42 : 50;
+          var strongSignal = false;
+          if (best === 'flood') {
+            strongSignal = (blueW >= 10) || (mud >= 18 && texture < 15 && blueW >= 4);
+          } else if (best === 'landslide') {
+            strongSignal = (soil >= 12) || (soil >= 9 && rock >= 12);
+          } else if (best === 'pothole') {
+            strongSignal = (asphalt >= 16 && holes >= 8);
+          }
 
-          if (bestSim < THRESHOLD || !signalOk) {
+          if (bestSim < THRESHOLD || !strongSignal) {
             return resolve(invalidMeta(
-              'Photo is not similar enough to flood, landslide, or pothole. No risk score.'
+              'Invalid photo — not clearly flood, landslide, or pothole. Risk score not calculated.'
             ));
           }
 
-          var conf = Math.min(96, Math.round(50 + bestSim * 0.4));
-          var risk = Math.min(95, Math.round(35 + bestSim * 0.55));
+          var conf = Math.min(96, Math.round(55 + bestSim * 0.35));
+          var risk = Math.min(95, Math.max(40, Math.round(40 + bestSim * 0.5)));
           var features = {
             soil: +soil.toFixed(1), rock: +rock.toFixed(1), muddy_water: +mud.toFixed(1),
-            blue_water: +blueW.toFixed(1), asphalt: +asphalt.toFixed(1),
-            texture: +texture.toFixed(1),
+            blue_water: +blueW.toFixed(1), asphalt: +asphalt.toFixed(1), texture: +texture.toFixed(1),
             sim_flood: +simFlood.toFixed(1), sim_landslide: +simLand.toFixed(1), sim_pothole: +simPot.toFixed(1)
           };
 
@@ -207,7 +213,7 @@
     return classify(url, filename);
   }
 
-  var api = { version: 21, classify: classify, analyze: analyze };
+  var api = { version: 22, classify: classify, analyze: analyze };
   global.SmartRoutePhotoCV = api;
   global.PhotoCV = api;
 })(typeof window !== 'undefined' ? window : this);
