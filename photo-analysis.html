@@ -31,7 +31,7 @@
       <main style="padding: 18px;">
         <div class="glass-card" style="margin-bottom: 14px;">
           <h1 style="margin:0 0 6px;font-size:1.35rem;color:#00d4ff;">AI Photo Analysis</h1>
-          <p style="margin:0;color:#8fa3b8;font-size:0.88rem;">Similar to flood / landslide / pothole → score · Otherwise → invalid (N/A)</p>
+          <p style="margin:0;color:#8fa3b8;font-size:0.88rem;">Clear flood / landslide / pothole → score · Anything else → Invalid (N/A)</p>
         </div>
         <div class="photo-layout">
           <div class="glass-card" style="position:relative;overflow:hidden;">
@@ -45,7 +45,7 @@
             <div class="upload-zone" id="upload-zone">
               <div style="font-size:2rem;">📷</div>
               <div style="font-weight:700;color:#e8f4ff;">Drop field photo or click to upload</div>
-              <div style="font-size:0.8rem;color:#8fa3b8;margin-top:6px;">Must look similar to flood, landslide, or pothole</div>
+              <div style="font-size:0.8rem;color:#8fa3b8;margin-top:6px;">Must clearly match flood, landslide, or pothole</div>
               <input type="file" id="file-input" accept="image/*" style="display:none;">
             </div>
             <img id="preview-img" alt="Preview">
@@ -63,7 +63,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="js/components.js"></script>
   <script src="js/map-engine.js"></script>
-  <script src="js/photo-cv.js?v=20"></script>
+  <script src="js/photo-cv.js?v=22"></script>
   <script>
   (function () {
     function $(id) { return document.getElementById(id); }
@@ -103,18 +103,19 @@
       card.className = 'result-card invalid';
       card.style.display = 'block';
       $('result-title').textContent = 'Invalid photo';
-      $('result-detail').textContent = reason || 'Not similar to flood, landslide, or pothole. No risk score.';
+      $('result-detail').textContent = reason || 'Not clearly flood, landslide, or pothole. Risk score is not calculated.';
       var risk = $('result-risk');
       risk.style.display = 'inline-block';
       risk.className = 'risk-pill bad';
       risk.textContent = 'Risk score: N/A (invalid)';
       $('map-photo-img').src = url || '';
-      $('map-photo-label').textContent = 'Invalid · not similar';
+      $('map-photo-label').textContent = 'Invalid · no score';
       $('map-photo-overlay').style.display = 'block';
       flyToHazard({ class: 'invalid', invalid: true });
     }
     function showValid(url, meta) {
-      if (!meta || meta.invalid || meta.class === 'invalid' || meta.no_score === true || meta.risk_score == null) {
+      if (!meta || meta.invalid === true || meta.class === 'invalid' || meta.no_score === true ||
+          meta.risk_score == null || typeof meta.risk_score !== 'number' || isNaN(meta.risk_score)) {
         showInvalid(url, meta && meta.recommended_action);
         return;
       }
@@ -148,7 +149,7 @@
     }
     document.addEventListener('DOMContentLoaded', function () {
       if (window.SmartRoute && SmartRoute.initSharedComponents) {
-        SmartRoute.initSharedComponents({ title: 'AI Photo Analysis', subtitle: 'Similarity to field hazards' });
+        SmartRoute.initSharedComponents({ title: 'AI Photo Analysis', subtitle: 'Field hazard classification' });
       }
       if (window.MapEngine && MapEngine.initMap) {
         map = MapEngine.initMap('analysis-map', { center: [25.80, 91.60], zoom: 7 });
@@ -173,9 +174,9 @@
         $('btn-analyze').disabled = true;
         $('btn-analyze').textContent = 'SCANNING…';
         CV.classify(customUrl, customFilename).then(function (meta) {
-          if (!meta || meta.invalid || meta.class === 'invalid' || meta.no_score || meta.risk_score == null) {
+          if (!meta || meta.invalid || meta.class === 'invalid' || meta.no_score || meta.risk_score == null || typeof meta.risk_score !== 'number') {
             showInvalid(customUrl, meta && meta.recommended_action);
-            if (window.SmartRoute) SmartRoute.showToast('Not similar to a problem type — no score', 'warn');
+            if (window.SmartRoute) SmartRoute.showToast('Invalid photo — no risk score', 'warn');
           } else {
             showValid(customUrl, meta);
             if (window.SmartRoute) SmartRoute.showToast(displayName(meta), 'success');
