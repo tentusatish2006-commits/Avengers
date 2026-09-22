@@ -29,7 +29,7 @@
         try {
           var w = img.naturalWidth || img.width;
           var h = img.naturalHeight || img.height;
-          if (w < 48 || h < 48) return resolve(invalidMeta('Image too small.');
+          if (w < 48 || h < 48) return resolve(invalidMeta('Image too small.'));
 
           var canvas = document.createElement('canvas');
           var maxSide = 320;
@@ -43,7 +43,7 @@
           var data = ctx.getImageData(0, 0, cw, ch).data;
           var n = cw * ch;
 
-          var soil = 0, rock = 0, mud = 0, blueW = 0, asphalt = 0, holes = 0, green = 0;
+          var soil = 0, rock = 0, mud = 0, blueW = 0, asphalt = 0, holes = 0;
           var uiGray = 0, uiWhite = 0, dark = 0, satSum = 0, edgeDiff = 0, edgeN = 0;
 
           for (var i = 0; i < data.length; i += 4) {
@@ -68,11 +68,9 @@
             if (b > r + 25 && b > g + 12 && lum > 45 && lum < 170 && sat > 0.15) blueW++;
             if (sat < 0.14 && lum > 28 && lum < 115 && Math.abs(r - g) < 18 && Math.abs(g - b) < 18) asphalt++;
             if (lum < 48 && sat < 0.28) holes++;
-            if (g > r + 18 && g > b + 12 && g > 65) green++;
 
             var px = (i / 4) % cw;
-            var py = Math.floor((i / 4) / cw);
-            if (px < cw - 2 && py < ch - 1) {
+            if (px < cw - 2) {
               var j = i + 8;
               var lum2 = 0.299 * data[j] + 0.587 * data[j + 1] + 0.114 * data[j + 2];
               edgeDiff += Math.abs(lum - lum2);
@@ -82,7 +80,7 @@
 
           function pct(x) { return (x / n) * 100; }
           soil = pct(soil); rock = pct(rock); mud = pct(mud); blueW = pct(blueW);
-          asphalt = pct(asphalt); holes = pct(holes); green = pct(green);
+          asphalt = pct(asphalt); holes = pct(holes);
           uiGray = pct(uiGray); uiWhite = pct(uiWhite); dark = pct(dark);
           var avgSat = satSum / n;
           var texture = edgeN ? (edgeDiff / edgeN) : 0;
