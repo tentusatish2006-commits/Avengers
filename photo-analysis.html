@@ -31,7 +31,7 @@
       <main style="padding: 18px;">
         <div class="glass-card" style="margin-bottom: 14px;">
           <h1 style="margin:0 0 6px;font-size:1.35rem;color:#00d4ff;">AI Photo Analysis</h1>
-          <p style="margin:0;color:#8fa3b8;font-size:0.88rem;">Clear flood / landslide / pothole → score · Anything else → Invalid (N/A)</p>
+          <p style="margin:0;color:#8fa3b8;font-size:0.88rem;">Clear flood / landslide / pothole → score · CAD / random photos → Invalid (N/A)</p>
         </div>
         <div class="photo-layout">
           <div class="glass-card" style="position:relative;overflow:hidden;">
@@ -63,7 +63,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="js/components.js"></script>
   <script src="js/map-engine.js"></script>
-  <script src="js/photo-cv.js?v=22"></script>
+  <script src="js/photo-cv.js?v=23"></script>
   <script>
   (function () {
     function $(id) { return document.getElementById(id); }
@@ -167,7 +167,7 @@
         }
         var CV = window.SmartRoutePhotoCV || window.PhotoCV;
         if (!CV || !CV.classify) {
-          if (window.SmartRoute) SmartRoute.showToast('Photo analyzer not loaded — hard refresh', 'warn');
+          if (window.SmartRoute) SmartRoute.showToast('Photo analyzer not loaded — hard refresh (Ctrl+Shift+R)', 'warn');
           return;
         }
         isScanning = true;
