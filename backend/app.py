@@ -83,6 +83,7 @@ def create_app():
             "uptime_sec": int(time.time() - START_TIME),
             "service": "SmartRoute API",
             "ors_configured": bool(os.environ.get("OPENROUTESERVICE_API_KEY") or os.environ.get("ORS_API_KEY")),
+            "openai_configured": bool(os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENAI_KEY")),
         })
 
     @app.route("/")
